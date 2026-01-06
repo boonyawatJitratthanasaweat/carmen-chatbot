@@ -31,9 +31,8 @@ print("🧠 กำลังโหลดสมอง AI... (Gemini + Pinecone)")
 try:
     embeddings = GoogleGenerativeAIEmbeddings(model="models/text-embedding-004")
     vectorstore = PineconeVectorStore(index_name=INDEX_NAME, embedding=embeddings)
-    # แก้ชื่อ Model ให้ตรงกับลิสต์ที่เจอ (ใช้ตัว 2.5 Flash)
     llm = ChatGoogleGenerativeAI(
-    model="gemini-1.5-flash",  
+   model="gemma-3-27b-it", 
     temperature=0.3,
     google_api_key=os.environ["GOOGLE_API_KEY"]
 )
