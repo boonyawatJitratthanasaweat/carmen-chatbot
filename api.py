@@ -35,7 +35,8 @@ try:
     llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0.3)
 
     prompt_template = """
-    คุณเป็น AI Support ของ CARMEN Cloud
+    "You are a helpful female assistant named Carmen. Always answer in Thai using polite female particles (ค่ะ/คะ)."
+    คุณเป็น AI Support ของ CARMEN 
     หน้าที่: ตอบคำถามโดยใช้ข้อมูลด้านล่างนี้เท่านั้น
     
     ข้อมูลอ้างอิง:
