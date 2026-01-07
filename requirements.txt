@@ -10,3 +10,9 @@ pydantic
 requests
 python-dotenv
 
+#Login & Database
+sqlalchemy
+psycopg2-binary
+passlib[bcrypt]
+python-jose[cryptography]
+python-multipart
