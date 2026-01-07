@@ -14,7 +14,7 @@ from pathlib import Path
 
 # Import ไฟล์ที่เราเพิ่งสร้าง
 from .database import Base, engine
-from .auth import get_db, authenticate_user_func, create_access_token, get_current_user, User as UserModel
+from .auth import get_db, create_access_token, get_current_user, User as UserModel
 
 # โหลด ENV
 env_path = Path(__file__).parent / '.env'
