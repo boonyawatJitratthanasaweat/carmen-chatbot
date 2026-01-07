@@ -2,7 +2,6 @@
     // ⚠️ แก้ URL ตรงนี้ให้เป็นของคุณ
     const API_URL_CHAT = "https://carmen-chatbot-api.onrender.com/chat"; 
 
-    // ตัวแปร State
     let accessToken = "";
     let currentUser = "";
     
@@ -15,7 +14,7 @@
         document.body.appendChild(container);
     }
 
-    // CSS Style (✨ แก้ไข: เพิ่มสีไอคอน send-btn และ msg-time)
+    // CSS Style
     const styles = `
       @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600&display=swap');
       #carmen-chat-widget { position: fixed; bottom: 20px; right: 20px; z-index: 99990; font-family: 'Sarabun', sans-serif; }
@@ -34,7 +33,7 @@
       .icon-btn svg { width: 20px; height: 20px; fill: white; }
 
       .chat-body { flex: 1; padding: 20px; overflow-y: auto; background: #f8f9fa; display: flex; flex-direction: column; gap: 10px; }
-      .msg { max-width: 85%; padding: 10px 14px; font-size: 14px; line-height: 1.5; border-radius: 12px; word-wrap: break-word; position: relative; }
+      .msg { max-width: 85%; padding: 10px 14px; font-size: 14px; line-height: 1.6; border-radius: 12px; word-wrap: break-word; position: relative; }
       .msg.user { background: #000; color: white; align-self: flex-end; border-radius: 18px 18px 4px 18px; }
       .msg.bot { background: white; color: #333; align-self: flex-start; border-radius: 18px 18px 18px 4px; border: 1px solid #ddd; }
       
@@ -42,13 +41,17 @@
       .msg.bot.typing::after { content: '▋'; animation: blink 1s infinite; font-size: 12px; margin-left: 2px; }
       @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
 
+      /* Video Wrapper */
+      .video-wrapper { position: relative; width: 100%; padding-bottom: 56.25%; height: 0; margin-top: 10px; margin-bottom: 5px; border-radius: 12px; overflow: hidden; background: #000; animation: fadeIn 0.5s ease; }
+      .video-wrapper iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0; }
+      @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
       .chat-footer { padding: 10px; background: white; border-top: 1px solid #eee; display: flex; gap: 5px; align-items: center; }
       .chat-input { flex: 1; padding: 10px 15px; border-radius: 20px; border: 1px solid #ddd; outline: none; background: #f9f9f9; font-family: 'Sarabun', sans-serif;}
       
-      /* ✅ แก้ไข: บังคับสีไอคอนปุ่มส่งเป็นสีขาว */
       .send-btn { width: 40px; height: 40px; background: #000; color: white; border: none; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
       .send-btn:hover { background: #333; }
-      .send-btn svg { width: 18px; height: 18px; fill: white; } /* สำคัญมาก! */
+      .send-btn svg { width: 18px; height: 18px; fill: white; } 
       
       .typing-indicator { font-size: 12px; color: #888; margin-left: 20px; display: none; margin-bottom: 5px; }
     `;
@@ -93,7 +96,6 @@
 
         const body = document.getElementById('carmenChatBody');
         if(body.innerHTML === '') {
-            // ✨ ใช้ true เพื่อเปิด Animation ตอนเริ่ม
             addMessage(`สวัสดีค่ะคุณ ${username} 👋<br>มีอะไรให้ Carmen ช่วยไหมคะ?`, 'bot', true);
         }
     };
@@ -148,7 +150,6 @@
             document.getElementById('carmenTypingIndicator').style.display = 'none';
             
             if(data.answer) {
-                // ✨ เปิด Animation ตอนตอบกลับ
                 addMessage(data.answer, 'bot', true);
             } else {
                 addMessage("ขออภัยค่ะ ไม่ได้รับคำตอบ", 'bot', true);
@@ -159,28 +160,48 @@
         }
     };
 
+    // Helper: ดึง ID YouTube
+    function getYoutubeId(url) {
+        const match = url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/);
+        return match ? match[1] : null;
+    }
+
     // ===============================================
-    // 🪄 Function แสดงข้อความ + Typewriter Effect
+    // 🪄 Function แสดงข้อความ + Typewriter + แยก Video มาต่อท้าย
     // ===============================================
     function addMessage(text, sender, animate = false) {
         const body = document.getElementById('carmenChatBody');
         const div = document.createElement('div');
         div.className = `msg ${sender}`;
         
-        // แปลง Markdown ง่ายๆ (**ตัวหนา**)
+        // 1. แปลง Markdown พื้นฐาน
         let formattedText = text.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>').replace(/\n/g, '<br>');
+
+        // 2. ✨ แยก Video ออกจากข้อความ (เพื่อไม่ให้กวน Animation)
+        let videoContent = "";
+        const urlRegex = /(https?:\/\/(?:www\.)?(?:youtube\.com|youtu\.be)[^\s<)"']+)/g;
+        
+        formattedText = formattedText.replace(urlRegex, (url) => {
+            const videoId = getYoutubeId(url);
+            if (videoId) {
+                // เก็บ HTML ของ Video ไว้แปะทีหลัง
+                videoContent += `<div class="video-wrapper"><iframe src="https://www.youtube.com/embed/${videoId}?rel=0" frameborder="0" allowfullscreen></iframe></div>`;
+                // ในข้อความ ให้แสดงเป็นลิงก์แทน
+                return `<a href="${url}" target="_blank" style="color:#2563eb; text-decoration:underline;">(ลิงก์วิดีโอ)</a>`; 
+            }
+            return `<a href="${url}" target="_blank" style="color:#2563eb;">เปิดลิงก์</a>`;
+        });
 
         body.appendChild(div);
 
         if (sender === 'bot' && animate) {
-            // เริ่มโหมดพิมพ์ดีด
+            // เริ่มโหมดพิมพ์ดีด (เฉพาะข้อความ)
             div.classList.add('typing');
             let i = 0;
-            const speed = 20; // ความเร็วในการพิมพ์ (ms)
+            const speed = 15; // ความเร็วในการพิมพ์
 
             function typeWriter() {
                 if (i < formattedText.length) {
-                    // ถ้าเจอ tag html (เช่น <br> หรือ <b>) ให้ข้ามไปพิมพ์ทีเดียวเลย (กันโค้ดพัง)
                     if (formattedText.charAt(i) === '<') {
                         let tag = '';
                         while (formattedText.charAt(i) !== '>' && i < formattedText.length) {
@@ -197,14 +218,18 @@
                     scrollToBottom();
                     setTimeout(typeWriter, speed);
                 } else {
-                    // พิมพ์เสร็จแล้ว
+                    // ✅ พิมพ์ข้อความเสร็จแล้ว -> ลบเคอร์เซอร์ -> แปะวิดีโอต่อท้าย
                     div.classList.remove('typing');
+                    if (videoContent) {
+                        div.innerHTML += videoContent; // 🎥 วิดีโอจะโผล่มาตอนนี้
+                        scrollToBottom();
+                    }
                 }
             }
             typeWriter();
         } else {
-            // แสดงทันที (สำหรับ user หรือตอนโหลด)
-            div.innerHTML = formattedText;
+            // กรณีไม่ Animate (User หรือโหลดเก่า)
+            div.innerHTML = formattedText + videoContent;
             scrollToBottom();
         }
     }
