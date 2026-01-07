@@ -14,7 +14,6 @@ from pathlib import Path
 
 # Import ไฟล์ระบบ
 from .database import Base, engine
-# ⚠️ แก้ตรงนี้: ลบ authenticate_user_func ออกตามที่เคยแก้ไปแล้ว
 from .auth import get_db, create_access_token, get_current_user, User as UserModel
 
 # โหลด ENV
@@ -33,7 +32,7 @@ try:
     
     prompt_template = """
     "You are a helpful female assistant named Carmen."
-    คุณมีหน้าที่ตอบคำถามโดยใช้ข้อมูลจาก Context ที่ให้มาผสมกัน
+    คุณมีหน้าที่ตอบคำถามโดยใช้ข้อมูลจาก Context ที่ให้มาผสมกัน (ทั้งข้อมูลส่วนตัวและข้อมูลส่วนกลาง)
     
     ข้อมูลอ้างอิง: {context}
     
@@ -62,7 +61,6 @@ app.add_middleware(
 async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     user = db.query(UserModel).filter(UserModel.username == form_data.username).first()
     
-    # Import passlib ตรงนี้เพื่อความง่าย
     from passlib.context import CryptContext
     pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
     
@@ -76,7 +74,7 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
     access_token = create_access_token(data={"sub": user.username})
     return {"access_token": access_token, "token_type": "bearer", "client_namespace": user.client_id}
 
-# --- 💬 Chat API (ค้นหา 2 ทาง) ---
+# --- 💬 Chat API (Hybrid Search) ---
 class Question(BaseModel):
     text: str
 
@@ -91,27 +89,23 @@ async def chat_endpoint(
         user_message = question.text
         client_ns = current_user.client_id 
         
-        print(f"User: {current_user.username} | Private NS: {client_ns} | Searching Both...")
+        print(f"User: {current_user.username} | Private NS: {client_ns} | Searching Hybrid...")
 
         # ✅ 1. ค้นหาในกล่องส่วนตัว (Private Knowledge)
         docs_private = []
         if client_ns and client_ns != "global":
-            # หา 2 อันดับแรกที่ตรงที่สุดในกล่องส่วนตัว
+            # ถ้า namespace เป็น global ไม่ต้องหาซ้ำ เพราะเดี๋ยวจะไปหาในขั้นตอนที่ 2 อยู่แล้ว
             docs_private = vectorstore.similarity_search(user_message, k=2, namespace=client_ns)
 
-        # ✅ 2. ค้นหาในกล่องกลาง (Common/Default Knowledge)
-        # ใน Pinecone ค่าเริ่มต้นคือ namespace="" (ว่าง) หรือบางคนใช้ "global"
-        # แต่ user แจ้งว่าใช้ namespace "__default__" ถ้าใช้ชื่อนี้จริงให้แก้บรรทัดล่างเป็น namespace="__default__"
-        # แต่ถ้าหมายถึงค่า Default ของ Pinecone ให้ใช้ "" (String ว่าง) ครับ
+        # ✅ 2. ค้นหาในกล่องข้อมูลพื้นฐาน (Common Knowledge)
+        # ระบุชื่อ namespace="__default__" ตามที่คุณต้องการ
+        docs_common = vectorstore.similarity_search(user_message, k=2, namespace="__default__") 
         
-        docs_global = vectorstore.similarity_search(user_message, k=2, namespace="") 
-        
-        # ✅ 3. มัดรวมข้อมูล (Merge)
-        # เอาข้อมูลส่วนตัวขึ้นก่อน + ตามด้วยข้อมูลส่วนกลาง
-        all_docs = docs_private + docs_global
+        # ✅ 3. มัดรวมข้อมูล (Private สำคัญกว่า ให้ขึ้นก่อน)
+        all_docs = docs_private + docs_common
 
         if not all_docs:
-            return {"answer": "ไม่พบข้อมูลที่เกี่ยวข้องทั้งในส่วนตัวและส่วนกลางค่ะ"}
+            return {"answer": "ไม่พบข้อมูลที่เกี่ยวข้องทั้งในส่วนตัวและข้อมูลพื้นฐานค่ะ"}
 
         # ส่งเข้าสมอง AI
         chain = PROMPT | llm | StrOutputParser()
