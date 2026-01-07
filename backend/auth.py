@@ -12,7 +12,7 @@ from .database import Base
 # --- Config ---
 SECRET_KEY = os.environ.get("SECRET_KEY", "secret")
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30 * 24 * 60  # 60 วัน (Login ยาวๆ)
+ACCESS_TOKEN_EXPIRE_MINUTES = 30 * 24 * 60  # 60 วัน
 
 # --- Password Hashing ---
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -21,6 +21,9 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 # --- 1. Database Models ---
 class User(Base):
     __tablename__ = "users"
+    # 👇 เพิ่มบรรทัดนี้ เพื่อบอกว่าถ้ามีตารางอยู่แล้ว ให้ใช้ต่อได้เลย ไม่ต้อง Error
+    __table_args__ = {'extend_existing': True} 
+    
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String, unique=True, index=True)
     hashed_password = Column(String)
@@ -31,13 +34,15 @@ class User(Base):
     # เชื่อมโยงไปหา ChatHistory
     history = relationship("ChatHistory", back_populates="owner")
 
-# ✅ เพิ่มตารางใหม่สำหรับเก็บประวัติแชท
 class ChatHistory(Base):
     __tablename__ = "chat_history"
+    # 👇 เพิ่มบรรทัดนี้เช่นกัน
+    __table_args__ = {'extend_existing': True}
+
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"))  # ผูกกับ User
     sender = Column(String)   # 'user' หรือ 'bot'
-    message = Column(Text)    # ข้อความ (ใช้ Text เพราะอาจจะยาว)
+    message = Column(Text)    # ข้อความ
     timestamp = Column(DateTime, default=datetime.utcnow) # เวลาที่ส่ง
     
     owner = relationship("User", back_populates="history")

@@ -1,18 +1,22 @@
 (function() {
+    // ⚠️ แก้ URL ตรงนี้ให้เป็นของคุณ
     const API_URL_CHAT = "https://carmen-chatbot-api.onrender.com/chat"; 
-    // ✅ เพิ่ม URL สำหรับ History
+    // ✅ เพิ่ม URL สำหรับดึงประวัติแชท
     const API_URL_HISTORY = "https://carmen-chatbot-api.onrender.com/chat/history";
 
+    // 💡 รายการคำถามแนะนำ (ชุดใหม่ของคุณ)
     const SUGGESTED_QUESTIONS = [
-        "วิธีบันทึกข้อมูล",
-        "การคำนวณค่าเสื่อมราคา",
-        "วิธีสร้างรหัสลูกหนี้",
-        "ยกเลิกรายการอย่างไร"
+        "Voucher มีกี่ประเภทอะไรบ้าง",
+        "ขั้นตอน Create Vendor มีอะไรบ้าง",
+        "A/R คืออะไร",
+        "Carmen Add-in ใช้ทำอะไร",
+        "นโยบายการเงิน"
     ];
 
     let accessToken = "";
     let currentUser = "";
     
+    // สร้าง Widget Container
     let container = document.getElementById('carmen-chat-widget');
     if (!container) {
         container = document.createElement('div');
@@ -21,6 +25,7 @@
         document.body.appendChild(container);
     }
 
+    // CSS Style
     const styles = `
       @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600&display=swap');
       #carmen-chat-widget { position: fixed; bottom: 20px; right: 20px; z-index: 99990; font-family: 'Sarabun', sans-serif; }
@@ -133,7 +138,7 @@
       </div>
     `;
 
-    // Global Functions
+    // Global Functions (✅ เพิ่ม Logic โหลด History กลับมาให้ครับ)
     window.carmenStartSession = async function(token, username) {
         accessToken = token;
         currentUser = username;
@@ -142,40 +147,33 @@
         document.getElementById('carmenChatWindow').classList.add('open');
 
         const body = document.getElementById('carmenChatBody');
-        body.innerHTML = ''; // ล้างของเก่าก่อนเสมอ กันซ้ำ
+        body.innerHTML = ''; // ล้างก่อนเสมอ
 
-        // ✅ โหลดประวัติแชทจาก Server
         try {
+            // ดึงประวัติ 3 ข้อความล่าสุด
             const res = await fetch(API_URL_HISTORY, {
                 headers: { 'Authorization': `Bearer ${accessToken}` }
             });
             if (res.ok) {
                 const history = await res.json();
                 if (history.length > 0) {
-                    // ถ้ามีประวัติ ให้วนลูปแสดงผล (แบบไม่อนิเมท)
                     history.forEach(msg => {
                         addMessage(msg.message, msg.sender, false);
                     });
-                    // ขีดเส้นแบ่งว่า "จบประวัติเก่า"
                     const divider = document.createElement('div');
-                    divider.style.textAlign = 'center';
-                    divider.style.fontSize = '10px';
-                    divider.style.color = '#ccc';
-                    divider.style.margin = '10px 0';
+                    divider.style.cssText = 'text-align:center; font-size:10px; color:#ccc; margin:10px 0;';
                     divider.innerText = '--- ประวัติการสนทนาล่าสุด ---';
                     body.appendChild(divider);
                 } else {
-                     // ถ้าไม่มีประวัติเก่าเลย ให้ทักทายใหม่
                     addMessage(`สวัสดีค่ะคุณ ${username} 👋<br>มีอะไรให้ Carmen ช่วยไหมคะ?`, 'bot', true);
                 }
             }
         } catch (e) {
-            console.error("Failed to load history", e);
-            // ถ้าโหลดไม่ได้ ก็ทักทายปกติ
+            // ถ้า Error หรือยังไม่มีประวัติ ก็ทักทายปกติ
             addMessage(`สวัสดีค่ะคุณ ${username} 👋<br>มีอะไรให้ Carmen ช่วยไหมคะ?`, 'bot', true);
         }
 
-        // โชว์คำถามแนะนำเสมอ
+        // ✅ โชว์คำถามแนะนำชุดใหม่เสมอ
         setTimeout(() => addSuggestions(), 1000); 
     };
 
@@ -193,9 +191,8 @@
     };
 
     window.carmenClearChat = function() {
-        // อันนี้ล้างแค่หน้าจอ ไม่ได้ลบ DB (ถ้าจะลบ DB ต้องทำ API เพิ่ม)
         document.getElementById('carmenChatBody').innerHTML = '';
-        addMessage(`ล้างแชทหน้าจอเรียบร้อยค่ะ ✨`, 'bot', true);
+        addMessage(`ล้างแชทเรียบร้อยค่ะ ✨`, 'bot', true);
         setTimeout(() => addSuggestions(), 1000);
     };
 
@@ -273,6 +270,9 @@
         scrollToBottom();
     }
 
+    // ===============================================
+    // 🪄 Main Message Function
+    // ===============================================
     function addMessage(text, sender, animate = false) {
         const body = document.getElementById('carmenChatBody');
         const div = document.createElement('div');
