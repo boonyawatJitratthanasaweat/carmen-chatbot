@@ -94,20 +94,18 @@ async def chat_endpoint(
         # ✅ 1. ค้นหาในกล่องส่วนตัว (Private Knowledge)
         docs_private = []
         if client_ns and client_ns != "global":
-            # ถ้า namespace เป็น global ไม่ต้องหาซ้ำ เพราะเดี๋ยวจะไปหาในขั้นตอนที่ 2 อยู่แล้ว
             docs_private = vectorstore.similarity_search(user_message, k=2, namespace=client_ns)
 
         # ✅ 2. ค้นหาในกล่องข้อมูลพื้นฐาน (Common Knowledge)
-        # ระบุชื่อ namespace="__default__" ตามที่คุณต้องการ
-        docs_common = vectorstore.similarity_search(user_message, k=2, namespace="__default__") 
+        # ⚠️ แก้ไข: ใช้ string ว่าง "" แทน __default__ ตามที่ Pinecone บังคับ
+        docs_common = vectorstore.similarity_search(user_message, k=2, namespace="") 
         
-        # ✅ 3. มัดรวมข้อมูล (Private สำคัญกว่า ให้ขึ้นก่อน)
+        # ✅ 3. มัดรวมข้อมูล
         all_docs = docs_private + docs_common
 
         if not all_docs:
             return {"answer": "ไม่พบข้อมูลที่เกี่ยวข้องทั้งในส่วนตัวและข้อมูลพื้นฐานค่ะ"}
 
-        # ส่งเข้าสมอง AI
         chain = PROMPT | llm | StrOutputParser()
         context_text = "\n\n".join([d.page_content for d in all_docs])
         
@@ -117,6 +115,9 @@ async def chat_endpoint(
 
     except Exception as e:
         print(f"Error: {e}")
+        # Print error ลง log ให้เห็นชัดๆ
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
