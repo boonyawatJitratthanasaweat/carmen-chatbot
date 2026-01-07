@@ -11,15 +11,15 @@
     if (!container) {
         container = document.createElement('div');
         container.id = 'carmen-chat-widget';
-        // ⚠️ ซ่อนไว้ก่อน จนกว่าจะ Login ผ่าน
         container.style.display = 'none'; 
         document.body.appendChild(container);
     }
 
-    // CSS Style
+    // CSS Style (✨ แก้ไข: เพิ่มสีไอคอน send-btn และ msg-time)
     const styles = `
       @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600&display=swap');
       #carmen-chat-widget { position: fixed; bottom: 20px; right: 20px; z-index: 99990; font-family: 'Sarabun', sans-serif; }
+      
       .chat-btn { width: 65px; height: 65px; background: #000; border-radius: 50%; box-shadow: 0 8px 24px rgba(0,0,0,0.25); cursor: pointer; display: flex; justify-content: center; align-items: center; transition: all 0.3s; }
       .chat-btn:hover { transform: scale(1.1) rotate(5deg); }
       .chat-btn svg { width: 32px; height: 32px; fill: white; }
@@ -29,27 +29,33 @@
 
       .chat-header { background: #000; color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; }
       .header-tools { display: flex; gap: 10px; }
-      .icon-btn { cursor: pointer; opacity: 0.8; transition: 0.2s; }
+      .icon-btn { cursor: pointer; opacity: 0.8; transition: 0.2s; display: flex; align-items: center; }
       .icon-btn:hover { opacity: 1; transform: scale(1.1); }
       .icon-btn svg { width: 20px; height: 20px; fill: white; }
 
       .chat-body { flex: 1; padding: 20px; overflow-y: auto; background: #f8f9fa; display: flex; flex-direction: column; gap: 10px; }
-      .msg { max-width: 85%; padding: 10px 14px; font-size: 14px; line-height: 1.5; border-radius: 12px; word-wrap: break-word; }
+      .msg { max-width: 85%; padding: 10px 14px; font-size: 14px; line-height: 1.5; border-radius: 12px; word-wrap: break-word; position: relative; }
       .msg.user { background: #000; color: white; align-self: flex-end; border-radius: 18px 18px 4px 18px; }
       .msg.bot { background: white; color: #333; align-self: flex-start; border-radius: 18px 18px 18px 4px; border: 1px solid #ddd; }
-      .msg-time { font-size: 10px; color: #bbb; margin-top: -5px; margin-left: 5px; }
-
-      .chat-footer { padding: 10px; background: white; border-top: 1px solid #eee; display: flex; gap: 5px; }
-      .chat-input { flex: 1; padding: 10px 15px; border-radius: 20px; border: 1px solid #ddd; outline: none; background: #f9f9f9; }
-      .send-btn { width: 40px; height: 40px; background: #000; color: white; border: none; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; }
       
-      .typing { font-size: 12px; color: #888; margin-left: 20px; display: none; margin-bottom: 5px; }
+      /* Animation Cursor */
+      .msg.bot.typing::after { content: '▋'; animation: blink 1s infinite; font-size: 12px; margin-left: 2px; }
+      @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+      .chat-footer { padding: 10px; background: white; border-top: 1px solid #eee; display: flex; gap: 5px; align-items: center; }
+      .chat-input { flex: 1; padding: 10px 15px; border-radius: 20px; border: 1px solid #ddd; outline: none; background: #f9f9f9; font-family: 'Sarabun', sans-serif;}
+      
+      /* ✅ แก้ไข: บังคับสีไอคอนปุ่มส่งเป็นสีขาว */
+      .send-btn { width: 40px; height: 40px; background: #000; color: white; border: none; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
+      .send-btn:hover { background: #333; }
+      .send-btn svg { width: 18px; height: 18px; fill: white; } /* สำคัญมาก! */
+      
+      .typing-indicator { font-size: 12px; color: #888; margin-left: 20px; display: none; margin-bottom: 5px; }
     `;
     const styleSheet = document.createElement("style");
     styleSheet.innerText = styles;
     document.head.appendChild(styleSheet);
 
-    // HTML Structure (เอา Login ออกไปแล้ว)
     container.innerHTML = `
       <div class="chat-btn" onclick="window.carmenToggleChat()">
         <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
@@ -67,66 +73,47 @@
            </div>
         </div>
         <div class="chat-body" id="carmenChatBody"></div>
-        <div class="typing" id="carmenTypingIndicator">กำลังพิมพ์...</div>
+        <div class="typing-indicator" id="carmenTypingIndicator">กำลังพิมพ์...</div>
         <div class="chat-footer">
           <input type="text" id="carmenUserInput" class="chat-input" placeholder="พิมพ์ข้อความ..." onkeypress="window.carmenCheckEnter(event)">
-          <button class="send-btn" onclick="window.carmenSendMessage()"><svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></button>
+          <button class="send-btn" onclick="window.carmenSendMessage()">
+            <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+          </button>
         </div>
       </div>
     `;
 
-    // ===============================================
-    // 🚀 Global Functions (เพื่อให้ index.html เรียกใช้ได้)
-    // ===============================================
-
-    // ฟังก์ชันเริ่มทำงานเมื่อ Login ผ่าน
+    // Global Functions
     window.carmenStartSession = function(token, username) {
         accessToken = token;
         currentUser = username;
-        
-        // 1. โชว์ปุ่ม Widget
         document.getElementById('carmen-chat-widget').style.display = 'block';
-        
-        // 2. อัปเดตชื่อ User ใน Header
         document.getElementById('carmenUserDisplay').innerText = `User: ${username}`;
-        
-        // 3. เปิดหน้าต่างแชทอัตโนมัติ (Option)
         document.getElementById('carmenChatWindow').classList.add('open');
 
-        // 4. ทักทาย (ถ้าแชทยังว่าง)
         const body = document.getElementById('carmenChatBody');
         if(body.innerHTML === '') {
-            addMessage(`สวัสดีค่ะคุณ ${username} 👋<br>มีอะไรให้ Carmen ช่วยไหมคะ?`, 'bot');
+            // ✨ ใช้ true เพื่อเปิด Animation ตอนเริ่ม
+            addMessage(`สวัสดีค่ะคุณ ${username} 👋<br>มีอะไรให้ Carmen ช่วยไหมคะ?`, 'bot', true);
         }
     };
 
-    // ฟังก์ชัน Logout (Action ภายใน Widget)
     window.carmenLogoutAction = function() {
-        // 1. ล้างข้อมูล State
         accessToken = "";
         currentUser = "";
-        
-        // 2. 🧹 ล้างประวัติการแชท (Clear Chat)
         document.getElementById('carmenChatBody').innerHTML = '';
-
-        // 3. ปิดหน้าต่างแชท และซ่อน Widget
         document.getElementById('carmenChatWindow').classList.remove('open');
         document.getElementById('carmen-chat-widget').style.display = 'none';
-
-        // 4. แจ้งกลับไปที่หน้า index.html ให้โชว์หน้า Login
-        if(window.onCarmenLogout) {
-            window.onCarmenLogout();
-        }
+        if(window.onCarmenLogout) window.onCarmenLogout();
     };
 
     window.carmenToggleChat = function() {
-        const box = document.getElementById('carmenChatWindow');
-        box.classList.toggle('open');
+        document.getElementById('carmenChatWindow').classList.toggle('open');
     };
 
     window.carmenClearChat = function() {
         document.getElementById('carmenChatBody').innerHTML = '';
-        addMessage(`ล้างแชทเรียบร้อยค่ะ ✨`, 'bot');
+        addMessage(`ล้างแชทเรียบร้อยค่ะ ✨`, 'bot', true);
     };
 
     window.carmenCheckEnter = function(e) { if(e.key === 'Enter') window.carmenSendMessage(); };
@@ -136,7 +123,7 @@
         const text = input.value.trim();
         if(!text) return;
         
-        addMessage(text, 'user');
+        addMessage(text, 'user', false);
         input.value = '';
         document.getElementById('carmenTypingIndicator').style.display = 'block';
         scrollToBottom();
@@ -159,21 +146,67 @@
 
             const data = await response.json();
             document.getElementById('carmenTypingIndicator').style.display = 'none';
-            if(data.answer) addMessage(data.answer, 'bot');
-            else addMessage("ขออภัยค่ะ ไม่ได้รับคำตอบ", 'bot');
+            
+            if(data.answer) {
+                // ✨ เปิด Animation ตอนตอบกลับ
+                addMessage(data.answer, 'bot', true);
+            } else {
+                addMessage("ขออภัยค่ะ ไม่ได้รับคำตอบ", 'bot', true);
+            }
         } catch (error) {
             document.getElementById('carmenTypingIndicator').style.display = 'none';
-            addMessage("⚠️ Error: เชื่อมต่อไม่ได้", 'bot');
+            addMessage("⚠️ Error: เชื่อมต่อไม่ได้", 'bot', true);
         }
     };
 
-    function addMessage(text, sender) {
+    // ===============================================
+    // 🪄 Function แสดงข้อความ + Typewriter Effect
+    // ===============================================
+    function addMessage(text, sender, animate = false) {
         const body = document.getElementById('carmenChatBody');
         const div = document.createElement('div');
         div.className = `msg ${sender}`;
-        div.innerHTML = text; // อนุญาต HTML
+        
+        // แปลง Markdown ง่ายๆ (**ตัวหนา**)
+        let formattedText = text.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>').replace(/\n/g, '<br>');
+
         body.appendChild(div);
-        scrollToBottom();
+
+        if (sender === 'bot' && animate) {
+            // เริ่มโหมดพิมพ์ดีด
+            div.classList.add('typing');
+            let i = 0;
+            const speed = 20; // ความเร็วในการพิมพ์ (ms)
+
+            function typeWriter() {
+                if (i < formattedText.length) {
+                    // ถ้าเจอ tag html (เช่น <br> หรือ <b>) ให้ข้ามไปพิมพ์ทีเดียวเลย (กันโค้ดพัง)
+                    if (formattedText.charAt(i) === '<') {
+                        let tag = '';
+                        while (formattedText.charAt(i) !== '>' && i < formattedText.length) {
+                            tag += formattedText.charAt(i);
+                            i++;
+                        }
+                        tag += '>';
+                        i++;
+                        div.innerHTML += tag;
+                    } else {
+                        div.innerHTML += formattedText.charAt(i);
+                        i++;
+                    }
+                    scrollToBottom();
+                    setTimeout(typeWriter, speed);
+                } else {
+                    // พิมพ์เสร็จแล้ว
+                    div.classList.remove('typing');
+                }
+            }
+            typeWriter();
+        } else {
+            // แสดงทันที (สำหรับ user หรือตอนโหลด)
+            div.innerHTML = formattedText;
+            scrollToBottom();
+        }
     }
 
     function scrollToBottom() {

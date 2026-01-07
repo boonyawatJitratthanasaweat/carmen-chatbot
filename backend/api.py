@@ -12,8 +12,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 from pathlib import Path
 
-# Import ไฟล์ที่เราเพิ่งสร้าง
+# Import ไฟล์ระบบ
 from .database import Base, engine
+# ⚠️ แก้ตรงนี้: ลบ authenticate_user_func ออกตามที่เคยแก้ไปแล้ว
 from .auth import get_db, create_access_token, get_current_user, User as UserModel
 
 # โหลด ENV
@@ -32,7 +33,10 @@ try:
     
     prompt_template = """
     "You are a helpful female assistant named Carmen."
+    คุณมีหน้าที่ตอบคำถามโดยใช้ข้อมูลจาก Context ที่ให้มาผสมกัน
+    
     ข้อมูลอ้างอิง: {context}
+    
     คำถาม: {question}
     คำตอบ (ภาษาไทย):
     """
@@ -53,14 +57,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# --- 🔐 Login API (ขอตั๋ว) ---
+# --- 🔐 Login API ---
 @app.post("/token")
 async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
-    # 1. ค้นหา User ใน DB
     user = db.query(UserModel).filter(UserModel.username == form_data.username).first()
     
-    # 2. ตรวจสอบรหัสผ่าน (ใช้ฟังก์ชันจาก auth.py - ต้องเขียนเพิ่มใน auth หรือทำตรงนี้ก็ได้)
-    # เพื่อความง่าย ขอ import passlib ตรงนี้เพื่อเช็ค hash
+    # Import passlib ตรงนี้เพื่อความง่าย
     from passlib.context import CryptContext
     pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
     
@@ -71,40 +73,50 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
             headers={"WWW-Authenticate": "Bearer"},
         )
     
-    # 3. สร้าง Token
     access_token = create_access_token(data={"sub": user.username})
     return {"access_token": access_token, "token_type": "bearer", "client_namespace": user.client_id}
 
-# --- 💬 Chat API (ต้องมีตั๋วถึงเข้าได้) ---
+# --- 💬 Chat API (ค้นหา 2 ทาง) ---
 class Question(BaseModel):
     text: str
 
 @app.post("/chat")
 async def chat_endpoint(
     question: Question, 
-    current_user: UserModel = Depends(get_current_user) # 👈 เช็ค Token ตรงนี้!
+    current_user: UserModel = Depends(get_current_user)
 ):
     if not vectorstore: raise HTTPException(status_code=500, detail="AI Not Ready")
     
     try:
         user_message = question.text
-        # ✅ ดึง Namespace จาก User ใน Database โดยตรง (ปลอมไม่ได้แล้ว!)
         client_ns = current_user.client_id 
         
-        print(f"User: {current_user.username} | NS: {client_ns} | Msg: {user_message}")
+        print(f"User: {current_user.username} | Private NS: {client_ns} | Searching Both...")
 
-        # RAG Process (เหมือนเดิม)
-        docs = []
-        if client_ns:
-            docs = vectorstore.similarity_search(user_message, k=3, namespace=client_ns)
+        # ✅ 1. ค้นหาในกล่องส่วนตัว (Private Knowledge)
+        docs_private = []
+        if client_ns and client_ns != "global":
+            # หา 2 อันดับแรกที่ตรงที่สุดในกล่องส่วนตัว
+            docs_private = vectorstore.similarity_search(user_message, k=2, namespace=client_ns)
+
+        # ✅ 2. ค้นหาในกล่องกลาง (Common/Default Knowledge)
+        # ใน Pinecone ค่าเริ่มต้นคือ namespace="" (ว่าง) หรือบางคนใช้ "global"
+        # แต่ user แจ้งว่าใช้ namespace "__default__" ถ้าใช้ชื่อนี้จริงให้แก้บรรทัดล่างเป็น namespace="__default__"
+        # แต่ถ้าหมายถึงค่า Default ของ Pinecone ให้ใช้ "" (String ว่าง) ครับ
         
-        if not docs:
-            docs = vectorstore.similarity_search(user_message, k=3, namespace="") # fallback global
+        docs_global = vectorstore.similarity_search(user_message, k=2, namespace="") 
+        
+        # ✅ 3. มัดรวมข้อมูล (Merge)
+        # เอาข้อมูลส่วนตัวขึ้นก่อน + ตามด้วยข้อมูลส่วนกลาง
+        all_docs = docs_private + docs_global
 
-        if not docs: return {"answer": "ไม่พบข้อมูลค่ะ"}
+        if not all_docs:
+            return {"answer": "ไม่พบข้อมูลที่เกี่ยวข้องทั้งในส่วนตัวและส่วนกลางค่ะ"}
 
+        # ส่งเข้าสมอง AI
         chain = PROMPT | llm | StrOutputParser()
-        context_text = "\n\n".join([d.page_content for d in docs])
+        context_text = "\n\n".join([d.page_content for d in all_docs])
+        
         response = chain.invoke({"context": context_text, "question": user_message})
         
         return {"answer": response}
