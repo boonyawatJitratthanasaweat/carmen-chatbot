@@ -18,11 +18,12 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 30 * 24 * 60  # 60 วัน
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
-# --- 1. Database Models ---
+# --- Database Models ---
+
+# ประกาศ Class User
 class User(Base):
     __tablename__ = "users"
-    # 👇 เพิ่มบรรทัดนี้ เพื่อบอกว่าถ้ามีตารางอยู่แล้ว ให้ใช้ต่อได้เลย ไม่ต้อง Error
-    __table_args__ = {'extend_existing': True} 
+    __table_args__ = {'extend_existing': True} # ป้องกัน Error สร้างตารางซ้ำ
     
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String, unique=True, index=True)
@@ -31,20 +32,21 @@ class User(Base):
     disabled = Column(Boolean, default=False)
     client_id = Column(String, default="global")
     
-    # เชื่อมโยงไปหา ChatHistory
+    # ใช้ String "ChatHistory" แทน Class โดยตรง เพื่อป้องกัน Circular Import
     history = relationship("ChatHistory", back_populates="owner")
 
+# ประกาศ Class ChatHistory
 class ChatHistory(Base):
     __tablename__ = "chat_history"
-    # 👇 เพิ่มบรรทัดนี้เช่นกัน
     __table_args__ = {'extend_existing': True}
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"))  # ผูกกับ User
+    user_id = Column(Integer, ForeignKey("users.id"))
     sender = Column(String)   # 'user' หรือ 'bot'
-    message = Column(Text)    # ข้อความ
-    timestamp = Column(DateTime, default=datetime.utcnow) # เวลาที่ส่ง
+    message = Column(Text)
+    timestamp = Column(DateTime, default=datetime.utcnow)
     
+    # ใช้ String "User" แทน Class
     owner = relationship("User", back_populates="history")
 
 # --- Helper Functions ---
