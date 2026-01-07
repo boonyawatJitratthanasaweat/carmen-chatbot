@@ -2,6 +2,15 @@
     // ⚠️ แก้ URL ตรงนี้ให้เป็นของคุณ
     const API_URL_CHAT = "https://carmen-chatbot-api.onrender.com/chat"; 
 
+    // 💡 รายการคำถามแนะนำ (แก้ไขตรงนี้ได้เลย)
+    const SUGGESTED_QUESTIONS = [
+        "Voucher มีกี่ประเภทอะไรบ้าง",
+        "ขั้นตอน Create Vendor มีอะไรบ้าง",
+        "A/R คืออะไร",
+        "Carmen Add-in ใช้ทำอะไร",
+        "นโยบายการเงิน"
+    ];
+
     let accessToken = "";
     let currentUser = "";
     
@@ -14,7 +23,7 @@
         document.body.appendChild(container);
     }
 
-    // CSS Style
+    // CSS Style (✨ เพิ่ม .suggestion-chip)
     const styles = `
       @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600&display=swap');
       #carmen-chat-widget { position: fixed; bottom: 20px; right: 20px; z-index: 99990; font-family: 'Sarabun', sans-serif; }
@@ -33,15 +42,57 @@
       .icon-btn svg { width: 20px; height: 20px; fill: white; }
 
       .chat-body { flex: 1; padding: 20px; overflow-y: auto; background: #f8f9fa; display: flex; flex-direction: column; gap: 10px; }
+      
       .msg { max-width: 85%; padding: 10px 14px; font-size: 14px; line-height: 1.6; border-radius: 12px; word-wrap: break-word; position: relative; }
       .msg.user { background: #000; color: white; align-self: flex-end; border-radius: 18px 18px 4px 18px; }
-      .msg.bot { background: white; color: #333; align-self: flex-start; border-radius: 18px 18px 18px 4px; border: 1px solid #ddd; }
       
-      /* Animation Cursor */
+      .msg.bot { 
+          background: white; 
+          color: #333; 
+          align-self: flex-start; 
+          border-radius: 18px 18px 18px 4px; 
+          border: 1px solid #ddd; 
+          padding-bottom: 28px; 
+      }
+      .msg.bot:hover .copy-btn { opacity: 1; }
+
+      /* ✅ CSS สำหรับปุ่มคำถามแนะนำ */
+      .suggestions-container { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 5px; margin-bottom: 10px; padding: 0 10px; animation: fadeIn 0.5s ease; }
+      .suggestion-chip {
+          background: #fff;
+          border: 1px solid #ddd;
+          border-radius: 16px;
+          padding: 8px 14px;
+          font-size: 13px;
+          color: #555;
+          cursor: pointer;
+          transition: all 0.2s;
+          white-space: nowrap;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+      }
+      .suggestion-chip:hover {
+          background: #000;
+          color: #fff;
+          border-color: #000;
+          transform: translateY(-2px);
+      }
+
+      .copy-btn {
+          position: absolute;
+          bottom: 4px; right: 6px;
+          width: 24px; height: 24px;
+          background: transparent; border: none; cursor: pointer;
+          opacity: 0; transition: opacity 0.2s;
+          display: flex; align-items: center; justify-content: center;
+          border-radius: 4px; z-index: 10;
+      }
+      .copy-btn:hover { background: #f0f0f0; }
+      .copy-btn svg { width: 14px; height: 14px; fill: #aaa; }
+      .copy-btn.copied svg { fill: #10b981; }
+
       .msg.bot.typing::after { content: '▋'; animation: blink 1s infinite; font-size: 12px; margin-left: 2px; }
       @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
 
-      /* Video Wrapper */
       .video-wrapper { position: relative; width: 100%; padding-bottom: 56.25%; height: 0; margin-top: 10px; margin-bottom: 5px; border-radius: 12px; overflow: hidden; background: #000; animation: fadeIn 0.5s ease; }
       .video-wrapper iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0; }
       @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
@@ -97,6 +148,8 @@
         const body = document.getElementById('carmenChatBody');
         if(body.innerHTML === '') {
             addMessage(`สวัสดีค่ะคุณ ${username} 👋<br>มีอะไรให้ Carmen ช่วยไหมคะ?`, 'bot', true);
+            // ✨ แสดงคำถามแนะนำหลังจากทักทาย
+            setTimeout(() => addSuggestions(), 1000); 
         }
     };
 
@@ -116,6 +169,7 @@
     window.carmenClearChat = function() {
         document.getElementById('carmenChatBody').innerHTML = '';
         addMessage(`ล้างแชทเรียบร้อยค่ะ ✨`, 'bot', true);
+        setTimeout(() => addSuggestions(), 1000); // โชว์คำถามแนะนำอีกรอบหลังล้างแชท
     };
 
     window.carmenCheckEnter = function(e) { if(e.key === 'Enter') window.carmenSendMessage(); };
@@ -127,6 +181,11 @@
         
         addMessage(text, 'user', false);
         input.value = '';
+        
+        // ลบ suggestions เดิมออก (เพื่อให้แชทสะอาด)
+        const suggestions = document.querySelectorAll('.suggestions-container');
+        suggestions.forEach(el => el.style.display = 'none');
+
         document.getElementById('carmenTypingIndicator').style.display = 'block';
         scrollToBottom();
 
@@ -166,50 +225,90 @@
         return match ? match[1] : null;
     }
 
+    // ✅ ฟังก์ชันเพิ่มปุ่มคำถามแนะนำ
+    function addSuggestions() {
+        const body = document.getElementById('carmenChatBody');
+        const div = document.createElement('div');
+        div.className = 'suggestions-container';
+
+        SUGGESTED_QUESTIONS.forEach(q => {
+            const chip = document.createElement('div');
+            chip.className = 'suggestion-chip';
+            chip.innerText = q;
+            chip.onclick = function() {
+                // กดปุ่มแล้วส่งข้อความเลย
+                document.getElementById('carmenUserInput').value = q;
+                window.carmenSendMessage();
+            };
+            div.appendChild(chip);
+        });
+
+        body.appendChild(div);
+        scrollToBottom();
+    }
+
     // ===============================================
-    // 🪄 Function แสดงข้อความ + Typewriter + แยก Video มาต่อท้าย
+    // 🪄 Main Message Function
     // ===============================================
     function addMessage(text, sender, animate = false) {
         const body = document.getElementById('carmenChatBody');
         const div = document.createElement('div');
         div.className = `msg ${sender}`;
         
-        // 1. แปลง Markdown พื้นฐาน
         let formattedText = text.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>').replace(/\n/g, '<br>');
 
-        // 2. ✨ แยก Video ออกจากข้อความ (เพื่อไม่ให้กวน Animation)
         let videoContent = "";
         const urlRegex = /(https?:\/\/(?:www\.)?(?:youtube\.com|youtu\.be)[^\s<)"']+)/g;
-        
         formattedText = formattedText.replace(urlRegex, (url) => {
             const videoId = getYoutubeId(url);
             if (videoId) {
-                // เก็บ HTML ของ Video ไว้แปะทีหลัง
                 videoContent += `<div class="video-wrapper"><iframe src="https://www.youtube.com/embed/${videoId}?rel=0" frameborder="0" allowfullscreen></iframe></div>`;
-                // ในข้อความ ให้แสดงเป็นลิงก์แทน
                 return `<a href="${url}" target="_blank" style="color:#2563eb; text-decoration:underline;">(ลิงก์วิดีโอ)</a>`; 
             }
             return `<a href="${url}" target="_blank" style="color:#2563eb;">เปิดลิงก์</a>`;
         });
 
+        let copyBtnHTML = '';
+        if (sender === 'bot') {
+            copyBtnHTML = `
+                <button class="copy-btn" title="คัดลอก">
+                    <svg viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+                </button>
+            `;
+        }
+
         body.appendChild(div);
 
+        function attachCopyEvent() {
+            const btn = div.querySelector('.copy-btn');
+            if (btn) {
+                btn.onclick = function() {
+                    const rawText = text.replace(/\*\*/g, '').replace(/<br>/g, '\n'); 
+                    navigator.clipboard.writeText(rawText).then(() => {
+                        btn.classList.add('copied');
+                        btn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>`;
+                        setTimeout(() => {
+                            btn.classList.remove('copied');
+                            btn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>`;
+                        }, 2000);
+                    });
+                };
+            }
+        }
+
         if (sender === 'bot' && animate) {
-            // เริ่มโหมดพิมพ์ดีด (เฉพาะข้อความ)
             div.classList.add('typing');
+            div.innerHTML = copyBtnHTML; 
+            
             let i = 0;
-            const speed = 15; // ความเร็วในการพิมพ์
+            const speed = 15;
 
             function typeWriter() {
                 if (i < formattedText.length) {
                     if (formattedText.charAt(i) === '<') {
                         let tag = '';
-                        while (formattedText.charAt(i) !== '>' && i < formattedText.length) {
-                            tag += formattedText.charAt(i);
-                            i++;
-                        }
-                        tag += '>';
-                        i++;
+                        while (formattedText.charAt(i) !== '>' && i < formattedText.length) { tag += formattedText.charAt(i); i++; }
+                        tag += '>'; i++;
                         div.innerHTML += tag;
                     } else {
                         div.innerHTML += formattedText.charAt(i);
@@ -218,18 +317,17 @@
                     scrollToBottom();
                     setTimeout(typeWriter, speed);
                 } else {
-                    // ✅ พิมพ์ข้อความเสร็จแล้ว -> ลบเคอร์เซอร์ -> แปะวิดีโอต่อท้าย
                     div.classList.remove('typing');
-                    if (videoContent) {
-                        div.innerHTML += videoContent; // 🎥 วิดีโอจะโผล่มาตอนนี้
-                        scrollToBottom();
-                    }
+                    div.innerHTML = formattedText + videoContent + copyBtnHTML;
+                    attachCopyEvent();
+                    scrollToBottom();
                 }
             }
+            div.innerHTML = ""; 
             typeWriter();
         } else {
-            // กรณีไม่ Animate (User หรือโหลดเก่า)
-            div.innerHTML = formattedText + videoContent;
+            div.innerHTML = formattedText + videoContent + copyBtnHTML;
+            attachCopyEvent();
             scrollToBottom();
         }
     }
