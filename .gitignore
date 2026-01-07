@@ -3,8 +3,6 @@ __pycache__/
 *.env
 
 ingest*.py
-index.html
-carmen-bot.js
 
 *.pyc
 backend/.env
