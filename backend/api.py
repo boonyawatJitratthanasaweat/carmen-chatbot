@@ -6,12 +6,14 @@ from langchain_google_genai import GoogleGenerativeAIEmbeddings, ChatGoogleGener
 from langchain_pinecone import PineconeVectorStore
 from langchain_core.prompts import PromptTemplate
 from langchain_core.output_parsers import StrOutputParser
-from langchain_core.runnables import RunnablePassthrough
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
+from pathlib import Path
 
-# โหลด Environment Variables
-load_dotenv()
+# --- 🔧 FIX: โหลด .env จากโฟลเดอร์เดียวกันกับไฟล์นี้เสมอ ---
+# ไม่ว่าจะรันจาก Root หรือจาก backend ก็จะหาไฟล์ .env เจอ
+env_path = Path(__file__).parent / '.env'
+load_dotenv(dotenv_path=env_path)
 
 # --- ตั้งค่า App ---
 app = FastAPI()
@@ -25,25 +27,22 @@ app.add_middleware(
 )
 
 # --- Config ---
-INDEX_NAME = "docscarmencloud" # ชื่อ Index ของคุณ
+# ถ้าหา ENV ไม่เจอ ให้ใช้ค่า Default (ป้องกัน Error ตอน Deploy ถ้าลืมตั้ง)
+INDEX_NAME = os.environ.get("PINECONE_INDEX_NAME", "docscarmencloud")
 
-# --- โหลดสมอง (Global Variable) ---
+# --- โหลดสมอง ---
 print("🧠 กำลังโหลดสมอง AI... (Gemini + Pinecone)")
 
 try:
-    # 1. Setup Embeddings & LLM
     embeddings = GoogleGenerativeAIEmbeddings(model="models/text-embedding-004")
-    
-    # เชื่อม Pinecone (ยังไม่กำหนด namespace ตายตัวตรงนี้)
     vectorstore = PineconeVectorStore(index_name=INDEX_NAME, embedding=embeddings)
     
     llm = ChatGoogleGenerativeAI(
         model="gemma-3-27b-it", 
         temperature=0.3,
-        google_api_key=os.environ["GOOGLE_API_KEY"]
+        google_api_key=os.environ.get("GOOGLE_API_KEY")
     )
 
-    # 2. Setup Prompt
     prompt_template = """
     "You are a helpful female assistant named Carmen. Always answer in Thai using polite female particles (ค่ะ/คะ)."
     คุณเป็น AI Support ของ CARMEN 
@@ -57,7 +56,6 @@ try:
     คำตอบ (ภาษาไทย, สุภาพ, กระชับ):
     """
     PROMPT = PromptTemplate(template=prompt_template, input_variables=["context", "question"])
-
     print("✅ สมองพร้อมใช้งานแล้ว!")
 
 except Exception as e:
@@ -65,16 +63,13 @@ except Exception as e:
     vectorstore = None
     llm = None
 
-# --- กำหนดรูปแบบคำถาม (เพิ่ม client_id) ---
 class Question(BaseModel):
     text: str
-    client_id: str = "" # ค่า Default เป็นค่าว่าง
+    client_id: str = ""
 
-# --- Helper Function: รวมเนื้อหาเอกสาร ---
 def format_docs(docs):
     return "\n\n".join(doc.page_content for doc in docs)
 
-# --- สร้างประตูรับคำถาม ---
 @app.post("/chat")
 async def chat_endpoint(question: Question):
     if not vectorstore or not llm:
@@ -82,60 +77,36 @@ async def chat_endpoint(question: Question):
     
     try:
         user_message = question.text
-        client_ns = question.client_id.strip() # ตัดช่องว่างหน้าหลัง
-        
+        client_ns = question.client_id.strip()
         print(f"📩 คำถาม: {user_message} | 🏢 Namespace: '{client_ns}'")
 
-        # ---------------------------------------------------------
-        # 🔍 ขั้นตอนที่ 1: ค้นหาใน Namespace ของลูกค้า (Private)
-        # ---------------------------------------------------------
         docs = []
+        # 1. หาใน Private Namespace
         if client_ns:
             try:
-                print(f"   running search in: {client_ns}")
-                docs = vectorstore.similarity_search(
-                    user_message, 
-                    k=3, 
-                    namespace=client_ns
-                )
-            except Exception as ns_err:
-                print(f"   ⚠️ Warning searching namespace: {ns_err}")
+                docs = vectorstore.similarity_search(user_message, k=3, namespace=client_ns)
+            except Exception:
+                pass
 
-        # ---------------------------------------------------------
-        # 🔍 ขั้นตอนที่ 2: ถ้าไม่เจอ (หรือไม่มี client_id) ให้หาใน Global
-        # ---------------------------------------------------------
+        # 2. หาใน Global Namespace (ค่าว่าง)
         if not docs:
-            print("   🚫 ไม่เจอข้อมูลส่วนตัว -> ค้นหาใน Global (Default)")
-            # Pinecone Default Namespace คือค่าว่าง ""
-            docs = vectorstore.similarity_search(
-                user_message, 
-                k=3, 
-                namespace="" 
-            )
+            print("   Search Global...")
+            docs = vectorstore.similarity_search(user_message, k=3, namespace="")
 
-        # ถ้าหาทั้ง 2 ที่แล้วไม่เจออะไรเลย
         if not docs:
             return {"answer": "ขออภัยค่ะ ไม่พบข้อมูลเกี่ยวกับเรื่องนี้ในระบบค่ะ"}
 
-        # ---------------------------------------------------------
-        # 🧠 ขั้นตอนที่ 3: ส่งให้ AI ตอบ (RAG)
-        # ---------------------------------------------------------
-        # แปลง Docs เป็น Text ก้อนเดียว
+        # 3. ตอบคำถาม
         context_text = format_docs(docs)
-        
-        # สร้าง Chain แบบ Manual (ยืดหยุ่นกว่า RetrievalQA)
         chain = PROMPT | llm | StrOutputParser()
-        
-        # รันคำสั่ง
         response = chain.invoke({"context": context_text, "question": user_message})
         
         return {"answer": response}
 
     except Exception as e:
         print(f"❌ Error: {e}")
-        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
-# เช็คว่าถ้าสั่งรันไฟล์นี้ตรงๆ ให้เริ่ม Server เลย
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     uvicorn.run(app, host="0.0.0.0", port=port)

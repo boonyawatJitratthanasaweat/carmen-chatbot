@@ -5,3 +5,7 @@ __pycache__/
 ingest*.py
 index.html
 carmen-bot.js
+
+*.pyc
+backend/.env
+scripts/

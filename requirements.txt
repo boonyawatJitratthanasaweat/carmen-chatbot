@@ -8,3 +8,5 @@ langchain-pinecone
 pinecone-client
 pydantic
 requests
+python-dotenv
+
