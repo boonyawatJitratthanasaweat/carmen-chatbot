@@ -1,20 +1,18 @@
 (function() {
-    // ⚠️ แก้ URL ตรงนี้ให้เป็นของคุณ
     const API_URL_CHAT = "https://carmen-chatbot-api.onrender.com/chat"; 
+    // ✅ เพิ่ม URL สำหรับ History
+    const API_URL_HISTORY = "https://carmen-chatbot-api.onrender.com/chat/history";
 
-    // 💡 รายการคำถามแนะนำ (แก้ไขตรงนี้ได้เลย)
     const SUGGESTED_QUESTIONS = [
-        "Voucher มีกี่ประเภทอะไรบ้าง",
-        "ขั้นตอน Create Vendor มีอะไรบ้าง",
-        "A/R คืออะไร",
-        "Carmen Add-in ใช้ทำอะไร",
-        "นโยบายการเงิน"
+        "วิธีบันทึกข้อมูล",
+        "การคำนวณค่าเสื่อมราคา",
+        "วิธีสร้างรหัสลูกหนี้",
+        "ยกเลิกรายการอย่างไร"
     ];
 
     let accessToken = "";
     let currentUser = "";
     
-    // สร้าง Widget Container
     let container = document.getElementById('carmen-chat-widget');
     if (!container) {
         container = document.createElement('div');
@@ -23,7 +21,6 @@
         document.body.appendChild(container);
     }
 
-    // CSS Style (✨ เพิ่ม .suggestion-chip)
     const styles = `
       @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600&display=swap');
       #carmen-chat-widget { position: fixed; bottom: 20px; right: 20px; z-index: 99990; font-family: 'Sarabun', sans-serif; }
@@ -56,7 +53,6 @@
       }
       .msg.bot:hover .copy-btn { opacity: 1; }
 
-      /* ✅ CSS สำหรับปุ่มคำถามแนะนำ */
       .suggestions-container { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 5px; margin-bottom: 10px; padding: 0 10px; animation: fadeIn 0.5s ease; }
       .suggestion-chip {
           background: #fff;
@@ -138,7 +134,7 @@
     `;
 
     // Global Functions
-    window.carmenStartSession = function(token, username) {
+    window.carmenStartSession = async function(token, username) {
         accessToken = token;
         currentUser = username;
         document.getElementById('carmen-chat-widget').style.display = 'block';
@@ -146,11 +142,41 @@
         document.getElementById('carmenChatWindow').classList.add('open');
 
         const body = document.getElementById('carmenChatBody');
-        if(body.innerHTML === '') {
+        body.innerHTML = ''; // ล้างของเก่าก่อนเสมอ กันซ้ำ
+
+        // ✅ โหลดประวัติแชทจาก Server
+        try {
+            const res = await fetch(API_URL_HISTORY, {
+                headers: { 'Authorization': `Bearer ${accessToken}` }
+            });
+            if (res.ok) {
+                const history = await res.json();
+                if (history.length > 0) {
+                    // ถ้ามีประวัติ ให้วนลูปแสดงผล (แบบไม่อนิเมท)
+                    history.forEach(msg => {
+                        addMessage(msg.message, msg.sender, false);
+                    });
+                    // ขีดเส้นแบ่งว่า "จบประวัติเก่า"
+                    const divider = document.createElement('div');
+                    divider.style.textAlign = 'center';
+                    divider.style.fontSize = '10px';
+                    divider.style.color = '#ccc';
+                    divider.style.margin = '10px 0';
+                    divider.innerText = '--- ประวัติการสนทนาล่าสุด ---';
+                    body.appendChild(divider);
+                } else {
+                     // ถ้าไม่มีประวัติเก่าเลย ให้ทักทายใหม่
+                    addMessage(`สวัสดีค่ะคุณ ${username} 👋<br>มีอะไรให้ Carmen ช่วยไหมคะ?`, 'bot', true);
+                }
+            }
+        } catch (e) {
+            console.error("Failed to load history", e);
+            // ถ้าโหลดไม่ได้ ก็ทักทายปกติ
             addMessage(`สวัสดีค่ะคุณ ${username} 👋<br>มีอะไรให้ Carmen ช่วยไหมคะ?`, 'bot', true);
-            // ✨ แสดงคำถามแนะนำหลังจากทักทาย
-            setTimeout(() => addSuggestions(), 1000); 
         }
+
+        // โชว์คำถามแนะนำเสมอ
+        setTimeout(() => addSuggestions(), 1000); 
     };
 
     window.carmenLogoutAction = function() {
@@ -167,9 +193,10 @@
     };
 
     window.carmenClearChat = function() {
+        // อันนี้ล้างแค่หน้าจอ ไม่ได้ลบ DB (ถ้าจะลบ DB ต้องทำ API เพิ่ม)
         document.getElementById('carmenChatBody').innerHTML = '';
-        addMessage(`ล้างแชทเรียบร้อยค่ะ ✨`, 'bot', true);
-        setTimeout(() => addSuggestions(), 1000); // โชว์คำถามแนะนำอีกรอบหลังล้างแชท
+        addMessage(`ล้างแชทหน้าจอเรียบร้อยค่ะ ✨`, 'bot', true);
+        setTimeout(() => addSuggestions(), 1000);
     };
 
     window.carmenCheckEnter = function(e) { if(e.key === 'Enter') window.carmenSendMessage(); };
@@ -182,7 +209,6 @@
         addMessage(text, 'user', false);
         input.value = '';
         
-        // ลบ suggestions เดิมออก (เพื่อให้แชทสะอาด)
         const suggestions = document.querySelectorAll('.suggestions-container');
         suggestions.forEach(el => el.style.display = 'none');
 
@@ -219,15 +245,16 @@
         }
     };
 
-    // Helper: ดึง ID YouTube
     function getYoutubeId(url) {
         const match = url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/);
         return match ? match[1] : null;
     }
 
-    // ✅ ฟังก์ชันเพิ่มปุ่มคำถามแนะนำ
     function addSuggestions() {
         const body = document.getElementById('carmenChatBody');
+        // เช็คว่ามี suggestion อยู่แล้วไหม ถ้ามีไม่ต้องเพิ่มซ้ำ
+        if (body.querySelector('.suggestions-container')) return;
+
         const div = document.createElement('div');
         div.className = 'suggestions-container';
 
@@ -236,7 +263,6 @@
             chip.className = 'suggestion-chip';
             chip.innerText = q;
             chip.onclick = function() {
-                // กดปุ่มแล้วส่งข้อความเลย
                 document.getElementById('carmenUserInput').value = q;
                 window.carmenSendMessage();
             };
@@ -247,9 +273,6 @@
         scrollToBottom();
     }
 
-    // ===============================================
-    // 🪄 Main Message Function
-    // ===============================================
     function addMessage(text, sender, animate = false) {
         const body = document.getElementById('carmenChatBody');
         const div = document.createElement('div');
