@@ -1,3 +1,4 @@
+import datetime
 from fastapi import FastAPI, HTTPException, Depends, status
 from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel
@@ -193,6 +194,47 @@ async def feedback_endpoint(
 # ==========================================
 # 👇 แปะส่วนนี้ไว้ล่างสุดของไฟล์ backend/api.py
 # ==========================================
+
+class TrainingRequest(BaseModel):
+    text: str
+    namespace: str = "" # ถ้าไม่ระบุ ถือเป็น Global
+
+@app.post("/train")
+async def train_data(
+    request: TrainingRequest,
+    current_user: UserModel = Depends(get_current_user), # บังคับ Login
+    db: Session = Depends(get_db)
+):
+    # 🔒 Security Check: กันไม่ให้ User ทั่วไปมากดสอนเล่น
+    # (สมมติว่าถ้า namespace ไม่ตรงกับ user ก็ห้ามสอน ยกเว้นเป็น global admin)
+    if current_user.client_id != "global" and request.namespace != current_user.client_id:
+         raise HTTPException(status_code=403, detail="คุณไม่มีสิทธิ์สอนในหัวข้อนี้")
+
+    if not vectorstore:
+        raise HTTPException(status_code=500, detail="เชื่อมต่อ Pinecone ไม่ได้")
+
+    try:
+        print(f"🧠 Learning: {request.text[:50]}... -> Namespace: {request.namespace}")
+        
+        # ✅ หัวใจสำคัญ: ส่งข้อมูลขึ้น Pinecone
+        vectorstore.add_texts(
+            texts=[request.text],
+            metadatas=[{
+                "source": "admin_manual_input", # ระบุที่มา
+                "added_by": current_user.username,
+                "timestamp": str(datetime.utcnow())
+            }],
+            namespace=request.namespace
+        )
+        
+        return {"status": "success", "message": "จำข้อมูลใหม่เรียบร้อยแล้วค่ะ! 💾"}
+
+    except Exception as e:
+        print(f"Training Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
 
 @app.get("/debug/init-db")
 async def init_database_endpoint(db: Session = Depends(get_db)):

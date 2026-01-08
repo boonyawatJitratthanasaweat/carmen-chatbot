@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carmen Trainer - สอนบอท</title>
+    <style>
+        body { font-family: 'Sarabun', sans-serif; max-width: 600px; margin: 40px auto; padding: 20px; background: #f3f4f6; }
+        .card { background: white; padding: 30px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        h2 { margin-top: 0; color: #111827; }
+        label { display: block; margin-bottom: 8px; font-weight: bold; color: #374151; }
+        
+        textarea { width: 100%; height: 150px; padding: 12px; border: 1px solid #d1d5db; border-radius: 8px; font-family: inherit; margin-bottom: 20px; resize: vertical; }
+        select { width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 8px; margin-bottom: 20px; }
+        
+        button { background: #000; color: white; border: none; padding: 12px 24px; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%; transition: 0.2s; }
+        button:hover { background: #2563eb; transform: translateY(-1px); }
+        button:disabled { background: #9ca3af; cursor: not-allowed; }
+
+        .status { margin-top: 15px; padding: 10px; border-radius: 6px; display: none; text-align: center; font-size: 14px; }
+        .success { background: #d1fae5; color: #065f46; }
+        .error { background: #fee2e2; color: #991b1b; }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <div class="card">
+        <h2>👩‍🏫 สอนความรู้ใหม่ให้ Carmen</h2>
+        <p style="color:#6b7280; font-size:14px; margin-bottom:20px;">
+            ข้อมูลที่พิมพ์ที่นี่จะถูกส่งเข้าสมอง (Pinecone) ทันทีและบอทจะจำได้ตลอดไป
+        </p>
+
+        <label>เนื้อหาความรู้ใหม่ (Knowledge):</label>
+        <textarea id="knowledgeInput" placeholder="ตัวอย่าง: เบอร์ติดต่อฝ่ายไอทีคือ 02-xxx-xxxx หรือ ขั้นตอนการเบิกจ่ายใหม่คือ..."></textarea>
+
+        <label>สอนให้ใครรู้? (Namespace):</label>
+        <select id="namespaceInput">
+            <option value="">🌐 ทุกคน (Global)</option>
+            <option value="hotel-seaside">🏖️ เฉพาะ Seaside</option>
+            <option value="hotel-city">🏙️ เฉพาะ City</option>
+        </select>
+
+        <button onclick="sendData()" id="sendBtn">บันทึกความรู้ 💾</button>
+        <div id="statusMsg" class="status"></div>
+    </div>
+
+    <script>
+        // ⚠️ ใส่ Token แอดมินตรงนี้ (ในการใช้งานจริงควรดึงจาก LocalStorage หลัง Login)
+        const ADMIN_TOKEN = "YOUR_ADMIN_TOKEN_HERE"; 
+        const API_URL = "https://carmen-chatbot-api.onrender.com/train";
+
+        async function sendData() {
+            const text = document.getElementById('knowledgeInput').value.trim();
+            const ns = document.getElementById('namespaceInput').value;
+            const btn = document.getElementById('sendBtn');
+            const status = document.getElementById('statusMsg');
+
+            if (!text) {
+                alert("กรุณาพิมพ์เนื้อหาก่อนค่ะ!");
+                return;
+            }
+
+            // UI Loading
+            btn.innerText = "กำลังบันทึก...";
+            btn.disabled = true;
+            status.style.display = 'none';
+
+            try {
+                const res = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${ADMIN_TOKEN}` // ส่ง Token ไปยืนยันตัวตน
+                    },
+                    body: JSON.stringify({ text: text, namespace: ns })
+                });
+
+                const data = await res.json();
+
+                if (res.ok) {
+                    status.className = "status success";
+                    status.innerText = "✅ " + data.message;
+                    document.getElementById('knowledgeInput').value = ""; // ล้างช่อง
+                } else {
+                    status.className = "status error";
+                    status.innerText = "❌ Error: " + (data.detail || "บันทึกไม่สำเร็จ");
+                }
+            } catch (err) {
+                status.className = "status error";
+                status.innerText = "❌ Connection Error: " + err.message;
+            } finally {
+                status.style.display = 'block';
+                btn.innerText = "บันทึกความรู้ 💾";
+                btn.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>
