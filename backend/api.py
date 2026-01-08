@@ -15,6 +15,15 @@ from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 from pathlib import Path
 from backend.auth import get_password_hash 
+from fastapi import UploadFile, File
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_community.document_loaders import PyPDFLoader
+import pandas as pd
+import io
+
+from github import Github
+from langchain.schema import Document
+from fastapi import BackgroundTasks
 
 
 # Import ไฟล์ระบบ
@@ -279,6 +288,181 @@ async def init_database_endpoint(db: Session = Depends(get_db)):
     except Exception as e:
         print(f"❌ Error: {e}")
         return {"status": "error", "message": str(e)}
+def get_github_docs(repo_name, access_token):
+    print(f"🕵️‍♂️ Connecting to GitHub Repo: {repo_name}")
+    docs = []
+    try:
+        g = Github(access_token)
+        repo = g.get_repo(repo_name)
+        contents = repo.get_contents("")
+        
+        while contents:
+            file_content = contents.pop(0)
+            if file_content.type == "dir":
+                contents.extend(repo.get_contents(file_content.path))
+            else:
+                # รองรับ md, mdx และ txt
+                if file_content.path.endswith((".md", ".mdx", ".txt")):
+                    try:
+                        decoded_content = file_content.decoded_content.decode("utf-8")
+                        docs.append(Document(
+                            page_content=decoded_content,
+                            metadata={"source": file_content.html_url} # เก็บ Link ไว้กดดูทีหลัง
+                        ))
+                        print(f"   - Found: {file_content.path}")
+                    except Exception as e:
+                        print(f"   - Error reading {file_content.path}: {e}")
+        return docs
+    except Exception as e:
+        print(f"❌ GitHub Error: {e}")
+        return []
+
+# ----------------------------------------------
+# ⚙️ ฟังก์ชันประมวลผลเบื้องหลัง (Background Task)
+# ----------------------------------------------
+def process_github_training(repo_name: str, token: str, namespace: str, user_name: str):
+    print(f"🚀 Started GitHub Processing: {repo_name}")
+    
+    # 1. ดูดข้อมูล
+    docs = get_github_docs(repo_name, token)
+    if not docs:
+        print("❌ ไม่พบเอกสารใน Repo นี้")
+        return
+
+    # 2. หั่นข้อมูล (Split)
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+    chunks = text_splitter.split_documents(docs)
+    print(f"✂️ หั่นได้ทั้งหมด {len(chunks)} ชิ้น")
+
+    # 3. เตรียม Metadata
+    for chunk in chunks:
+        chunk.metadata["added_by"] = user_name
+        chunk.metadata["timestamp"] = str(datetime.now())
+        chunk.metadata["source_type"] = "github_repo"
+
+    # 4. ทยอยส่ง (Safe Mode Batching Logic จากคุณ) 🛡️
+    batch_size = 30  
+    sleep_time = 20  
+    total_chunks = len(chunks)
+
+    try:
+        for i in range(0, total_chunks, batch_size):
+            batch = chunks[i : i + batch_size]
+            print(f"📦 Sending Batch {i // batch_size + 1} ({i}/{total_chunks})...")
+            
+            # ส่งเข้า Pinecone (ใช้ vectorstore ตัวเดิมใน api.py)
+            vectorstore.add_documents(documents=batch, namespace=namespace)
+            
+            print(f"   ✅ Batch Done! Sleeping {sleep_time}s...")
+            import time
+            time.sleep(sleep_time) # พักกัน API Limit
+            
+        print(f"🎉 GitHub Import Finished: {repo_name}")
+        
+    except Exception as e:
+        print(f"⚠️ Error during Pinecone upload: {e}")
+
+# ----------------------------------------------
+# 🌐 API Endpoint
+# ----------------------------------------------
+class GithubRequest(BaseModel):
+    repo_name: str
+    github_token: str
+    namespace: str = ""
+
+@app.post("/train/github")
+async def train_github(
+    request: GithubRequest,
+    background_tasks: BackgroundTasks, # รับ parameter นี้
+    current_user: UserModel = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    if current_user.client_id != "global" and request.namespace != current_user.client_id:
+         raise HTTPException(status_code=403, detail="ไม่มีสิทธิ์")
+
+    # สั่งให้ทำงานเบื้องหลัง (User จะได้ไม่ต้องรอบนหน้าเว็บนานๆ)
+    background_tasks.add_task(
+        process_github_training, 
+        request.repo_name, 
+        request.github_token, 
+        request.namespace, 
+        current_user.username
+    )
+    
+    return {"status": "success", "message": f"ระบบเริ่มดูดข้อมูลจาก {request.repo_name} แล้ว! (ทำงานเบื้องหลัง)"}
+    
+@app.post("/train/upload")
+async def train_upload(
+        file: UploadFile = File(...),
+        namespace: str = "", 
+        source: str = "File Upload",
+        current_user: UserModel = Depends(get_current_user),
+        db: Session = Depends(get_db)
+    ):
+        # Security Check
+        if current_user.client_id != "global" and namespace != current_user.client_id:
+            raise HTTPException(status_code=403, detail="คุณไม่มีสิทธิ์สอนในหัวข้อนี้")
+        
+        if not vectorstore:
+            raise HTTPException(status_code=500, detail="เชื่อมต่อ Pinecone ไม่ได้")
+
+        text_content = ""
+        filename = file.filename.lower()
+
+        try:
+            # 1. อ่านไฟล์ตามประเภท 📂
+            contents = await file.read()
+            
+            if filename.endswith(".pdf"):
+                # เทคนิคอ่าน PDF ใน Memory
+                from pypdf import PdfReader
+                pdf_file = io.BytesIO(contents)
+                reader = PdfReader(pdf_file)
+                for page in reader.pages:
+                    text_content += page.extract_text() + "\n"
+                    
+            elif filename.endswith(".csv"):
+                # อ่าน CSV เป็นตาราง Text
+                df = pd.read_csv(io.BytesIO(contents))
+                text_content = df.to_string(index=False)
+                
+            elif filename.endswith((".txt", ".md", ".py", ".js", ".html", ".css", ".json")):
+                # อ่าน Text File / Code จาก Repo
+                text_content = contents.decode("utf-8")
+                
+            else:
+                raise HTTPException(status_code=400, detail="รองรับเฉพาะ PDF, CSV, และ Text/Code Files เท่านั้น")
+
+            # 2. หั่นข้อมูลเป็นชิ้นย่อย (Chunking) 🔪
+            # (เพราะ PDF/Code ยาวมาก ยัดใส่ Pinecone ทีเดียวไม่ได้)
+            text_splitter = RecursiveCharacterTextSplitter(
+                chunk_size=1000,
+                chunk_overlap=200
+            )
+            chunks = text_splitter.split_text(text_content)
+            
+            print(f"📄 File: {filename} -> {len(chunks)} Chunks")
+
+            # 3. ส่งขึ้น Pinecone 🌲
+            vectorstore.add_texts(
+                texts=chunks,
+                metadatas=[{
+                    "source": f"{source} ({filename})",
+                    "added_by": current_user.username,
+                    "timestamp": str(datetime.now())
+                } for _ in chunks], # ใส่ Metadata ให้ทุกชิ้น
+                namespace=namespace
+            )
+
+            return {"status": "success", "message": f"อ่านไฟล์ {filename} สำเร็จ! ({len(chunks)} ส่วน)"}
+
+        except Exception as e:
+            print(f"Upload Error: {e}")
+            raise HTTPException(status_code=500, detail=str(e))
+        
+        
+        
+        
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Carmen Trainer - สอนบอท</title>
+    <title>Carmen Trainer - Super Admin</title>
     <style>
         body { font-family: 'Sarabun', sans-serif; max-width: 600px; margin: 40px auto; padding: 20px; background: #f3f4f6; }
         .card { background: white; padding: 30px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 20px; }
@@ -11,43 +11,40 @@
         label { display: block; margin-bottom: 8px; font-weight: bold; color: #374151; }
         
         input, textarea, select { width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 8px; font-family: inherit; margin-bottom: 20px; box-sizing: border-box; }
-        textarea { height: 150px; resize: vertical; }
         
-        button { background: #000; color: white; border: none; padding: 12px 24px; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%; transition: 0.2s; }
-        button:hover { background: #2563eb; transform: translateY(-1px); }
-        button.logout { background: #ef4444; margin-top: 10px; }
+        /* Style ปุ่ม Tab */
+        .tabs { display: flex; gap: 10px; margin-bottom: 20px; }
+        .tab-btn { flex: 1; padding: 10px; background: #e5e7eb; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; color: #6b7280; }
+        .tab-btn.active { background: #000; color: white; }
         
-        .status { margin-top: 15px; padding: 10px; border-radius: 6px; display: none; text-align: center; font-size: 14px; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        button.action-btn { background: #000; color: white; border: none; padding: 12px 24px; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%; transition: 0.2s; }
+        button.action-btn:hover { background: #2563eb; }
+        button.action-btn:disabled { background: #9ca3af; }
+
+        .status { margin-top: 15px; padding: 10px; border-radius: 6px; display: none; text-align: center; }
         .success { background: #d1fae5; color: #065f46; }
         .error { background: #fee2e2; color: #991b1b; }
-
-        #trainingSection { display: none; }
     </style>
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600&display=swap" rel="stylesheet">
 </head>
 <body>
 
     <div id="loginSection" class="card">
-        <h2>🔐 เข้าสู่ระบบ Admin</h2>
-        <label>Username:</label>
-        <input type="text" id="loginUser" placeholder="admin">
-        <label>Password:</label>
-        <input type="password" id="loginPass" placeholder="password">
-        <button onclick="doLogin()">Login</button>
+        <h2>🔐 Admin Login</h2>
+        <input type="text" id="loginUser" placeholder="Username (admin)">
+        <input type="password" id="loginPass" placeholder="Password">
+        <button class="action-btn" onclick="doLogin()">Login</button>
         <div id="loginStatus" class="status"></div>
     </div>
 
-    <div id="trainingSection" class="card">
-        <h2>👩‍🏫 สอนความรู้ใหม่ให้ Carmen</h2>
-        <p style="color:#6b7280; font-size:14px; margin-bottom:20px;">
-            ข้อมูลจะถูกส่งเข้าสมอง (Pinecone) ทันที
-        </p>
-
-        <label>อ้างอิงจาก (Source / Reference):</label>
-        <input type="text" id="sourceInput" placeholder="เช่น อีเมลจาก HR, ประกาศฉบับที่ 12/2026">
-
-        <label>เนื้อหาความรู้ใหม่ (Knowledge):</label>
-        <textarea id="knowledgeInput" placeholder="พิมพ์เนื้อหาที่นี่..."></textarea>
+    <div id="trainingSection" class="card" style="display:none;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+            <h2>👩‍🏫 Carmen Trainer</h2>
+            <button onclick="doLogout()" style="background:none; border:none; color:red; cursor:pointer;">Logout</button>
+        </div>
 
         <label>สอนให้ใครรู้? (Namespace):</label>
         <select id="namespaceInput">
@@ -56,11 +53,43 @@
             <option value="hotel-city">🏙️ เฉพาะ City</option>
         </select>
 
-        <button onclick="sendData()" id="sendBtn">บันทึกความรู้ 💾</button>
-        <button onclick="doLogout()" class="logout">ออกจากระบบ</button>
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('text')">✍️ พิมพ์เอง</button>
+            <button class="tab-btn" onclick="switchTab('file')">📂 อัปโหลดไฟล์</button>
+            <button class="tab-btn" onclick="switchTab('github')">🐙 GitHub Repo</button> 
+        </div>
+
+        <div id="tab-text" class="tab-content active">
+            <label>อ้างอิงจาก (Source):</label>
+            <input type="text" id="sourceInput" placeholder="เช่น ประกาศฝ่ายบุคคล">
+            <label>เนื้อหา (Content):</label>
+            <textarea id="knowledgeInput" rows="5" placeholder="พิมพ์เนื้อหาที่นี่..."></textarea>
+            <button class="action-btn" onclick="sendTextData()">บันทึกข้อความ 💾</button>
+        </div>
+
+        <div id="tab-file" class="tab-content">
+            <label>เลือกไฟล์ (PDF, CSV, Code):</label>
+            <input type="file" id="fileInput" accept=".pdf,.csv,.txt,.md,.py,.js">
+            <p style="font-size:12px; color:#666;">* รองรับ PDF, CSV และ Code Files จาก Repo</p>
+            <button class="action-btn" onclick="sendFileData()">อัปโหลดและประมวลผล 🚀</button>
+        </div>
         
         <div id="trainStatus" class="status"></div>
     </div>
+
+    <div id="tab-github" class="tab-content">
+    <label>GitHub Repository Name (user/repo):</label>
+    <input type="text" id="repoInput" placeholder="เช่น llHorizonll/docscarmencloud">
+
+    <label>GitHub Token (Optional ถ้า Repo เป็น Public):</label>
+    <input type="password" id="ghTokenInput" placeholder="ghp_xxxxxxxxxxxx (ถ้า Repo ส่วนตัวต้องใส่)">
+
+    <div style="background:#eef2ff; padding:10px; border-radius:8px; font-size:12px; color:#3730a3; margin-bottom:15px;">
+        ℹ️ ระบบจะค้นหาไฟล์ .md, .mdx ในทุกโฟลเดอร์ และทยอยส่งเข้าบอททีละชุด (ใช้เวลาสักพัก)
+    </div>
+
+    <button class="action-btn" onclick="sendGithubData()">เริ่มดูดข้อมูล 🚀</button>
+</div>
 
     <script>
         const API_URL = "https://carmen-chatbot-api.onrender.com";
@@ -68,103 +97,130 @@
 
         if (accessToken) showTrainingSection();
 
+        // --- Tab Logic ---
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            
+            if(tabName === 'text') {
+                document.querySelector('.tabs button:nth-child(1)').classList.add('active');
+                document.getElementById('tab-text').classList.add('active');
+            } else {
+                document.querySelector('.tabs button:nth-child(2)').classList.add('active');
+                document.getElementById('tab-file').classList.add('active');
+            }
+        }
+
+        // --- Auth Logic ---
         async function doLogin() {
             const user = document.getElementById('loginUser').value;
             const pass = document.getElementById('loginPass').value;
-            const status = document.getElementById('loginStatus');
-            status.style.display = 'none';
-
             try {
                 const formData = new URLSearchParams();
-                formData.append('username', user);
-                formData.append('password', pass);
-
-                const res = await fetch(`${API_URL}/token`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: formData
-                });
-
+                formData.append('username', user); formData.append('password', pass);
+                const res = await fetch(`${API_URL}/token`, { method: 'POST', body: formData });
                 if (res.ok) {
                     const data = await res.json();
                     accessToken = data.access_token;
                     localStorage.setItem('carmen_admin_token', accessToken);
                     showTrainingSection();
-                } else {
-                    status.innerText = "❌ Username หรือ Password ผิดค่ะ";
-                    status.className = "status error";
-                    status.style.display = 'block';
-                }
-            } catch (e) { alert("เชื่อมต่อ Server ไม่ได้: " + e.message); }
+                } else { alert("Login Failed"); }
+            } catch (e) { alert("Error: " + e.message); }
         }
 
         function showTrainingSection() {
             document.getElementById('loginSection').style.display = 'none';
             document.getElementById('trainingSection').style.display = 'block';
         }
-
         function doLogout() {
-            accessToken = "";
             localStorage.removeItem('carmen_admin_token');
-            document.getElementById('loginSection').style.display = 'block';
-            document.getElementById('trainingSection').style.display = 'none';
-            document.getElementById('loginUser').value = "";
-            document.getElementById('loginPass').value = "";
+            location.reload();
         }
 
-        async function sendData() {
-            const text = document.getElementById('knowledgeInput').value.trim();
-            const src = document.getElementById('sourceInput').value.trim(); // ✅ รับค่า Source
+        // แก้ฟังก์ชัน switchTab เพิ่ม case 'github'
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+            if(tabName === 'text') {
+                document.querySelector('.tabs button:nth-child(1)').classList.add('active');
+                document.getElementById('tab-text').classList.add('active');
+            } else if(tabName === 'file') {
+                document.querySelector('.tabs button:nth-child(2)').classList.add('active');
+                document.getElementById('tab-file').classList.add('active');
+            } else {
+                // ✅ Case GitHub
+                document.querySelector('.tabs button:nth-child(3)').classList.add('active');
+                document.getElementById('tab-github').classList.add('active');
+            }
+        }
+
+        // ✅ เพิ่มฟังก์ชันส่งข้อมูล GitHub
+        async function sendGithubData() {
+            const repo = document.getElementById('repoInput').value.trim();
+            const ghToken = document.getElementById('ghTokenInput').value.trim();
             const ns = document.getElementById('namespaceInput').value;
-            const btn = document.getElementById('sendBtn');
+
+            if(!repo) return alert("ใส่ชื่อ Repo ก่อนครับ");
+
+            await sendRequest(`${API_URL}/train/github`, JSON.stringify({ 
+                repo_name: repo, 
+                github_token: ghToken, 
+                namespace: ns 
+            }), 'application/json');
+        }
+
+        // --- Send Text Logic ---
+        async function sendTextData() {
+            const text = document.getElementById('knowledgeInput').value;
+            const source = document.getElementById('sourceInput').value || "Manual Input";
+            const ns = document.getElementById('namespaceInput').value;
+            
+            if(!text) return alert("พิมพ์เนื้อหาก่อนครับ");
+            
+            await sendRequest(`${API_URL}/train`, JSON.stringify({ text, source, namespace: ns }), 'application/json');
+        }
+
+        // --- Send File Logic ---
+        async function sendFileData() {
+            const fileInput = document.getElementById('fileInput');
+            const ns = document.getElementById('namespaceInput').value;
+            
+            if(fileInput.files.length === 0) return alert("เลือกไฟล์ก่อนครับ");
+            
+            const formData = new FormData();
+            formData.append("file", fileInput.files[0]);
+            formData.append("source", "File Upload");
+            // ส่ง namespace ผ่าน Query Param
+            const url = `${API_URL}/train/upload?namespace=${ns}&source=File Upload`;
+
+            // สำหรับ File Upload ไม่ต้องใส่ Content-Type (Browser จัดการเอง)
+            await sendRequest(url, formData, null); 
+        }
+
+        // --- Helper Function ---
+        async function sendRequest(url, body, contentType) {
             const status = document.getElementById('trainStatus');
-
-            if (!text) { alert("กรุณาพิมพ์เนื้อหาก่อนค่ะ!"); return; }
-
-            const finalSource = src || "Admin Manual Input"; // ถ้าไม่กรอกให้ใส่อันนี้แทน
-
-            btn.innerText = "กำลังบันทึก...";
-            btn.disabled = true;
             status.style.display = 'none';
+            
+            const headers = { 'Authorization': `Bearer ${accessToken}` };
+            if(contentType) headers['Content-Type'] = contentType;
 
             try {
-                const res = await fetch(`${API_URL}/train`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${accessToken}`
-                    },
-                    body: JSON.stringify({ 
-                        text: text, 
-                        namespace: ns,
-                        source: finalSource // ✅ ส่งค่า Source ไปด้วย
-                    })
-                });
-
+                const res = await fetch(url, { method: 'POST', headers, body });
                 const data = await res.json();
-
-                if (res.ok) {
+                if(res.ok) {
                     status.className = "status success";
                     status.innerText = "✅ " + data.message;
-                    document.getElementById('knowledgeInput').value = ""; 
-                    document.getElementById('sourceInput').value = ""; 
                 } else {
-                    if (res.status === 401) {
-                        alert("Session หมดอายุ กรุณา Login ใหม่");
-                        doLogout();
-                    } else {
-                        status.className = "status error";
-                        status.innerText = "❌ Error: " + (data.detail || "บันทึกไม่สำเร็จ");
-                    }
+                    status.className = "status error";
+                    status.innerText = "❌ " + (data.detail || "Error");
                 }
-            } catch (err) {
+            } catch(e) {
                 status.className = "status error";
-                status.innerText = "❌ Connection Error: " + err.message;
-            } finally {
-                status.style.display = 'block';
-                btn.innerText = "บันทึกความรู้ 💾";
-                btn.disabled = false;
+                status.innerText = "❌ Connect Error";
             }
+            status.style.display = 'block';
         }
     </script>
 </body>
