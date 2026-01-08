@@ -199,7 +199,8 @@ async def feedback_endpoint(
 
 class TrainingRequest(BaseModel):
     text: str
-    namespace: str = "" # ถ้าไม่ระบุ ถือเป็น Global
+    namespace: str = "" 
+    source: str = "admin_manual"
 
 @app.post("/train")
 async def train_data(
@@ -222,7 +223,7 @@ async def train_data(
         vectorstore.add_texts(
             texts=[request.text],
             metadatas=[{
-                "source": "admin_manual_input", # ระบุที่มา
+                "source": request.source,  # ใช้ค่าที่ส่งมาจากหน้าเว็บ
                 "added_by": current_user.username,
                 "timestamp": str(datetime.now())
             }],
