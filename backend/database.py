@@ -1,26 +1,20 @@
-from sqlalchemy import create_engine, Column, Integer, String
-from sqlalchemy.orm import sessionmaker, declarative_base
+from sqlalchemy import create_engine
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
 import os
 from dotenv import load_dotenv
-from pathlib import Path
 
-# โหลด .env
-env_path = Path(__file__).parent / '.env'
-load_dotenv(dotenv_path=env_path)
+load_dotenv()
 
-# ดึง URL จาก .env (ถ้าไม่มีให้ใช้ sqlite ชั่วคราวกัน error)
-DATABASE_URL = os.getenv("DATABASE_URL")
+# ใช้ External URL (สำหรับต่อจากคอมคุณ) หรือ Internal (สำหรับ Render)
+# แต่ Python จะเลือกให้อัตโนมัติถ้าคุณตั้ง ENV ไว้ถูก
+SQLALCHEMY_DATABASE_URL = os.environ.get("DATABASE_URL")
 
-# สร้างการเชื่อมต่อ
-engine = create_engine(DATABASE_URL)
+# กรณีรัน Local แล้ว URL ขึ้นต้นด้วย postgres:// ให้แก้เป็น postgresql:// (SQLAlchemy รุ่นใหม่บังคับ)
+if SQLALCHEMY_DATABASE_URL and SQLALCHEMY_DATABASE_URL.startswith("postgres://"):
+    SQLALCHEMY_DATABASE_URL = SQLALCHEMY_DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
+engine = create_engine(SQLALCHEMY_DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
 Base = declarative_base()
-
-# --- 📝 สร้างตาราง Users ---
-class User(Base):
-    __tablename__ = "users"
-
-    id = Column(Integer, primary_key=True, index=True)
-    username = Column(String, unique=True, index=True) # ชื่อล็อกอิน (เช่น hotel-a)
-    hashed_password = Column(String)                   # รหัสผ่านแบบเข้ารหัส
-    client_id = Column(String)                         # Namespace ของ Pinecone (เช่น hotel-seaside)
