@@ -20,5 +20,4 @@ bcrypt==4.0.1
 
 pypdf
 pandas
-
 PyGithub
