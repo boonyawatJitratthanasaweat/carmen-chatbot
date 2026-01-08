@@ -12,6 +12,7 @@ from langchain_core.output_parsers import StrOutputParser
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 from pathlib import Path
+from backend.auth import get_password_hash # ✅ ต้องใช้ตัวนี้ตอนสร้าง User ใหม่
 
 # Import ไฟล์ระบบ
 from .database import Base, engine
@@ -188,6 +189,51 @@ async def feedback_endpoint(
     db.commit()
     
     return {"status": "success", "score": feedback.score}
+
+# ==========================================
+# 👇 แปะส่วนนี้ไว้ล่างสุดของไฟล์ backend/api.py
+# ==========================================
+
+@app.get("/debug/init-db")
+async def init_database_endpoint(db: Session = Depends(get_db)):
+    try:
+        print("🚀 Resetting Database via API...")
+        
+        # 1. 💣 ล้างตารางเก่าทิ้ง (เพื่อแก้ปัญหา Column ไม่ครบ)
+        Base.metadata.drop_all(bind=engine)
+        
+        # 2. 🏗️ สร้างตารางใหม่ (ที่มีช่อง feedback ครบแล้ว)
+        Base.metadata.create_all(bind=engine)
+
+        # 3. 🌱 สร้าง User เริ่มต้น
+        users_data = [
+            ("manager_seaside", "1234", "hotel-seaside"),
+            ("manager_city", "1234", "hotel-city"),
+            ("admin", "admin", "global")
+        ]
+        
+        created_users = []
+        for username, pwd, ns in users_data:
+            new_user = UserModel(
+                username=username,
+                hashed_password=get_password_hash(pwd),
+                client_id=ns,
+                full_name=username # ใส่ชื่อเล่นให้ด้วย
+            )
+            db.add(new_user)
+            created_users.append(username)
+        
+        db.commit()
+        
+        return {
+            "status": "success", 
+            "message": "🎉 Database Reset & Initialized Successfully!", 
+            "users_created": created_users
+        }
+
+    except Exception as e:
+        print(f"❌ Error: {e}")
+        return {"status": "error", "message": str(e)}
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
