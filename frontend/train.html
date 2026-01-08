@@ -9,24 +9,52 @@
         .card { background: white; padding: 30px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 20px; }
         h2 { margin-top: 0; color: #111827; }
         label { display: block; margin-bottom: 8px; font-weight: bold; color: #374151; }
-        
-        input, textarea, select { width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 8px; font-family: inherit; margin-bottom: 20px; box-sizing: border-box; }
-        
-        /* Style ปุ่ม Tab */
+        input, textarea, select { width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 8px; margin-bottom: 20px; box-sizing: border-box; }
         .tabs { display: flex; gap: 10px; margin-bottom: 20px; }
         .tab-btn { flex: 1; padding: 10px; background: #e5e7eb; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; color: #6b7280; }
         .tab-btn.active { background: #000; color: white; }
-        
         .tab-content { display: none; }
         .tab-content.active { display: block; }
-
-        button.action-btn { background: #000; color: white; border: none; padding: 12px 24px; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%; transition: 0.2s; }
+        button.action-btn { background: #000; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%; transition: 0.2s; }
         button.action-btn:hover { background: #2563eb; }
-        button.action-btn:disabled { background: #9ca3af; }
 
-        .status { margin-top: 15px; padding: 10px; border-radius: 6px; display: none; text-align: center; }
-        .success { background: #d1fae5; color: #065f46; }
-        .error { background: #fee2e2; color: #991b1b; }
+        /* --- 🛠️ MODAL STYLES (ส่วนสำคัญ) --- */
+        #processModal {
+            display: none; 
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85); z-index: 9999;
+            align-items: center; justify-content: center;
+        }
+        .modal-content {
+            background: #1f2937; color: white;
+            width: 90%; max-width: 500px;
+            padding: 25px; border-radius: 16px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            text-align: center;
+        }
+        .progress-container {
+            width: 100%; background: #374151; height: 14px; border-radius: 7px; margin: 20px 0; overflow: hidden;
+        }
+        .progress-bar {
+            height: 100%; background: #10b981; width: 0%; transition: width 0.5s ease;
+            box-shadow: 0 0 10px #10b981;
+        }
+        .log-terminal {
+            background: #000; color: #0f0;
+            font-family: 'Courier New', monospace;
+            font-size: 12px; text-align: left;
+            padding: 15px; border-radius: 8px;
+            height: 200px; overflow-y: auto;
+            border: 1px solid #374151;
+            margin-top: 15px;
+        }
+        .log-line { margin-bottom: 4px; border-bottom: 1px solid #111; padding-bottom: 2px; }
+        .stat-grid { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 14px; color: #9ca3af; }
+        .stat-value { color: white; font-weight: bold; font-size: 18px; }
+        .close-modal-btn {
+            margin-top: 15px; background: #ef4444; color: white; border: none; padding: 10px 20px; 
+            border-radius: 8px; cursor: pointer; display: none; /* ซ่อนก่อน */
+        }
     </style>
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600&display=swap" rel="stylesheet">
 </head>
@@ -34,193 +62,213 @@
 
     <div id="loginSection" class="card">
         <h2>🔐 Admin Login</h2>
-        <input type="text" id="loginUser" placeholder="Username (admin)">
+        <input type="text" id="loginUser" placeholder="Username">
         <input type="password" id="loginPass" placeholder="Password">
         <button class="action-btn" onclick="doLogin()">Login</button>
-        <div id="loginStatus" class="status"></div>
     </div>
 
     <div id="trainingSection" class="card" style="display:none;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+        <div style="display:flex; justify-content:space-between; margin-bottom:15px;">
             <h2>👩‍🏫 Carmen Trainer</h2>
-            <button onclick="doLogout()" style="background:none; border:none; color:red; cursor:pointer;">Logout</button>
+            <button onclick="doLogout()" style="background:none;border:none;color:red;cursor:pointer;">Logout</button>
         </div>
 
-        <label>สอนให้ใครรู้? (Namespace):</label>
+        <label>Namespace:</label>
         <select id="namespaceInput">
-            <option value="">🌐 ทุกคน (Global)</option>
-            <option value="hotel-seaside">🏖️ เฉพาะ Seaside</option>
-            <option value="hotel-city">🏙️ เฉพาะ City</option>
+            <option value="global" selected>🌐 ทุกคน (Global)</option>
+            <option value="hotel-seaside">🏖️ Seaside</option>
+            <option value="hotel-city">🏙️ City</option>
         </select>
 
         <div class="tabs">
-            <button class="tab-btn active" onclick="switchTab('text')">✍️ พิมพ์เอง</button>
-            <button class="tab-btn" onclick="switchTab('file')">📂 อัปโหลดไฟล์</button>
-            <button class="tab-btn" onclick="switchTab('github')">🐙 GitHub Repo</button> 
+            <button class="tab-btn active" onclick="switchTab('github')">🐙 GitHub Repo</button>
+            <button class="tab-btn" onclick="switchTab('file')">📂 Upload File</button>
+            <button class="tab-btn" onclick="switchTab('text')">✍️ Text</button>
         </div>
 
-        <div id="tab-text" class="tab-content active">
-            <label>อ้างอิงจาก (Source):</label>
-            <input type="text" id="sourceInput" placeholder="เช่น ประกาศฝ่ายบุคคล">
-            <label>เนื้อหา (Content):</label>
-            <textarea id="knowledgeInput" rows="5" placeholder="พิมพ์เนื้อหาที่นี่..."></textarea>
-            <button class="action-btn" onclick="sendTextData()">บันทึกข้อความ 💾</button>
+        <div id="tab-github" class="tab-content active">
+            <label>Repo Name:</label>
+            <input type="text" id="repoInput" placeholder="user/repo">
+            <label>Token:</label>
+            <input type="password" id="ghTokenInput" placeholder="ghp_xxxx">
+            <button class="action-btn" onclick="sendGithubData()">เริ่มดูดข้อมูล 🚀</button>
         </div>
 
         <div id="tab-file" class="tab-content">
-            <label>เลือกไฟล์ (PDF, CSV, Code):</label>
-            <input type="file" id="fileInput" accept=".pdf,.csv,.txt,.md,.py,.js">
-            <p style="font-size:12px; color:#666;">* รองรับ PDF, CSV และ Code Files จาก Repo</p>
-            <button class="action-btn" onclick="sendFileData()">อัปโหลดและประมวลผล 🚀</button>
+            <input type="file" id="fileInput" accept=".pdf,.csv,.txt,.md">
+            <button class="action-btn" onclick="sendFileData()">Upload 🚀</button>
         </div>
-        
-        <div id="trainStatus" class="status"></div>
+
+        <div id="tab-text" class="tab-content">
+            <textarea id="knowledgeInput" rows="5" placeholder="Content..."></textarea>
+            <button class="action-btn" onclick="sendTextData()">Save 💾</button>
+        </div>
     </div>
 
-    <div id="tab-github" class="tab-content">
-    <label>GitHub Repository Name (user/repo):</label>
-    <input type="text" id="repoInput" placeholder="เช่น llHorizonll/docscarmencloud">
+    <div id="processModal" style="display:flex;">
+        <div class="modal-content">
+            <h3 id="modalTitle">🚀 กำลังทำงาน...</h3>
+            
+            <div class="stat-grid">
+                <div>
+                    <div>Progress</div>
+                    <div id="percentTxt" class="stat-value">0%</div>
+                </div>
+                <div>
+                    <div>Status</div>
+                    <div id="statusTxt" class="stat-value" style="color:#fbbf24;">Starting</div>
+                </div>
+                <div>
+                    <div>Time Left</div>
+                    <div id="timeLeftTxt" class="stat-value">--:--</div>
+                </div>
+            </div>
 
-    <label>GitHub Token (Optional ถ้า Repo เป็น Public):</label>
-    <input type="password" id="ghTokenInput" placeholder="ghp_xxxxxxxxxxxx (ถ้า Repo ส่วนตัวต้องใส่)">
+            <div class="progress-container">
+                <div id="modalProgressBar" class="progress-bar"></div>
+            </div>
 
-    <div style="background:#eef2ff; padding:10px; border-radius:8px; font-size:12px; color:#3730a3; margin-bottom:15px;">
-        ℹ️ ระบบจะค้นหาไฟล์ .md, .mdx ในทุกโฟลเดอร์ และทยอยส่งเข้าบอททีละชุด (ใช้เวลาสักพัก)
+            <div class="log-terminal" id="logTerminal">
+                <div class="log-line">> System Initialized...</div>
+            </div>
+
+            <button id="closeModalBtn" class="close-modal-btn" onclick="closeModal()">ปิดหน้าต่าง</button>
+        </div>
     </div>
-
-    <button class="action-btn" onclick="sendGithubData()">เริ่มดูดข้อมูล 🚀</button>
-</div>
 
     <script>
         const API_URL = "https://carmen-chatbot-api.onrender.com";
-        let accessToken = localStorage.getItem('carmen_admin_token') || "";
+        let accessToken = localStorage.getItem('carmen_admin_token');
+        let pollInterval;
 
-        if (accessToken) showTrainingSection();
+        // Init
+        document.getElementById('processModal').style.display = 'none'; // ซ่อนก่อน
+        if(accessToken) showTrainingSection();
 
-        // --- Tab Logic ---
-        function switchTab(tabName) {
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-            
-            if(tabName === 'text') {
-                document.querySelector('.tabs button:nth-child(1)').classList.add('active');
-                document.getElementById('tab-text').classList.add('active');
-            } else {
-                document.querySelector('.tabs button:nth-child(2)').classList.add('active');
-                document.getElementById('tab-file').classList.add('active');
-            }
+        // --- Functions ---
+        function switchTab(t){
+            document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+            if(t==='github'){ document.querySelector('.tabs button:nth-child(1)').classList.add('active'); document.getElementById('tab-github').classList.add('active'); }
+            else if(t==='file'){ document.querySelector('.tabs button:nth-child(2)').classList.add('active'); document.getElementById('tab-file').classList.add('active'); }
+            else{ document.querySelector('.tabs button:nth-child(3)').classList.add('active'); document.getElementById('tab-text').classList.add('active'); }
         }
 
-        // --- Auth Logic ---
-        async function doLogin() {
-            const user = document.getElementById('loginUser').value;
-            const pass = document.getElementById('loginPass').value;
-            try {
-                const formData = new URLSearchParams();
-                formData.append('username', user); formData.append('password', pass);
-                const res = await fetch(`${API_URL}/token`, { method: 'POST', body: formData });
-                if (res.ok) {
+        async function doLogin(){
+            const u=document.getElementById('loginUser').value;
+            const p=document.getElementById('loginPass').value;
+            try{
+                const fd=new URLSearchParams(); fd.append('username',u); fd.append('password',p);
+                const r=await fetch(API_URL+'/token',{method:'POST',body:fd});
+                if(r.ok){ 
+                    const d=await r.json(); accessToken=d.access_token; localStorage.setItem('carmen_admin_token',accessToken); showTrainingSection(); 
+                }else alert('Login Failed');
+            }catch(e){alert(e.message);}
+        }
+        function showTrainingSection(){ document.getElementById('loginSection').style.display='none'; document.getElementById('trainingSection').style.display='block'; }
+        function doLogout(){ localStorage.removeItem('carmen_admin_token'); location.reload(); }
+
+        // --- GitHub Logic ---
+        async function sendGithubData(){
+            const r=document.getElementById('repoInput').value;
+            const t=document.getElementById('ghTokenInput').value;
+            const n=document.getElementById('namespaceInput').value;
+            if(!r) return alert('ใส่ Repo Name ก่อน');
+
+            // 1. เปิด Modal ทันที
+            openModal();
+
+            // 2. ส่งคำสั่ง
+            await fetch(API_URL+'/train/github',{
+                method:'POST',
+                headers:{'Content-Type':'application/json','Authorization':`Bearer ${accessToken}`},
+                body:JSON.stringify({repo_name:r, github_token:t, namespace:n})
+            });
+
+            // 3. เริ่มจับตาดู (Polling)
+            startPolling();
+        }
+
+        // --- File Logic ---
+        async function sendFileData(){
+            const f=document.getElementById('fileInput').files[0];
+            const n=document.getElementById('namespaceInput').value;
+            if(!f) return alert('เลือกไฟล์ก่อน');
+            
+            openModal(); // เปิดรอไว้เลย (ถึงแม้มันจะเร็ว แต่เปิดให้ดูเท่ๆ ก็ได้ หรือจะทำ Status แยกก็ได้)
+            
+            const fd=new FormData(); fd.append('file',f);
+            await fetch(`${API_URL}/train/upload?namespace=${n}`,{
+                 method:'POST', headers:{'Authorization':`Bearer ${accessToken}`}, body:fd
+            });
+            
+            // File Upload ปกติเร็วมาก ไม่ต้อง Polling ก็ได้ แต่ถ้าไฟล์ใหญ่ก็ใช้ได้
+            // ในที่นี้ขอปิด Modal เลยเมื่อเสร็จ (เพราะ API upload รอ response)
+            document.getElementById('modalTitle').innerText = "✅ อัปโหลดเสร็จสิ้น!";
+            document.getElementById('modalProgressBar').style.width = "100%";
+            document.getElementById('percentTxt').innerText = "100%";
+            document.getElementById('closeModalBtn').style.display = 'block';
+        }
+
+        // --- Modal & Polling System 🚀 ---
+        function openModal(){
+            document.getElementById('processModal').style.display = 'flex';
+            document.getElementById('closeModalBtn').style.display = 'none';
+            document.getElementById('modalTitle').innerText = "🚀 กำลังประมวลผล...";
+            document.getElementById('modalTitle').style.color = "white";
+            document.getElementById('logTerminal').innerHTML = ""; // Clear logs
+        }
+
+        function closeModal(){
+            document.getElementById('processModal').style.display = 'none';
+            if(pollInterval) clearInterval(pollInterval);
+        }
+
+        function startPolling(){
+            if(pollInterval) clearInterval(pollInterval);
+            
+            pollInterval = setInterval(async ()=>{
+                try {
+                    const res = await fetch(API_URL + '/train/status');
                     const data = await res.json();
-                    accessToken = data.access_token;
-                    localStorage.setItem('carmen_admin_token', accessToken);
-                    showTrainingSection();
-                } else { alert("Login Failed"); }
-            } catch (e) { alert("Error: " + e.message); }
-        }
+                    
+                    // Update UI
+                    document.getElementById('percentTxt').innerText = data.progress + "%";
+                    document.getElementById('modalProgressBar').style.width = data.progress + "%";
+                    document.getElementById('statusTxt').innerText = data.status;
+                    
+                    // Format Time Left
+                    const sec = data.estimated_remaining;
+                    const min = Math.floor(sec / 60);
+                    const s = sec % 60;
+                    document.getElementById('timeLeftTxt').innerText = `${min}m ${s}s`;
 
-        function showTrainingSection() {
-            document.getElementById('loginSection').style.display = 'none';
-            document.getElementById('trainingSection').style.display = 'block';
-        }
-        function doLogout() {
-            localStorage.removeItem('carmen_admin_token');
-            location.reload();
-        }
+                    // Logs (Append Only New)
+                    const logBox = document.getElementById('logTerminal');
+                    logBox.innerHTML = ""; // Reset & Re-render (ง่ายกว่า)
+                    data.logs.forEach(line => {
+                        logBox.innerHTML += `<div class="log-line">${line}</div>`;
+                    });
+                    logBox.scrollTop = logBox.scrollHeight; // Auto Scroll
 
-        // แก้ฟังก์ชัน switchTab เพิ่ม case 'github'
-        function switchTab(tabName) {
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                    // Check Finish
+                    if(data.status === 'Completed'){
+                        document.getElementById('modalTitle').innerText = "🎉 เสร็จสมบูรณ์!";
+                        document.getElementById('statusTxt').style.color = "#10b981";
+                        document.getElementById('timeLeftTxt').innerText = "0m 0s";
+                        document.getElementById('closeModalBtn').style.display = 'block';
+                        clearInterval(pollInterval);
+                    }
+                    else if(data.status === 'Failed' || data.status === 'Error'){
+                        document.getElementById('modalTitle').innerText = "❌ เกิดข้อผิดพลาด";
+                        document.getElementById('modalTitle').style.color = "#ef4444";
+                        document.getElementById('statusTxt').style.color = "#ef4444";
+                        document.getElementById('closeModalBtn').style.display = 'block';
+                        clearInterval(pollInterval);
+                    }
 
-            if(tabName === 'text') {
-                document.querySelector('.tabs button:nth-child(1)').classList.add('active');
-                document.getElementById('tab-text').classList.add('active');
-            } else if(tabName === 'file') {
-                document.querySelector('.tabs button:nth-child(2)').classList.add('active');
-                document.getElementById('tab-file').classList.add('active');
-            } else {
-                // ✅ Case GitHub
-                document.querySelector('.tabs button:nth-child(3)').classList.add('active');
-                document.getElementById('tab-github').classList.add('active');
-            }
-        }
-
-        // ✅ เพิ่มฟังก์ชันส่งข้อมูล GitHub
-        async function sendGithubData() {
-            const repo = document.getElementById('repoInput').value.trim();
-            const ghToken = document.getElementById('ghTokenInput').value.trim();
-            const ns = document.getElementById('namespaceInput').value;
-
-            if(!repo) return alert("ใส่ชื่อ Repo ก่อนครับ");
-
-            await sendRequest(`${API_URL}/train/github`, JSON.stringify({ 
-                repo_name: repo, 
-                github_token: ghToken, 
-                namespace: ns 
-            }), 'application/json');
-        }
-
-        // --- Send Text Logic ---
-        async function sendTextData() {
-            const text = document.getElementById('knowledgeInput').value;
-            const source = document.getElementById('sourceInput').value || "Manual Input";
-            const ns = document.getElementById('namespaceInput').value;
-            
-            if(!text) return alert("พิมพ์เนื้อหาก่อนครับ");
-            
-            await sendRequest(`${API_URL}/train`, JSON.stringify({ text, source, namespace: ns }), 'application/json');
-        }
-
-        // --- Send File Logic ---
-        async function sendFileData() {
-            const fileInput = document.getElementById('fileInput');
-            const ns = document.getElementById('namespaceInput').value;
-            
-            if(fileInput.files.length === 0) return alert("เลือกไฟล์ก่อนครับ");
-            
-            const formData = new FormData();
-            formData.append("file", fileInput.files[0]);
-            formData.append("source", "File Upload");
-            // ส่ง namespace ผ่าน Query Param
-            const url = `${API_URL}/train/upload?namespace=${ns}&source=File Upload`;
-
-            // สำหรับ File Upload ไม่ต้องใส่ Content-Type (Browser จัดการเอง)
-            await sendRequest(url, formData, null); 
-        }
-
-        // --- Helper Function ---
-        async function sendRequest(url, body, contentType) {
-            const status = document.getElementById('trainStatus');
-            status.style.display = 'none';
-            
-            const headers = { 'Authorization': `Bearer ${accessToken}` };
-            if(contentType) headers['Content-Type'] = contentType;
-
-            try {
-                const res = await fetch(url, { method: 'POST', headers, body });
-                const data = await res.json();
-                if(res.ok) {
-                    status.className = "status success";
-                    status.innerText = "✅ " + data.message;
-                } else {
-                    status.className = "status error";
-                    status.innerText = "❌ " + (data.detail || "Error");
-                }
-            } catch(e) {
-                status.className = "status error";
-                status.innerText = "❌ Connect Error";
-            }
-            status.style.display = 'block';
+                } catch (e) { console.log("Polling Error", e); }
+            }, 1500); // เช็คทุก 1.5 วินาที
         }
     </script>
 </body>

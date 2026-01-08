@@ -1,4 +1,4 @@
-# ที่หัวไฟล์ backend/api.py
+import time
 from datetime import datetime
 from fastapi import FastAPI, HTTPException, Depends, status, BackgroundTasks, UploadFile, File
 from fastapi.security import OAuth2PasswordRequestForm
@@ -353,43 +353,118 @@ def get_github_docs(repo_name, access_token):
              print("   👉 คำแนะนำ: Token ผิด หรือหมดอายุ")
 
         return []
+    
+training_state = {
+    "is_running": False,
+    "progress": 0,          # %
+    "total_chunks": 0,
+    "processed_chunks": 0,
+    "status": "Idle",
+    "logs": [],             # เก็บ Log ย้อนหลัง 10 บรรทัด
+    "start_time": 0,
+    "estimated_remaining": 0 # วินาที
+}    
+    
+def add_log(message: str):
+    """ฟังก์ชันช่วยเก็บ Log และ Print ลง Console"""
+    print(message)
+    timestamp = datetime.now().strftime("%H:%M:%S")
+    training_state["logs"].append(f"[{timestamp}] {message}")
+    # เก็บแค่ 20 บรรทัดล่าสุดพอ (เดี๋ยว Memory เต็ม)
+    if len(training_state["logs"]) > 20:
+        training_state["logs"].pop(0)    
 
 def process_github_training(repo_name: str, token: str, namespace: str, user_name: str):
-    print(f"🚀 Started GitHub Processing: {repo_name}")
+    global training_state
     
-    docs = get_github_docs(repo_name, token)
-    if not docs:
-        print("❌ ไม่พบเอกสารใน Repo นี้")
-        return
-
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
-    chunks = text_splitter.split_documents(docs)
-    print(f"✂️ หั่นได้ทั้งหมด {len(chunks)} ชิ้น")
-
-    for chunk in chunks:
-        chunk.metadata["added_by"] = user_name
-        chunk.metadata["timestamp"] = str(datetime.now())
-        chunk.metadata["source_type"] = "github_repo"
-
-    batch_size = 30  
-    sleep_time = 20  
-    total_chunks = len(chunks)
+    # Reset State
+    training_state.update({
+        "is_running": True,
+        "progress": 0,
+        "total_chunks": 0,
+        "processed_chunks": 0,
+        "status": "Starting",
+        "logs": [],
+        "start_time": time.time(),
+        "estimated_remaining": 0
+    })
 
     try:
+        add_log(f"🚀 เริ่มต้นเชื่อมต่อ GitHub Repo: {repo_name}")
+        
+        # 1. ดูดข้อมูล
+        docs = get_github_docs(repo_name, token)
+        if not docs:
+            add_log("❌ ไม่พบเอกสาร หรือเกิดข้อผิดพลาดในการเชื่อมต่อ")
+            training_state["status"] = "Failed"
+            training_state["is_running"] = False
+            return
+
+        add_log(f"✂️ กำลังหั่นเนื้อหาจาก {len(docs)} ไฟล์...")
+        
+        # 2. หั่นข้อมูล
+        text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+        chunks = text_splitter.split_documents(docs)
+        
+        total_chunks = len(chunks)
+        training_state["total_chunks"] = total_chunks
+        add_log(f"📦 เตรียมส่งข้อมูลทั้งหมด {total_chunks} ชิ้น (Chunks)")
+
+        # 3. เตรียม Metadata
+        for chunk in chunks:
+            chunk.metadata["added_by"] = user_name
+            chunk.metadata["timestamp"] = str(datetime.now())
+            chunk.metadata["source_type"] = "github_repo"
+
+        # 4. ทยอยส่ง (Safe Mode)
+        batch_size = 30  
+        sleep_time = 20  
+        
         for i in range(0, total_chunks, batch_size):
-            batch = chunks[i : i + batch_size]
-            print(f"📦 Sending Batch {i // batch_size + 1} ({i}/{total_chunks})...")
+            # --- คำนวณเวลา ---
+            current_time = time.time()
+            elapsed_time = current_time - training_state["start_time"]
             
+            # ส่งไปแล้วกี่ชิ้น
+            processed = i
+            
+            # ความเร็วเฉลี่ย (ชิ้น/วินาที)
+            if processed > 0:
+                speed = processed / elapsed_time
+                remaining_chunks = total_chunks - processed
+                eta = remaining_chunks / speed if speed > 0 else 0
+                training_state["estimated_remaining"] = int(eta)
+            
+            # อัปเดต %
+            percent = int((i / total_chunks) * 100)
+            training_state["progress"] = percent
+            training_state["processed_chunks"] = i
+            training_state["status"] = "Processing"
+            
+            add_log(f"📤 กำลังส่ง Batch {(i//batch_size)+1} (Process: {i}/{total_chunks}) - ETA: {int(training_state['estimated_remaining'])}s")
+
+            # --- ส่งเข้า Pinecone ---
+            batch = chunks[i : i + batch_size]
             vectorstore.add_documents(documents=batch, namespace=namespace)
             
-            print(f"   ✅ Batch Done! Sleeping {sleep_time}s...")
-            import time
+            add_log(f"✅ Batch {(i//batch_size)+1} สำเร็จ! พักหายใจ {sleep_time} วินาที...")
             time.sleep(sleep_time) 
             
-        print(f"🎉 GitHub Import Finished: {repo_name}")
+        # จบงาน
+        training_state["progress"] = 100
+        training_state["status"] = "Completed"
+        training_state["is_running"] = False
+        add_log(f"🎉 เสร็จสมบูรณ์! ข้อมูล {total_chunks} ชิ้น พร้อมใช้งานแล้ว")
         
     except Exception as e:
-        print(f"⚠️ Error during Pinecone upload: {e}")
+        training_state["status"] = "Error"
+        training_state["is_running"] = False
+        add_log(f"⚠️ เกิดข้อผิดพลาดร้ายแรง: {str(e)}")
+
+# ✅ API สำหรับให้หน้าเว็บมาดึงข้อมูล
+@app.get("/train/status")
+async def get_training_status():
+    return training_state
 
 class GithubRequest(BaseModel):
     repo_name: str
@@ -453,6 +528,8 @@ async def init_database_endpoint(db: Session = Depends(get_db)):
     except Exception as e:
         print(f"❌ Error: {e}")
         return {"status": "error", "message": str(e)}
+    
+    
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
