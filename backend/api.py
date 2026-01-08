@@ -1,4 +1,5 @@
-import datetime
+# ที่หัวไฟล์ backend/api.py
+from datetime import datetime  
 from fastapi import FastAPI, HTTPException, Depends, status
 from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel
@@ -13,7 +14,8 @@ from langchain_core.output_parsers import StrOutputParser
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 from pathlib import Path
-from backend.auth import get_password_hash # ✅ ต้องใช้ตัวนี้ตอนสร้าง User ใหม่
+from backend.auth import get_password_hash 
+
 
 # Import ไฟล์ระบบ
 from .database import Base, engine
@@ -222,7 +224,7 @@ async def train_data(
             metadatas=[{
                 "source": "admin_manual_input", # ระบุที่มา
                 "added_by": current_user.username,
-                "timestamp": str(datetime.utcnow())
+                "timestamp": str(datetime.now())
             }],
             namespace=request.namespace
         )
