@@ -284,31 +284,74 @@ async def train_upload(
 
 # 3. GitHub Logic
 def get_github_docs(repo_name, access_token):
-    print(f"🕵️‍♂️ Connecting to GitHub Repo: {repo_name}")
+    print(f"🕵️‍♂️ Connecting to GitHub Repo: '{repo_name}'")
+    
+    # Clean Inputs
+    repo_name = repo_name.strip()
+    access_token = access_token.strip() if access_token else None
+    
     docs = []
     try:
-        g = Github(access_token)
+        # 1. เชื่อมต่อ GitHub
+        if access_token:
+            print("   🔑 Using Access Token")
+            g = Github(access_token)
+        else:
+            print("   🌐 Using Anonymous Access (Public Repo Only)")
+            g = Github()
+
+        # 2. ค้นหา Repo
         repo = g.get_repo(repo_name)
+        print(f"   ✅ Found Repo: {repo.full_name} (Default Branch: {repo.default_branch})")
+
+        # 3. ดึงไฟล์ทั้งหมด (Recursive)
         contents = repo.get_contents("")
+        file_count = 0
         
         while contents:
             file_content = contents.pop(0)
+            
             if file_content.type == "dir":
                 contents.extend(repo.get_contents(file_content.path))
             else:
-                if file_content.path.endswith((".md", ".mdx", ".txt")):
+                # ✅ เพิ่มนามสกุลไฟล์ที่รองรับ (Code, Text, Config)
+                ALLOWED_EXTENSIONS = (
+                    ".md", ".mdx", ".txt", ".csv", 
+                    ".py", ".js", ".ts", ".html", ".css", ".json"
+                )
+                
+                if file_content.path.endswith(ALLOWED_EXTENSIONS):
+                    file_count += 1
                     try:
+                        # Decode เนื้อหาไฟล์
                         decoded_content = file_content.decoded_content.decode("utf-8")
+                        
                         docs.append(Document(
                             page_content=decoded_content,
-                            metadata={"source": file_content.html_url}
+                            metadata={
+                                "source": file_content.html_url,
+                                "file_path": file_content.path
+                            }
                         ))
-                        print(f"   - Found: {file_content.path}")
-                    except Exception as e:
-                        print(f"   - Error reading {file_content.path}: {e}")
+                        # print(f"     📄 Loaded: {file_content.path}") # ปิดไว้จะได้ไม่รก Log
+                    except Exception as decode_err:
+                        print(f"     ⚠️ Skip {file_content.path}: {decode_err}")
+
+        print(f"   📊 Summary: Found {file_count} valid files in repo.")
         return docs
+
     except Exception as e:
-        print(f"❌ GitHub Error: {e}")
+        # 🚨 แจ้ง Error แบบละเอียด
+        print(f"❌ GitHub Error Detail: {type(e).__name__} - {str(e)}")
+        
+        # กรณี 404 (หาไม่เจอ)
+        if "404" in str(e):
+             print("   👉 คำแนะนำ: เช็คชื่อ Repo ให้ถูก หรือถ้าเป็น Private Repo ต้องใส่ Token")
+        
+        # กรณี 401 (รหัสผิด)
+        if "401" in str(e) or "Bad credentials" in str(e):
+             print("   👉 คำแนะนำ: Token ผิด หรือหมดอายุ")
+
         return []
 
 def process_github_training(repo_name: str, token: str, namespace: str, user_name: str):
