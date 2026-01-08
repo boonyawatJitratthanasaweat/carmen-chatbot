@@ -232,7 +232,7 @@
             document.getElementById('carmenTypingIndicator').style.display = 'none';
             
             if(data.answer) {
-                addMessage(data.answer, 'bot', true);
+                addMessage(data.answer, 'bot', true, data.message_id);
             } else {
                 addMessage("ขออภัยค่ะ ไม่ได้รับคำตอบ", 'bot', true);
             }
@@ -273,7 +273,8 @@
     // ===============================================
     // 🪄 Main Message Function
     // ===============================================
-    function addMessage(text, sender, animate = false) {
+    // ✅ 1. เพิ่ม parameter 'msgId' ต่อท้ายสุด (ค่า default เป็น null)
+    function addMessage(text, sender, animate = false, msgId = null) {
         const body = document.getElementById('carmenChatBody');
         const div = document.createElement('div');
         div.className = `msg ${sender}`;
@@ -291,13 +292,25 @@
             return `<a href="${url}" target="_blank" style="color:#2563eb;">เปิดลิงก์</a>`;
         });
 
-        let copyBtnHTML = '';
+        // ✅ 2. สร้าง HTML เครื่องมือ (ปุ่ม Copy + ปุ่ม Feedback)
+        let toolsHTML = '';
         if (sender === 'bot') {
-            copyBtnHTML = `
+            // ปุ่ม Copy (อันเดิม)
+            toolsHTML += `
                 <button class="copy-btn" title="คัดลอก">
                     <svg viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
                 </button>
             `;
+            
+            // ✅ ปุ่ม Feedback (จะโชว์เฉพาะถ้ามี msgId ส่งมา)
+            if (msgId) {
+                toolsHTML += `
+                    <div class="feedback-container" style="display:flex; justify-content:flex-end; gap:10px; margin-top:8px; padding-top:5px; border-top:1px dashed #eee;">
+                        <div style="cursor:pointer; font-size:14px; opacity:0.6; transition:0.2s;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.6" onclick="window.carmenRate(${msgId}, 1, this)" title="คำตอบนี้มีประโยชน์">👍</div>
+                        <div style="cursor:pointer; font-size:14px; opacity:0.6; transition:0.2s;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.6" onclick="window.carmenRate(${msgId}, -1, this)" title="คำตอบนี้ไม่ถูกต้อง">👎</div>
+                    </div>
+                `;
+            }
         }
 
         body.appendChild(div);
@@ -321,7 +334,7 @@
 
         if (sender === 'bot' && animate) {
             div.classList.add('typing');
-            div.innerHTML = copyBtnHTML; 
+            // ซ่อน Tools ไว้ก่อนตอนกำลังพิมพ์
             
             let i = 0;
             const speed = 15;
@@ -341,7 +354,8 @@
                     setTimeout(typeWriter, speed);
                 } else {
                     div.classList.remove('typing');
-                    div.innerHTML = formattedText + videoContent + copyBtnHTML;
+                    // ✅ พิมพ์เสร็จแล้ว ค่อยเอา Tools มาแปะต่อท้าย
+                    div.innerHTML = formattedText + videoContent + toolsHTML;
                     attachCopyEvent();
                     scrollToBottom();
                 }
@@ -349,7 +363,8 @@
             div.innerHTML = ""; 
             typeWriter();
         } else {
-            div.innerHTML = formattedText + videoContent + copyBtnHTML;
+            // ✅ ถ้าไม่ต้องพิมพ์ ก็แปะ Tools ไปเลย
+            div.innerHTML = formattedText + videoContent + toolsHTML;
             attachCopyEvent();
             scrollToBottom();
         }
@@ -360,4 +375,29 @@
         body.scrollTop = body.scrollHeight;
     }
 
+    // ✅ 3. เพิ่มฟังก์ชันกดโหวต (เอาไปวางต่อท้าย scrollToBottom ได้เลยครับ)
+    window.carmenRate = async function(msgId, score, btnElement) {
+        // เปลี่ยนหน้าตาปุ่มเมื่อกดแล้ว
+        const parent = btnElement.parentElement;
+        parent.innerHTML = score === 1 
+            ? '<span style="font-size:12px; color:#10b981;">ขอบคุณค่ะ ❤️</span>' 
+            : '<span style="font-size:12px; color:#ef4444;">ขอบคุณค่ะ เราจะปรับปรุง 🙏</span>';
+        
+        try {
+            await fetch(`https://carmen-chatbot-api.onrender.com/chat/feedback/${msgId}`, {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${accessToken}`
+                },
+                body: JSON.stringify({ score: score })
+            });
+        } catch(e) {
+            console.error("Feedback failed", e);
+        }
+    };
+
 })();
+
+
+

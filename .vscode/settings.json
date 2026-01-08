@@ -1,3 +1,23 @@
 {
-    "sqltools.connections": []
+    "sqltools.connections": [
+        {
+            "pgOptions": {
+                "ssl": {
+                    "rejectUnauthorized": true
+                }
+            },
+            "ssh": "Disabled",
+            "previewLimit": 50,
+            "server": "dpg-d5evlr7gi27c73cd4dd0-a.singapore-postgres.render.com",
+            "port": 5432,
+            "askForPassword": true,
+            "sshOptions": {
+                "port": 22
+            },
+            "driver": "PostgreSQL",
+            "name": "carmen_db",
+            "username": "carmen_db_user",
+            "database": "carmen_db"
+        }
+    ]
 }

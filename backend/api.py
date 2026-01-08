@@ -106,23 +106,30 @@ async def get_chat_history(
 class Question(BaseModel):
     text: str
 
+# ในไฟล์ backend/api.py
+
+# 1. แก้ไข Chat Endpoint เดิม (ให้ return id)
 @app.post("/chat")
 async def chat_endpoint(
     question: Question, 
     current_user: UserModel = Depends(get_current_user),
-    db: Session = Depends(get_db) # รับ DB Session
+    db: Session = Depends(get_db)
 ):
     if not vectorstore: raise HTTPException(status_code=500, detail="AI Not Ready")
     
     try:
         user_message = question.text
         
-        # ✅ 1. บันทึกคำถาม User ลง DB
+        # Save User Msg
         user_msg_db = ChatHistory(user_id=current_user.id, sender="user", message=user_message)
         db.add(user_msg_db)
-        db.commit() # เซฟทันที
+        db.commit()
         
-        # ... (ส่วนค้นหา Hybrid Search เหมือนเดิม) ...
+        # ... (ส่วน AI Search & Generate เหมือนเดิม) ...
+        # เพื่อความสั้น ผมขอละส่วน Search ไว้ (ใช้โค้ดเดิมตรงกลางได้เลย)
+        # แต่ถ้าขี้เกียจแก้ แปะทับด้วย Logic เต็มๆ ได้ครับ
+        
+        # --- Logic AI (ย่อ) ---
         client_ns = current_user.client_id 
         docs_private = []
         if client_ns and client_ns != "global":
@@ -136,19 +143,51 @@ async def chat_endpoint(
             chain = PROMPT | llm | StrOutputParser()
             context_text = "\n\n".join([d.page_content for d in all_docs])
             bot_ans = chain.invoke({"context": context_text, "question": user_message})
-        
-        # ✅ 2. บันทึกคำตอบ Bot ลง DB
+        # ---------------------
+
+        # Save Bot Msg
         bot_msg_db = ChatHistory(user_id=current_user.id, sender="bot", message=bot_ans)
         db.add(bot_msg_db)
-        db.commit()
+        db.commit() # Commit เพื่อให้ได้ ID
+        db.refresh(bot_msg_db) # ดึง ID ล่าสุดมา
 
-        return {"answer": bot_ans}
+        # ✅ Return ID กลับไปด้วย (สำคัญ!)
+        return {
+            "answer": bot_ans, 
+            "message_id": bot_msg_db.id 
+        }
 
     except Exception as e:
         print(f"Error: {e}")
-        import traceback
-        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# 2. เพิ่ม Model และ API สำหรับ Feedback (ใหม่ ✨)
+class FeedbackRequest(BaseModel):
+    score: int # 1 = Like, -1 = Dislike
+
+@app.post("/chat/feedback/{message_id}")
+async def feedback_endpoint(
+    message_id: int,
+    feedback: FeedbackRequest,
+    current_user: UserModel = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    # หาข้อความใน DB
+    msg = db.query(ChatHistory).filter(ChatHistory.id == message_id).first()
+    
+    if not msg:
+        raise HTTPException(status_code=404, detail="Message not found")
+        
+    # เช็คว่าเป็นของ User คนนี้จริงไหม (กันมั่ว)
+    if msg.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not your message")
+
+    # บันทึกคะแนน
+    msg.feedback = feedback.score
+    db.commit()
+    
+    return {"status": "success", "score": feedback.score}
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))

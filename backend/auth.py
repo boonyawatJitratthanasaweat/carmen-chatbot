@@ -46,7 +46,10 @@ class ChatHistory(Base):
     message = Column(Text)
     timestamp = Column(DateTime, default=datetime.utcnow)
     
-    # ใช้ String "User" แทน Class
+    # ✅ เพิ่ม 2 ช่องนี้ครับ
+    feedback = Column(Integer, nullable=True) # 1=Like, -1=Dislike, 0/Null=เฉยๆ
+    feedback_reason = Column(String, nullable=True) # เก็บเหตุผลเผื่อลูกค้าพิมพ์บอก
+    
     owner = relationship("User", back_populates="history")
 
 # --- Helper Functions ---
