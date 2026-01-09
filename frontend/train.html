@@ -239,7 +239,8 @@
         <div class="tabs">
             <button class="tab-btn active" onclick="switchTab('github')">🐙 GitHub Repo</button>
             <button class="tab-btn" onclick="switchTab('url')">🌐 URL Website</button>
-            <button class="tab-btn" onclick="switchTab('file')">📂 Upload File</button>
+            <button class="tab-btn" onclick="switchTab('drive')">📁 Google Drive</button> <button class="tab-btn"
+                onclick="switchTab('file')">📂 Upload File</button>
             <button class="tab-btn" onclick="switchTab('text')">✍️ Text</button>
         </div>
 
@@ -282,6 +283,28 @@
             </div>
 
             <button class="action-btn" onclick="sendUrlData()">เริ่มดูดข้อมูล 🚀</button>
+        </div>
+
+        <div id="tab-drive" class="tab-content">
+            <label>Google Drive Folder ID (หรือ Link):</label>
+            <input type="text" id="gdriveIdInput" placeholder="วางลิงก์ Folder หรือ ID เช่น 1A2B3C...">
+
+            <label>Service Account Key (JSON):</label>
+            <input type="file" id="gdriveKeyInput" accept=".json">
+            <p style="font-size:12px; color:#666; margin-top:-10px;">
+                *ไฟล์ JSON ที่ได้จาก Google Cloud Console (ระบบจะใช้เพื่อยืนยันตัวตนเท่านั้น)
+            </p>
+
+            <div
+                style="background:#fff3cd; padding:10px; border-radius:8px; margin-bottom:20px; border:1px solid #ffeeba;">
+                <strong style="color:#856404;">⚠️ อย่าลืม!</strong>
+                <p style="margin:5px 0 0; font-size:13px; color:#856404;">
+                    คุณต้องกด <b>Share</b> โฟลเดอร์ใน Google Drive ให้กับอีเมลของบอท <br>
+                    (ดูอีเมลได้ในไฟล์ JSON บรรทัด "client_email")
+                </p>
+            </div>
+
+            <button class="action-btn" onclick="sendDriveData()">เชื่อมต่อ Google Drive 🚀</button>
         </div>
 
         <div id="tab-file" class="tab-content">
@@ -339,21 +362,65 @@
         if (accessToken) showTrainingSection();
 
         function switchTab(t) {
-
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
 
             if (t === 'github') {
                 document.querySelector('.tabs button:nth-child(1)').classList.add('active');
                 document.getElementById('tab-github').classList.add('active');
-            } else if (t === 'url') {
+            }
+            else if (t === 'url') {
                 document.querySelector('.tabs button:nth-child(2)').classList.add('active');
                 document.getElementById('tab-url').classList.add('active');
-            } else if (t === 'file') {
+            }
+            else if (t === 'drive') { // ✅ เพิ่มส่วนนี้
                 document.querySelector('.tabs button:nth-child(3)').classList.add('active');
-                document.getElementById('tab-file').classList.add('active');
-            } else { // text
+                document.getElementById('tab-drive').classList.add('active');
+            }
+            else if (t === 'file') {
                 document.querySelector('.tabs button:nth-child(4)').classList.add('active');
+                document.getElementById('tab-file').classList.add('active');
+            }
+            else {
+                document.querySelector('.tabs button:nth-child(5)').classList.add('active');
+                document.getElementById('tab-text').classList.add('active');
+            }
+        }
+
+        // ฟังก์ชันส่งข้อมูล Drive
+        async function sendDriveData() {
+            let fid = document.getElementById('gdriveIdInput').value;
+            const keyFile = document.getElementById('gdriveKeyInput').files[0];
+            const n = document.getElementById('namespaceInput').value;
+
+            if (!fid) return alert('ใส่ Folder ID หรือ Link ก่อนครับ');
+            if (!keyFile) return alert('อัปโหลดไฟล์ JSON Key ก่อนครับ');
+
+            // ดึง ID ออกจาก Link (ถ้าผู้ใช้แปะมาทั้งลิงก์)
+            // ลิงก์มักจะเป็น https://drive.google.com/drive/folders/1H-xxxxxx?usp=sharing
+            if (fid.includes('folders/')) {
+                fid = fid.split('folders/')[1].split('?')[0].split('/')[0];
+            }
+
+            openModal();
+
+            try {
+                const fd = new FormData();
+                fd.append('folder_id', fid);
+                fd.append('namespace', n);
+                fd.append('file', keyFile); // ส่งไฟล์ JSON ไปด้วย
+
+                const res = await fetch(API_URL + '/train/drive', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${accessToken}` },
+                    body: fd
+                });
+
+                if (!res.ok) throw new Error("Server Error");
+                startPolling();
+            } catch (e) {
+                alert("Error: " + e.message);
+                closeModal();
             }
         }
 

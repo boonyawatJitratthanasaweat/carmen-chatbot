@@ -1,4 +1,7 @@
 import time
+from langchain_community.document_loaders import GoogleDriveLoader # ✅ เพิ่มตัวนี้
+import shutil # เอาไว้เซฟไฟล์ JSON ชั่วคราว
+import os
 from datetime import datetime, timedelta 
 from fastapi import FastAPI, HTTPException, Depends, status, BackgroundTasks, UploadFile, File
 from fastapi.security import OAuth2PasswordRequestForm
@@ -542,6 +545,116 @@ def process_url_training(url: str, namespace: str, user_name: str, recursive: bo
         training_state["is_running"] = False
         add_log(f"⚠️ Error: {str(e)}")
 
+def process_drive_training(folder_id: str, key_path: str, namespace: str, user_name: str):
+    global training_state
+    
+    # Reset State
+    training_state.update({
+        "is_running": True,
+        "progress": 0,
+        "total_chunks": 0,
+        "processed_chunks": 0,
+        "status": "Starting",
+        "logs": [],
+        "start_time": time.time(),
+        "estimated_remaining": 0,
+        "abort": False 
+    })
+
+    try:
+        add_log(f"📁 กำลังเชื่อมต่อ Google Drive (Folder ID: {folder_id})")
+        add_log("🔑 ตรวจสอบกุญแจ Service Account...")
+
+        # 1. โหลดข้อมูลจาก Drive
+        try:
+            loader = GoogleDriveLoader(
+                folder_id=folder_id,
+                service_account_key=key_path,
+                recursive=False  # ถ้าอยากให้อ่าน Folder ย่อยด้วย ให้แก้เป็น True
+            )
+            docs = loader.load()
+            add_log(f"✅ พบไฟล์ใน Folder จำนวน {len(docs)} ไฟล์")
+            
+            # โชว์รายชื่อไฟล์
+            add_log("📋 รายชื่อไฟล์ที่พบ:")
+            for i, doc in enumerate(docs):
+                source = doc.metadata.get('source', 'Unknown')
+                title = doc.metadata.get('title', source)
+                add_log(f"   📄 {i+1}. {title}")
+                
+        except Exception as e:
+            add_log(f"❌ เชื่อมต่อ Drive ไม่สำเร็จ: {e}")
+            add_log("💡 คำแนะนำ: เช็คว่าแชร์ Folder ให้ email ของ Service Account หรือยัง?")
+            training_state["status"] = "Failed"
+            training_state["is_running"] = False
+            return
+
+        if not docs:
+            add_log("⚠️ ไม่พบไฟล์ที่อ่านได้ (รองรับ Google Docs, PDF, Text)")
+            training_state["status"] = "Failed"
+            training_state["is_running"] = False
+            return
+
+        # 2. หั่นข้อมูล (Splitting)
+        add_log(f"✂️ กำลังหั่นเนื้อหา...")
+        text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+        chunks = text_splitter.split_documents(docs)
+        
+        total_chunks = len(chunks)
+        training_state["total_chunks"] = total_chunks
+        add_log(f"📦 เตรียมส่งข้อมูล {total_chunks} ชิ้น")
+
+        # 3. ใส่ Metadata
+        for chunk in chunks:
+            chunk.metadata["added_by"] = user_name
+            chunk.metadata["timestamp"] = str(datetime.now())
+            chunk.metadata["source_type"] = "google_drive"
+            chunk.metadata["folder_id"] = folder_id
+
+        # 4. ทยอยส่ง (Loop เดิม)
+        batch_size = 30
+        sleep_time = 20
+        
+        for i in range(0, total_chunks, batch_size):
+            if training_state["abort"]:
+                add_log("⛔ กระบวนการถูกยกเลิก")
+                training_state["status"] = "Cancelled"
+                training_state["is_running"] = False
+                return
+
+            current_time = time.time()
+            elapsed_time = current_time - training_state["start_time"]
+            processed = i
+            if processed > 0:
+                speed = processed / elapsed_time
+                remaining_chunks = total_chunks - processed
+                eta = remaining_chunks / speed if speed > 0 else 0
+                training_state["estimated_remaining"] = int(eta)
+            
+            percent = int((i / total_chunks) * 100)
+            training_state["progress"] = percent
+            training_state["status"] = "Processing"
+            add_log(f"📤 กำลังส่ง Batch {(i//batch_size)+1} (Process: {i}/{total_chunks})")
+
+            batch = chunks[i : i + batch_size]
+            vectorstore.add_documents(documents=batch, namespace=namespace)
+            
+            add_log(f"✅ Batch {(i//batch_size)+1} สำเร็จ! พัก {sleep_time} วิ...")
+            
+            for _ in range(sleep_time):
+                if training_state["abort"]: break
+                time.sleep(1)
+
+        training_state["progress"] = 100
+        training_state["status"] = "Completed"
+        training_state["is_running"] = False
+        add_log("🎉 เสร็จสมบูรณ์! Google Drive ถูกบันทึกเรียบร้อย")
+
+    except Exception as e:
+        training_state["status"] = "Error"
+        training_state["is_running"] = False
+        add_log(f"⚠️ Error: {str(e)}")        
+
 def process_github_training(repo_name: str, token: str, namespace: str, user_name: str, incremental: bool = False):
     global training_state
     
@@ -733,6 +846,33 @@ async def train_url(
         request.depth
     )
     return {"status": "success", "message": "Start processing URL"}
+
+@app.post("/train/drive")
+async def train_drive(
+    background_tasks: BackgroundTasks,  # ✅ ย้ายมาไว้บรรทัดแรกสุด (ก่อนตัวแปรที่มี =)
+    folder_id: str = Form(...),
+    namespace: str = Form(...),
+    file: UploadFile = File(...), 
+    current_user: UserModel = Depends(get_current_user)
+):
+    if current_user.client_id != "global" and namespace != current_user.client_id:
+         raise HTTPException(status_code=403, detail="ไม่มีสิทธิ์")
+
+    # 1. เซฟไฟล์ Key ลงเครื่อง Server ชั่วคราว
+    key_filename = f"service_key_{current_user.username}.json" # (เปลี่ยนชื่อไฟล์นิดหน่อยกันชนกัน)
+    with open(key_filename, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+    
+    # 2. สั่งรัน Background Task
+    background_tasks.add_task(
+        process_drive_training, 
+        folder_id, 
+        key_filename, 
+        namespace, 
+        current_user.username
+    )
+    
+    return {"status": "success", "message": "Start processing Google Drive"}
 
 # --- 🛠️ Debug / Reset DB API ---
 @app.get("/debug/init-db")
