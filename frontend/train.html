@@ -266,18 +266,21 @@
             <input type="text" id="urlInput" placeholder="https://example.com/policy">
 
             <div
-                style="margin-bottom: 20px; display: flex; align-items: center; gap: 10px; background: #fff; padding: 10px; border-radius: 8px; border: 1px solid #ddd;">
-                <input type="checkbox" id="recursiveUrlInput" style="width: 20px; margin: 0;">
-                <div>
-                    <strong style="display:block;">🕷️ ค้นหาลิงก์ภายในเว็บ (Crawl Links)</strong>
-                    <span style="font-size: 12px; color: #666;">(จะอ่านหน้าอื่นๆ ที่ลิงก์ไปถึงด้วย ลึกสูงสุด 2
-                        ระดับ)</span>
+                style="margin-bottom: 20px; background: #fff; padding: 15px; border-radius: 8px; border: 1px solid #ddd;">
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                    <input type="checkbox" id="recursiveUrlInput" style="width: 20px; margin: 0;"
+                        onchange="toggleDepthInput()">
+                    <strong>🕷️ ค้นหาลิงก์ภายในเว็บ (Crawl Links)</strong>
+                </div>
+
+                <div id="depthOption" style="display:none; margin-left: 30px; align-items: center; gap: 10px;">
+                    <label style="margin:0; font-weight:normal;">ความลึก (Depth):</label>
+                    <input type="number" id="depthInput" value="2" min="1" max="10"
+                        style="width: 80px; margin:0; padding:5px;">
+                    <span style="font-size: 12px; color: #666;">(แนะนำ 2-3)</span>
                 </div>
             </div>
 
-            <p style="font-size:12px; color:#666; margin-top:-10px; margin-bottom:20px;">
-                *ระบบจะดึงข้อความทั้งหมดจากหน้าเว็บนี้ (ระวังเว็บที่มี JavaScript เยอะๆ อาจดึงไม่ติด)
-            </p>
             <button class="action-btn" onclick="sendUrlData()">เริ่มดูดข้อมูล 🚀</button>
         </div>
 
@@ -470,7 +473,9 @@
         async function sendUrlData() {
             const u = document.getElementById('urlInput').value;
             const n = document.getElementById('namespaceInput').value;
-            const rec = document.getElementById('recursiveUrlInput').checked; // ✅ รับค่า Checkbox
+            const rec = document.getElementById('recursiveUrlInput').checked;
+            // เอาค่า depth มา (ถ้าไม่ติ๊ก ให้ส่ง 2 เป็น default)
+            const d = document.getElementById('depthInput').value || 2;
 
             if (!u) return alert('ใส่ URL ก่อนครับ');
             if (!u.startsWith('http')) return alert('URL ต้องขึ้นต้นด้วย http:// หรือ https://');
@@ -481,8 +486,13 @@
                 const res = await fetch(API_URL + '/train/url', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${accessToken}` },
-                    // ✅ ส่งค่า recursive ไปด้วย
-                    body: JSON.stringify({ url: u, namespace: n, recursive: rec })
+                    // ✅ ส่ง depth ไปด้วย (แปลงเป็น int)
+                    body: JSON.stringify({
+                        url: u,
+                        namespace: n,
+                        recursive: rec,
+                        depth: parseInt(d)
+                    })
                 });
 
                 if (!res.ok) throw new Error("Server Error");
@@ -511,6 +521,11 @@
                 btn.disabled = false;
                 btn.innerText = "🛑 ยกเลิก (Cancel)";
             }
+        }
+
+        function toggleDepthInput() {
+            const chk = document.getElementById('recursiveUrlInput').checked;
+            document.getElementById('depthOption').style.display = chk ? 'flex' : 'none';
         }
 
         // --- Modal & Polling System ---

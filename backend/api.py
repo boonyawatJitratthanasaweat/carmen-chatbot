@@ -417,7 +417,7 @@ def add_log(message: str):
     if len(training_state["logs"]) > 20:
         training_state["logs"].pop(0)    
 
-def process_url_training(url: str, namespace: str, user_name: str, recursive: bool = False):
+def process_url_training(url: str, namespace: str, user_name: str, recursive: bool = False, depth: int = 2):
     global training_state
     
     # Reset State
@@ -440,16 +440,14 @@ def process_url_training(url: str, namespace: str, user_name: str, recursive: bo
         
         # ✅ Logic เลือกเครื่องมือโหลด
         if recursive:
-            add_log("🕷️ Mode: Recursive Crawling (กำลังไต่ลิงก์ภายในเว็บ...)")
-            add_log("⏳ ขั้นตอนนี้อาจใช้เวลานาน โปรดรอสักครู่...")
-            
-            # max_depth=2 แปลว่า: หน้าแรก -> ลิงก์ในหน้าแรก (พอ) ไม่ลึกไปกว่านั้น
+            add_log(f"🕷️ Mode: Recursive Crawling (Depth: {depth})") # Show Log
+        
             loader = RecursiveUrlLoader(
-                url=url, 
-                max_depth=2, 
-                extractor=lambda x: Soup(x, "html.parser").text,
-                prevent_outside=True # ห้ามออกนอก Domain
-            )
+            url=url, 
+            max_depth=depth, 
+            extractor=lambda x: Soup(x, "html.parser").text,
+            prevent_outside=True
+        )
             docs = loader.load()
             add_log(f"✅ เจอหน้าเว็บทั้งหมด {len(docs)} หน้า")
         else:
@@ -696,6 +694,7 @@ class UrlRequest(BaseModel):
     url: str
     namespace: str = "global"
     recursive: bool = False
+    depth: int = 2
 
 @app.post("/train/url")
 async def train_url(
@@ -711,7 +710,8 @@ async def train_url(
         request.url, 
         request.namespace, 
         current_user.username,
-        request.recursive
+        request.recursive,
+        request.depth
     )
     return {"status": "success", "message": "Start processing URL"}
 
