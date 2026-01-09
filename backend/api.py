@@ -438,37 +438,42 @@ def process_url_training(url: str, namespace: str, user_name: str, recursive: bo
         
         docs = []
         
-        # ✅ Logic เลือกเครื่องมือโหลด
+        # ==========================================
+        # ⚠️ จุดสำคัญคือตรงนี้ครับ (if / else)
+        # ==========================================
         if recursive:
-            add_log(f"🕷️ Mode: Recursive Crawling (Depth: {depth})") # Show Log
-        
+            add_log(f"🕷️ Mode: Recursive Crawling (Depth: {depth})")
+            add_log("⏳ กำลังไต่ลิงก์... ขั้นตอนนี้อาจใช้เวลาสักพัก")
+            
             loader = RecursiveUrlLoader(
-            url=url, 
-            max_depth=depth, 
-            extractor=lambda x: Soup(x, "html.parser").text,
-            prevent_outside=True
-        )
+                url=url, 
+                max_depth=depth,
+                extractor=lambda x: Soup(x, "html.parser").text,
+                prevent_outside=True
+            )
             docs = loader.load()
             add_log(f"✅ เจอหน้าเว็บทั้งหมด {len(docs)} หน้า")
-            add_log("📋 รายการ URL ที่ค้นพบ:")
-        
-        # วนลูปโชว์ชื่อลิงก์ (จำกัดไว้ 50 อัน กัน Log ระเบิดถ้าเจอเยอะจัด)
-        for i, doc in enumerate(docs):
-            # ดึง URL จาก Metadata
-            url_found = doc.metadata.get("source", "Unknown URL")
-            title_found = doc.metadata.get("title", "") # บาง Loader อาจไม่มี title ไม่เป็นไร
-            
-            # แสดงผล
-            if title_found:
-                add_log(f"   👉 {i+1}. {url_found} ({title_found})")
-            else:
-                add_log(f"   👉 {i+1}. {url_found}")
-        
-                add_log("-----------------------------------------------------")
-        else:
+
+            # --- โชว์ Log ลิงก์ ---
+            add_log("📋 รายการ URL ที่ค้นพบทั้งหมด:")
+            for i, doc in enumerate(docs):
+                url_found = doc.metadata.get("source", "Unknown URL")
+                title_found = doc.metadata.get("title", "").strip()[:50]
+                if title_found:
+                    add_log(f"   👉 {i+1}. {url_found} ({title_found}...)")
+                else:
+                    add_log(f"   👉 {i+1}. {url_found}")
+            add_log(f"-----------------------------------------------------")
+            # ---------------------
+
+        else: 
+            # ⚠️ ต้องมี else และย่อหน้าต้องตรงกับ if ข้างบนเป๊ะๆ
+            # ถ้าไม่ใส่ else หรือย่อหน้าผิด มันจะทำงานทั้งคู่ แล้วทับข้อมูลกันเอง
             add_log("📄 Mode: Single Page (อ่านเฉพาะหน้านี้)")
             loader = WebBaseLoader(url)
             docs = loader.load()
+
+        # ==========================================
 
         if not docs:
             add_log("❌ ไม่พบเนื้อหา หรือเว็บไซต์ป้องกันบอท")
@@ -490,11 +495,10 @@ def process_url_training(url: str, namespace: str, user_name: str, recursive: bo
             chunk.metadata["added_by"] = user_name
             chunk.metadata["timestamp"] = str(datetime.now())
             chunk.metadata["source_type"] = "web_url"
-            # ถ้าเป็น Recursive source จะเปลี่ยนไปตามหน้าย่อยจริงๆ
             if "source" not in chunk.metadata: 
                 chunk.metadata["source"] = url
 
-        # 4. ทยอยส่ง (เหมือนเดิม)
+        # 4. ทยอยส่ง
         batch_size = 30
         sleep_time = 20
         
