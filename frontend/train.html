@@ -324,17 +324,23 @@
         document.getElementById('processModal').style.display = 'none';
         if (accessToken) showTrainingSection();
 
-        // --- Functions ---
         function switchTab(t) {
+          
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-            if (t === 'github') { document.querySelector('.tabs button:nth-child(1)').classList.add('active'); document.getElementById('tab-github').classList.add('active'); }
-            else if (t === 'url') {
+
+            if (t === 'github') {
+                document.querySelector('.tabs button:nth-child(1)').classList.add('active');
+                document.getElementById('tab-github').classList.add('active');
+            } else if (t === 'url') {
                 document.querySelector('.tabs button:nth-child(2)').classList.add('active');
                 document.getElementById('tab-url').classList.add('active');
+            } else if (t === 'file') {
+                document.querySelector('.tabs button:nth-child(3)').classList.add('active'); 
+                document.getElementById('tab-file').classList.add('active');
+            } else { // text
+                document.querySelector('.tabs button:nth-child(4)').classList.add('active'); 
             }
-            else if (t === 'file') { document.querySelector('.tabs button:nth-child(2)').classList.add('active'); document.getElementById('tab-file').classList.add('active'); }
-            else { document.querySelector('.tabs button:nth-child(3)').classList.add('active'); document.getElementById('tab-text').classList.add('active'); }
         }
 
         async function doLogin() {

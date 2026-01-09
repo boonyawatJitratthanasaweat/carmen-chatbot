@@ -23,3 +23,4 @@ pandas
 PyGithub
 
 beautifulsoup4
+validators
