@@ -1,6 +1,7 @@
 import time
-from langchain_community.document_loaders import GoogleDriveLoader # ✅ เพิ่มตัวนี้
-import shutil # เอาไว้เซฟไฟล์ JSON ชั่วคราว
+from langchain_community.document_loaders import GoogleDriveLoader
+import shutil 
+import sqlite3 
 import os
 from datetime import datetime, timedelta 
 from fastapi import FastAPI, HTTPException, BackgroundTasks, Depends, Request, Form, File, UploadFile
@@ -9,7 +10,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
-import os
 import uvicorn
 import io
 import pandas as pd
@@ -18,7 +18,6 @@ from pathlib import Path
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload
-import io
 
 # AI & LangChain
 from langchain_google_genai import GoogleGenerativeAIEmbeddings, ChatGoogleGenerativeAI
@@ -32,8 +31,8 @@ from github import Github
 
 from dotenv import load_dotenv
 
-from langchain_community.document_loaders import WebBaseLoader # ✅ เพิ่มตัวนี้
-import validators # (Optional: ไว้เช็คว่า URL ถูกต้องไหม แต่ถ้าไม่มีไม่เป็นไร)
+from langchain_community.document_loaders import WebBaseLoader
+import validators 
 
 # เพิ่ม RecursiveUrlLoader เข้ามา
 from langchain_community.document_loaders import RecursiveUrlLoader
@@ -47,8 +46,63 @@ from .auth import get_db, create_access_token, get_current_user, get_password_ha
 env_path = Path(__file__).parent / '.env'
 load_dotenv(dotenv_path=env_path)
 
-# --- สร้างตารางใน Database ---
+# --- สร้างตารางใน Database หลัก (Postgres/SQLAlchemy) ---
 Base.metadata.create_all(bind=engine)
+
+# ==========================================
+# 🛠️ 1. สร้างตารางเก็บ Log Token (SQLite แยก)
+# ==========================================
+LOG_DB_NAME = "carmen_logs.db"
+
+def init_log_db():
+    """สร้างตาราง chat_logs ถ้ายังไม่มี"""
+    try:
+        conn = sqlite3.connect(LOG_DB_NAME)
+        cursor = conn.cursor()
+        sql_create_table = """
+        CREATE TABLE IF NOT EXISTS chat_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+            namespace TEXT NOT NULL,
+            user_query TEXT,
+            model_name TEXT,
+            input_tokens INTEGER DEFAULT 0,
+            output_tokens INTEGER DEFAULT 0,
+            total_tokens INTEGER DEFAULT 0,
+            latency_ms REAL DEFAULT 0.0
+        );
+        """
+        cursor.execute(sql_create_table)
+        conn.commit()
+        conn.close()
+        print("✅ Log Database Initialized (chat_logs table ready).")
+    except Exception as e:
+        print(f"❌ Log DB Error: {e}")
+
+# เรียกใช้งานทันทีเมื่อเริ่มแอป
+init_log_db()
+
+# ฟังก์ชันบันทึก Log (Background Task)
+def log_token_usage(namespace: str, model: str, input_tk: int, output_tk: int, query: str = ""):
+    try:
+        total_tk = input_tk + output_tk
+        conn = sqlite3.connect(LOG_DB_NAME)
+        cursor = conn.cursor()
+        
+        sql = """
+            INSERT INTO chat_logs (namespace, model_name, input_tokens, output_tokens, total_tokens, user_query, timestamp)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """
+        cursor.execute(sql, (namespace, model, input_tk, output_tk, total_tk, query, datetime.now()))
+        
+        conn.commit()
+        conn.close()
+        print(f"📝 Token Log saved: {total_tk} tokens (Client: {namespace})")
+        
+    except Exception as e:
+        print(f"⚠️ Failed to save token log: {e}")
+
+# ==========================================
 
 # --- Config ---
 INDEX_NAME = os.environ.get("PINECONE_INDEX_NAME", "docscarmencloud")
@@ -58,6 +112,8 @@ print("🧠 Loading AI Brain...")
 try:
     embeddings = GoogleGenerativeAIEmbeddings(model="models/text-embedding-004")
     vectorstore = PineconeVectorStore(index_name=INDEX_NAME, embedding=embeddings)
+    
+    # ✅ ใช้ ChatGoogleGenerativeAI (Google)
     llm = ChatGoogleGenerativeAI(model="gemma-3-27b-it", temperature=0.3)
     
     prompt_template = """
@@ -104,7 +160,7 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
     
     if not user or not pwd_context.verify(form_data.password, user.hashed_password):
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
+            status_code=401,
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
@@ -123,13 +179,32 @@ async def get_chat_history(
                 .limit(50).all()
     return history[::-1] 
 
-# --- 💬 Chat API ---
+# --- 📜 API สำหรับ Admin ดู Log Token (เพิ่มใหม่) ---
+@app.get("/admin/logs")
+async def get_token_logs(current_user: UserModel = Depends(get_current_user)):
+    # เช็คสิทธิ์ Admin (สมมติว่าถ้า client_id = global คือ admin)
+    if current_user.client_id != "global":
+        raise HTTPException(status_code=403, detail="Admin access only")
+    
+    try:
+        conn = sqlite3.connect(LOG_DB_NAME)
+        conn.row_factory = sqlite3.Row # ให้ดึงข้อมูลเป็น Dictionary
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM chat_logs ORDER BY id DESC LIMIT 50")
+        rows = cursor.fetchall()
+        conn.close()
+        return [dict(row) for row in rows]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# --- 💬 Chat API (แก้ใหม่ให้เก็บ Token) ---
 class Question(BaseModel):
     text: str
 
 @app.post("/chat")
 async def chat_endpoint(
     question: Question, 
+    background_tasks: BackgroundTasks, # ✅ รับ BackgroundTasks
     current_user: UserModel = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -153,12 +228,33 @@ async def chat_endpoint(
         docs_common = vectorstore.similarity_search(user_message, k=2, namespace="global") 
         all_docs = docs_private + docs_common
 
+        bot_ans = ""
+        usage = {} # ตัวแปรเก็บ Token
+
         if not all_docs:
             bot_ans = "ไม่พบข้อมูลที่เกี่ยวข้องทั้งในส่วนตัวและข้อมูลพื้นฐานค่ะ"
         else:
-            chain = PROMPT | llm | StrOutputParser()
+            # ⚠️ เอา StrOutputParser ออก เพื่อให้ได้ Object เต็มๆ (ที่มี Usage Metadata)
+            chain = PROMPT | llm 
             context_text = "\n\n".join([d.page_content for d in all_docs])
-            bot_ans = chain.invoke({"context": context_text, "question": user_message})
+            
+            # เรียก AI
+            response = chain.invoke({"context": context_text, "question": user_message})
+            
+            # แกะคำตอบและ Token
+            bot_ans = response.content
+            usage = response.usage_metadata or {} # ดึง Token Info
+            
+            # ✅ สั่งบันทึก Token ลง DB (ทำงานเบื้องหลัง)
+            if usage:
+                background_tasks.add_task(
+                    log_token_usage,
+                    namespace=client_ns,
+                    model="gemma-3-27b-it",
+                    input_tk=usage.get("input_tokens", 0),
+                    output_tk=usage.get("output_tokens", 0),
+                    query=user_message # (ถ้าไม่อยากเก็บคำถาม ให้แก้เป็น "")
+                )
 
         # Save Bot Msg
         bot_msg_db = ChatHistory(user_id=current_user.id, sender="bot", message=bot_ans)
@@ -168,7 +264,8 @@ async def chat_endpoint(
 
         return {
             "answer": bot_ans, 
-            "message_id": bot_msg_db.id 
+            "message_id": bot_msg_db.id,
+            "usage_debug": usage # ส่งกลับไปดูเล่นๆ ที่หน้าเว็บ (Optional)
         }
 
     except Exception as e:
@@ -205,7 +302,7 @@ async def feedback_endpoint(
 # 1. Manual Input
 class TrainingRequest(BaseModel):
     text: str
-    namespace: str = "global"  # ✅ เปลี่ยน default เป็น global
+    namespace: str = "global"
     source: str = "admin_manual"
 
 @app.post("/train")
@@ -242,7 +339,7 @@ async def train_data(
 @app.post("/train/upload")
 async def train_upload(
     file: UploadFile = File(...),
-    namespace: str = "global", # ✅ เปลี่ยน default เป็น global
+    namespace: str = "global",
     source: str = "File Upload",
     current_user: UserModel = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -297,7 +394,9 @@ async def train_upload(
         print(f"Upload Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-# 3. GitHub Logic
+# ==========================================
+# ⚙️ Helper Functions for Training
+# ==========================================
 
 def get_modified_files(repo, days=30):
     """หาไฟล์ที่มีการแก้ไขใน X วันที่ผ่านมา"""
@@ -306,12 +405,9 @@ def get_modified_files(repo, days=30):
     
     modified_files = set()
     try:
-        # ดึง Commit ย้อนหลัง
         commits = repo.get_commits(since=since_date)
-        
         for commit in commits:
             for file in commit.files:
-                # เลือกเฉพาะไฟล์นามสกุลที่รองรับ
                 if file.filename.endswith((".md", ".mdx", ".txt", ".csv", ".py", ".js", ".ts", ".html", ".css", ".json")):
                     modified_files.add(file.filename)
                     
@@ -335,14 +431,11 @@ def get_file_content(repo, file_path):
 
 def get_github_docs(repo_name, access_token):
     print(f"🕵️‍♂️ Connecting to GitHub Repo: '{repo_name}'")
-    
-    # Clean Inputs
     repo_name = repo_name.strip()
     access_token = access_token.strip() if access_token else None
     
     docs = []
     try:
-        # 1. เชื่อมต่อ GitHub
         if access_token:
             print("   🔑 Using Access Token")
             g = Github(access_token)
@@ -350,21 +443,17 @@ def get_github_docs(repo_name, access_token):
             print("   🌐 Using Anonymous Access (Public Repo Only)")
             g = Github()
 
-        # 2. ค้นหา Repo
         repo = g.get_repo(repo_name)
         print(f"   ✅ Found Repo: {repo.full_name} (Default Branch: {repo.default_branch})")
 
-        # 3. ดึงไฟล์ทั้งหมด (Recursive)
         contents = repo.get_contents("")
         file_count = 0
         
         while contents:
             file_content = contents.pop(0)
-            
             if file_content.type == "dir":
                 contents.extend(repo.get_contents(file_content.path))
             else:
-                # ✅ เพิ่มนามสกุลไฟล์ที่รองรับ (Code, Text, Config)
                 ALLOWED_EXTENSIONS = (
                     ".md", ".mdx", ".txt", ".csv", 
                     ".py", ".js", ".ts", ".html", ".css", ".json"
@@ -373,9 +462,7 @@ def get_github_docs(repo_name, access_token):
                 if file_content.path.endswith(ALLOWED_EXTENSIONS):
                     file_count += 1
                     try:
-                        # Decode เนื้อหาไฟล์
                         decoded_content = file_content.decoded_content.decode("utf-8")
-                        
                         docs.append(Document(
                             page_content=decoded_content,
                             metadata={
@@ -383,7 +470,6 @@ def get_github_docs(repo_name, access_token):
                                 "file_path": file_content.path
                             }
                         ))
-                        # print(f"     📄 Loaded: {file_content.path}") # ปิดไว้จะได้ไม่รก Log
                     except Exception as decode_err:
                         print(f"     ⚠️ Skip {file_content.path}: {decode_err}")
 
@@ -391,97 +477,59 @@ def get_github_docs(repo_name, access_token):
         return docs
 
     except Exception as e:
-        # 🚨 แจ้ง Error แบบละเอียด
         print(f"❌ GitHub Error Detail: {type(e).__name__} - {str(e)}")
-        
-        # กรณี 404 (หาไม่เจอ)
-        if "404" in str(e):
-             print("   👉 คำแนะนำ: เช็คชื่อ Repo ให้ถูก หรือถ้าเป็น Private Repo ต้องใส่ Token")
-        
-        # กรณี 401 (รหัสผิด)
-        if "401" in str(e) or "Bad credentials" in str(e):
-             print("   👉 คำแนะนำ: Token ผิด หรือหมดอายุ")
-
         return []
     
 training_state = {
     "is_running": False,
-    "progress": 0,          # %
+    "progress": 0,
     "total_chunks": 0,
     "processed_chunks": 0,
     "status": "Idle",
-    "logs": [],             # เก็บ Log ย้อนหลัง 10 บรรทัด
+    "logs": [],
     "start_time": 0,
-    "estimated_remaining": 0,# วินาที
+    "estimated_remaining": 0,
     "abort": False
 }    
     
 def add_log(message: str):
-    """ฟังก์ชันช่วยเก็บ Log และ Print ลง Console"""
     print(message)
     timestamp = datetime.now().strftime("%H:%M:%S")
     training_state["logs"].append(f"[{timestamp}] {message}")
-    # เก็บแค่ 20 บรรทัดล่าสุดพอ (เดี๋ยว Memory เต็ม)
     if len(training_state["logs"]) > 20:
         training_state["logs"].pop(0)    
 
 def process_url_training(url: str, namespace: str, user_name: str, recursive: bool = False, depth: int = 2):
     global training_state
     
-    # Reset State
     training_state.update({
-        "is_running": True,
-        "progress": 0,
-        "total_chunks": 0,
-        "processed_chunks": 0,
-        "status": "Starting",
-        "logs": [],
-        "start_time": time.time(),
-        "estimated_remaining": 0,
-        "abort": False 
+        "is_running": True, "progress": 0, "total_chunks": 0, "processed_chunks": 0,
+        "status": "Starting", "logs": [], "start_time": time.time(), "estimated_remaining": 0, "abort": False 
     })
 
     try:
         add_log(f"🌐 กำลังเชื่อมต่อ: {url}")
-        
         docs = []
         
-        # ==========================================
-        # ⚠️ จุดสำคัญคือตรงนี้ครับ (if / else)
-        # ==========================================
         if recursive:
             add_log(f"🕷️ Mode: Recursive Crawling (Depth: {depth})")
             add_log("⏳ กำลังไต่ลิงก์... ขั้นตอนนี้อาจใช้เวลาสักพัก")
-            
             loader = RecursiveUrlLoader(
-                url=url, 
-                max_depth=depth,
-                extractor=lambda x: Soup(x, "html.parser").text,
-                prevent_outside=True
+                url=url, max_depth=depth, extractor=lambda x: Soup(x, "html.parser").text, prevent_outside=True
             )
             docs = loader.load()
             add_log(f"✅ เจอหน้าเว็บทั้งหมด {len(docs)} หน้า")
-
-            # --- โชว์ Log ลิงก์ ---
+            # Log links
             add_log("📋 รายการ URL ที่ค้นพบทั้งหมด:")
             for i, doc in enumerate(docs):
                 url_found = doc.metadata.get("source", "Unknown URL")
-                title_found = doc.metadata.get("title", "").strip()[:50]
-                if title_found:
-                    add_log(f"   👉 {i+1}. {url_found} ({title_found}...)")
-                else:
-                    add_log(f"   👉 {i+1}. {url_found}")
+                add_log(f"   👉 {i+1}. {url_found}")
             add_log(f"-----------------------------------------------------")
-            # ---------------------
 
         else: 
-            # ⚠️ ต้องมี else และย่อหน้าต้องตรงกับ if ข้างบนเป๊ะๆ
-            # ถ้าไม่ใส่ else หรือย่อหน้าผิด มันจะทำงานทั้งคู่ แล้วทับข้อมูลกันเอง
             add_log("📄 Mode: Single Page (อ่านเฉพาะหน้านี้)")
             loader = WebBaseLoader(url)
             docs = loader.load()
-
-        # ==========================================
 
         if not docs:
             add_log("❌ ไม่พบเนื้อหา หรือเว็บไซต์ป้องกันบอท")
@@ -489,7 +537,6 @@ def process_url_training(url: str, namespace: str, user_name: str, recursive: bo
             training_state["is_running"] = False
             return
 
-        # 2. หั่นข้อมูล (Splitting)
         add_log(f"✂️ กำลังรวบรวมและหั่นเนื้อหาจาก {len(docs)} หน้า...")
         text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
         chunks = text_splitter.split_documents(docs)
@@ -498,15 +545,12 @@ def process_url_training(url: str, namespace: str, user_name: str, recursive: bo
         training_state["total_chunks"] = total_chunks
         add_log(f"📦 เตรียมส่งข้อมูล {total_chunks} ชิ้น (Chunks)")
 
-        # 3. ใส่ Metadata
         for chunk in chunks:
             chunk.metadata["added_by"] = user_name
             chunk.metadata["timestamp"] = str(datetime.now())
             chunk.metadata["source_type"] = "web_url"
-            if "source" not in chunk.metadata: 
-                chunk.metadata["source"] = url
+            if "source" not in chunk.metadata: chunk.metadata["source"] = url
 
-        # 4. ทยอยส่ง
         batch_size = 30
         sleep_time = 20
         
@@ -535,7 +579,6 @@ def process_url_training(url: str, namespace: str, user_name: str, recursive: bo
             vectorstore.add_documents(documents=batch, namespace=namespace)
             
             add_log(f"✅ Batch {(i//batch_size)+1} สำเร็จ! พัก {sleep_time} วิ...")
-            
             for _ in range(sleep_time):
                 if training_state["abort"]: break
                 time.sleep(1)
@@ -553,42 +596,28 @@ def process_url_training(url: str, namespace: str, user_name: str, recursive: bo
 def process_drive_training(folder_id: str, key_path: str, namespace: str, user_name: str):
     global training_state
     
-    # Reset State
     training_state.update({
-        "is_running": True,
-        "progress": 0,
-        "total_chunks": 0,
-        "processed_chunks": 0,
-        "status": "Starting",
-        "logs": [],
-        "start_time": time.time(),
-        "estimated_remaining": 0,
-        "abort": False 
+        "is_running": True, "progress": 0, "total_chunks": 0, "processed_chunks": 0,
+        "status": "Starting", "logs": [], "start_time": time.time(), "estimated_remaining": 0, "abort": False 
     })
 
     try:
         add_log(f"📁 กำลังเชื่อมต่อ Google Drive (Folder ID: {folder_id})")
         
-        # 1. เชื่อมต่อ API
         creds = service_account.Credentials.from_service_account_file(
             key_path, scopes=['https://www.googleapis.com/auth/drive.readonly']
         )
         service = build('drive', 'v3', credentials=creds)
 
-        # -----------------------------------------------------
-        # 🔍 2. ค้นหาไฟล์แบบ Recursive (เจาะทุกชั้น)
-        # -----------------------------------------------------
         all_items = []
-        folders_stack = [folder_id] # เริ่มจากโฟลเดอร์ตั้งต้น
+        folders_stack = [folder_id]
         
         add_log("🕷️ เริ่มค้นหาไฟล์ในทุก Folder ย่อย...")
         
         while folders_stack:
             if training_state["abort"]: break
-            
             current_folder = folders_stack.pop()
             
-            # ดึงของใน Folder ปัจจุบัน
             try:
                 results = service.files().list(
                     q=f"'{current_folder}' in parents and trashed=false",
@@ -598,39 +627,29 @@ def process_drive_training(folder_id: str, key_path: str, namespace: str, user_n
                 items = results.get('files', [])
                 
                 for item in items:
-                    # ถ้าเป็น Folder -> เก็บเข้า Stack เพื่อรอไปค้นต่อรอบหน้า
                     if item['mimeType'] == 'application/vnd.google-apps.folder':
                         folders_stack.append(item['id'])
-                    # ถ้าเป็น File -> เก็บเข้า list เตรียมโหลด
                     else:
                         all_items.append(item)
-                        
             except Exception as e:
                 add_log(f"⚠️ เข้าถึง Folder {current_folder} ไม่ได้: {e}")
 
         add_log(f"✅ พบไฟล์ทั้งหมด {len(all_items)} ไฟล์ (จากทุกชั้น)")
 
-        # -----------------------------------------------------
-
         docs = []
-        
-        # 3. ไล่โหลดเนื้อหาทีละไฟล์
         for idx, item in enumerate(all_items):
             if training_state["abort"]: break
-            
             file_id = item['id']
             name = item['name']
             mime = item['mimeType']
             content = ""
 
             try:
-                # 📄 Case A: Google Docs
                 if mime == 'application/vnd.google-apps.document':
                     add_log(f"   [{idx+1}/{len(all_items)}] 🔄 แปลง G-Doc: {name}")
                     request = service.files().export_media(fileId=file_id, mimeType='text/plain')
                     content = request.execute().decode('utf-8')
 
-                # 📝 Case B: Text Files (.md, .txt, etc)
                 elif name.endswith(('.md', '.txt', '.json', '.py', '.js', '.csv')) or mime.startswith('text/'):
                     add_log(f"   [{idx+1}/{len(all_items)}] ⬇️ โหลดไฟล์: {name}")
                     request = service.files().get_media(fileId=file_id)
@@ -639,13 +658,9 @@ def process_drive_training(folder_id: str, key_path: str, namespace: str, user_n
                     done = False
                     while done is False:
                         status, done = downloader.next_chunk()
-                    
                     fh.seek(0)
                     content = fh.read().decode('utf-8', errors='ignore')
-                
-                # 🖼️ Case C: ข้าม
                 else:
-                    # add_log(f"   ⚠️ ข้าม: {name}") # ปิด Log นี้ก็ได้จะได้ไม่รก
                     continue
 
                 if content.strip():
@@ -665,8 +680,6 @@ def process_drive_training(folder_id: str, key_path: str, namespace: str, user_n
             return
 
         add_log(f"✅ ได้เอกสารพร้อมเทรนทั้งหมด {len(docs)} ฉบับ")
-
-        # 4. หั่นข้อมูล (Splitting)
         add_log(f"✂️ กำลังหั่นเนื้อหา...")
         text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
         chunks = text_splitter.split_documents(docs)
@@ -675,7 +688,6 @@ def process_drive_training(folder_id: str, key_path: str, namespace: str, user_n
         training_state["total_chunks"] = total_chunks
         add_log(f"📦 เตรียมส่งข้อมูล {total_chunks} ชิ้น")
 
-        # 5. ใส่ Metadata และส่ง Pinecone
         for chunk in chunks:
             chunk.metadata["added_by"] = user_name
             chunk.metadata["timestamp"] = str(datetime.now())
@@ -710,7 +722,6 @@ def process_drive_training(folder_id: str, key_path: str, namespace: str, user_n
             vectorstore.add_documents(documents=batch, namespace=namespace)
             
             add_log(f"✅ Batch {(i//batch_size)+1} สำเร็จ! พัก {sleep_time} วิ...")
-            
             for _ in range(sleep_time):
                 if training_state["abort"]: break
                 time.sleep(1)
@@ -728,36 +739,22 @@ def process_drive_training(folder_id: str, key_path: str, namespace: str, user_n
 def process_github_training(repo_name: str, token: str, namespace: str, user_name: str, incremental: bool = False):
     global training_state
     
-    # Reset State
     training_state.update({
-        "is_running": True,
-        "progress": 0,
-        "total_chunks": 0,
-        "processed_chunks": 0,
-        "status": "Starting",
-        "logs": [],
-        "start_time": time.time(),
-        "estimated_remaining": 0,
-        "abort": False  # ✅ 1. ตั้งค่าเริ่มต้นธงยกเลิก
+        "is_running": True, "progress": 0, "total_chunks": 0, "processed_chunks": 0,
+        "status": "Starting", "logs": [], "start_time": time.time(), "estimated_remaining": 0, "abort": False
     })
 
     try:
         add_log(f"🚀 เริ่มต้นเชื่อมต่อ GitHub Repo: {repo_name}")
-        if incremental:
-            add_log(f"🔄 Mode: Incremental Update (อัปเดตเฉพาะที่เปลี่ยนใน 30 วัน)")
-        else:
-            add_log(f"💿 Mode: Full Load (โหลดใหม่ทั้งหมด)")
+        mode_text = "Incremental Update" if incremental else "Full Load"
+        add_log(f"🔄 Mode: {mode_text}")
 
-        # 1. เชื่อมต่อ GitHub
         if token: g = Github(token)
         else: g = Github()
         repo = g.get_repo(repo_name)
 
         docs = []
-        
-        # ✅ แยก Logic ตามโหมด
         if incremental:
-            # 1.1 หาไฟล์ที่เปลี่ยน
             file_paths = get_modified_files(repo, days=30)
             if not file_paths:
                 add_log("✅ ไม่พบการอัปเดตใหม่ๆ ในช่วง 30 วันที่ผ่านมา")
@@ -766,20 +763,16 @@ def process_github_training(repo_name: str, token: str, namespace: str, user_nam
                 training_state["is_running"] = False
                 return
             
-            # 1.2 โหลดเนื้อหาทีละไฟล์
             add_log(f"📥 กำลังดาวน์โหลด {len(file_paths)} ไฟล์ใหม่...")
-            for idx, path in enumerate(file_paths):
-                # 🛑 เช็ค Cancel ระหว่างดาวน์โหลดไฟล์ (เผื่อไฟล์เยอะ)
+            for path in file_paths:
                 if training_state["abort"]:
                     add_log("⛔ ยกเลิกการดาวน์โหลด")
                     training_state["status"] = "Cancelled"
                     training_state["is_running"] = False
                     return
-
                 doc = get_file_content(repo, path)
                 if doc: docs.append(doc)
         else:
-            # 1.1 โหลดทั้งหมด (Logic เดิม)
             docs = get_github_docs(repo_name, token)
 
         if not docs:
@@ -789,7 +782,6 @@ def process_github_training(repo_name: str, token: str, namespace: str, user_nam
             return
 
         add_log(f"✂️ กำลังหั่นเนื้อหาจาก {len(docs)} ไฟล์...")
-        
         text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
         chunks = text_splitter.split_documents(docs)
         
@@ -806,14 +798,12 @@ def process_github_training(repo_name: str, token: str, namespace: str, user_nam
         sleep_time = 20  
         
         for i in range(0, total_chunks, batch_size):
-            # 🛑 2. เช็คธงแดง ก่อนส่งแต่ละ Batch
             if training_state["abort"]:
                 add_log("⛔ กระบวนการถูกยกเลิกโดย Admin")
                 training_state["status"] = "Cancelled"
                 training_state["is_running"] = False
-                return # จบการทำงานทันที
+                return 
             
-            # คำนวณเวลา
             current_time = time.time()
             elapsed_time = current_time - training_state["start_time"]
             processed = i
@@ -835,7 +825,6 @@ def process_github_training(repo_name: str, token: str, namespace: str, user_nam
             
             add_log(f"✅ Batch {(i//batch_size)+1} สำเร็จ! พักหายใจ {sleep_time} วินาที...")
             
-            # 🛑 3. Smart Sleep (เช็ค Cancel ทุกวินาที ระหว่างพัก)
             for _ in range(sleep_time):
                 if training_state["abort"]: break
                 time.sleep(1)
@@ -859,7 +848,6 @@ async def cancel_training(current_user: UserModel = Depends(get_current_user)):
         add_log("🛑 ได้รับคำสั่งยกเลิก! กำลังหยุดกระบวนการ...")
     return {"status": "success", "message": "Cancellation requested"}        
 
-# ✅ API สำหรับให้หน้าเว็บมาดึงข้อมูล
 @app.get("/train/status")
 async def get_training_status():
     return training_state
@@ -919,7 +907,7 @@ async def train_url(
 
 @app.post("/train/drive")
 async def train_drive(
-    background_tasks: BackgroundTasks,  # ✅ ย้ายมาไว้บรรทัดแรกสุด (ก่อนตัวแปรที่มี =)
+    background_tasks: BackgroundTasks,  # ✅ BackgroundTasks ต้องอยู่ก่อนตัวแปรที่มี default
     folder_id: str = Form(...),
     namespace: str = Form(...),
     file: UploadFile = File(...), 
@@ -928,12 +916,10 @@ async def train_drive(
     if current_user.client_id != "global" and namespace != current_user.client_id:
          raise HTTPException(status_code=403, detail="ไม่มีสิทธิ์")
 
-    # 1. เซฟไฟล์ Key ลงเครื่อง Server ชั่วคราว
-    key_filename = f"service_key_{current_user.username}.json" # (เปลี่ยนชื่อไฟล์นิดหน่อยกันชนกัน)
+    key_filename = f"service_key_{current_user.username}.json"
     with open(key_filename, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
     
-    # 2. สั่งรัน Background Task
     background_tasks.add_task(
         process_drive_training, 
         folder_id, 
@@ -970,18 +956,14 @@ async def init_database_endpoint(db: Session = Depends(get_db)):
             created_users.append(username)
         
         db.commit()
-        
         return {
             "status": "success", 
             "message": "🎉 Database Reset & Initialized Successfully!", 
             "users_created": created_users
         }
-
     except Exception as e:
         print(f"❌ Error: {e}")
         return {"status": "error", "message": str(e)}
-    
-    
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
