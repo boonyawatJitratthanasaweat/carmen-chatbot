@@ -27,6 +27,10 @@ from dotenv import load_dotenv
 from langchain_community.document_loaders import WebBaseLoader # ✅ เพิ่มตัวนี้
 import validators # (Optional: ไว้เช็คว่า URL ถูกต้องไหม แต่ถ้าไม่มีไม่เป็นไร)
 
+# เพิ่ม RecursiveUrlLoader เข้ามา
+from langchain_community.document_loaders import RecursiveUrlLoader
+from bs4 import BeautifulSoup as Soup 
+
 # Import ไฟล์ระบบ
 from .database import Base, engine
 from .auth import get_db, create_access_token, get_current_user, get_password_hash, User as UserModel, ChatHistory
@@ -413,7 +417,7 @@ def add_log(message: str):
     if len(training_state["logs"]) > 20:
         training_state["logs"].pop(0)    
 
-def process_url_training(url: str, namespace: str, user_name: str):
+def process_url_training(url: str, namespace: str, user_name: str, recursive: bool = False):
     global training_state
     
     # Reset State
@@ -430,21 +434,37 @@ def process_url_training(url: str, namespace: str, user_name: str):
     })
 
     try:
-        add_log(f"🌐 กำลังเชื่อมต่อเว็บไซต์: {url}")
+        add_log(f"🌐 กำลังเชื่อมต่อ: {url}")
         
-        # 1. โหลดข้อมูลจาก URL
-        try:
+        docs = []
+        
+        # ✅ Logic เลือกเครื่องมือโหลด
+        if recursive:
+            add_log("🕷️ Mode: Recursive Crawling (กำลังไต่ลิงก์ภายในเว็บ...)")
+            add_log("⏳ ขั้นตอนนี้อาจใช้เวลานาน โปรดรอสักครู่...")
+            
+            # max_depth=2 แปลว่า: หน้าแรก -> ลิงก์ในหน้าแรก (พอ) ไม่ลึกไปกว่านั้น
+            loader = RecursiveUrlLoader(
+                url=url, 
+                max_depth=2, 
+                extractor=lambda x: Soup(x, "html.parser").text,
+                prevent_outside=True # ห้ามออกนอก Domain
+            )
+            docs = loader.load()
+            add_log(f"✅ เจอหน้าเว็บทั้งหมด {len(docs)} หน้า")
+        else:
+            add_log("📄 Mode: Single Page (อ่านเฉพาะหน้านี้)")
             loader = WebBaseLoader(url)
             docs = loader.load()
-            add_log(f"✅ โหลดสำเร็จ! ได้เนื้อหายาว {len(docs[0].page_content)} ตัวอักษร")
-        except Exception as e:
-            add_log(f"❌ โหลด URL ไม่สำเร็จ: {e}")
+
+        if not docs:
+            add_log("❌ ไม่พบเนื้อหา หรือเว็บไซต์ป้องกันบอท")
             training_state["status"] = "Failed"
             training_state["is_running"] = False
             return
 
         # 2. หั่นข้อมูล (Splitting)
-        add_log("✂️ กำลังหั่นเนื้อหา...")
+        add_log(f"✂️ กำลังรวบรวมและหั่นเนื้อหาจาก {len(docs)} หน้า...")
         text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
         chunks = text_splitter.split_documents(docs)
         
@@ -457,9 +477,11 @@ def process_url_training(url: str, namespace: str, user_name: str):
             chunk.metadata["added_by"] = user_name
             chunk.metadata["timestamp"] = str(datetime.now())
             chunk.metadata["source_type"] = "web_url"
-            chunk.metadata["source"] = url # เก็บลิงก์ต้นทางไว้
+            # ถ้าเป็น Recursive source จะเปลี่ยนไปตามหน้าย่อยจริงๆ
+            if "source" not in chunk.metadata: 
+                chunk.metadata["source"] = url
 
-        # 4. ทยอยส่ง (Loop พร้อมระบบ Cancel)
+        # 4. ทยอยส่ง (เหมือนเดิม)
         batch_size = 30
         sleep_time = 20
         
@@ -470,7 +492,6 @@ def process_url_training(url: str, namespace: str, user_name: str):
                 training_state["is_running"] = False
                 return
 
-            # คำนวณเวลา
             current_time = time.time()
             elapsed_time = current_time - training_state["start_time"]
             processed = i
@@ -674,6 +695,7 @@ async def train_github(
 class UrlRequest(BaseModel):
     url: str
     namespace: str = "global"
+    recursive: bool = False
 
 @app.post("/train/url")
 async def train_url(
@@ -688,7 +710,8 @@ async def train_url(
         process_url_training, 
         request.url, 
         request.namespace, 
-        current_user.username
+        current_user.username,
+        request.recursive
     )
     return {"status": "success", "message": "Start processing URL"}
 

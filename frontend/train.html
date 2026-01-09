@@ -264,6 +264,17 @@
         <div id="tab-url" class="tab-content">
             <label>URL เว็บไซต์:</label>
             <input type="text" id="urlInput" placeholder="https://example.com/policy">
+
+            <div
+                style="margin-bottom: 20px; display: flex; align-items: center; gap: 10px; background: #fff; padding: 10px; border-radius: 8px; border: 1px solid #ddd;">
+                <input type="checkbox" id="recursiveUrlInput" style="width: 20px; margin: 0;">
+                <div>
+                    <strong style="display:block;">🕷️ ค้นหาลิงก์ภายในเว็บ (Crawl Links)</strong>
+                    <span style="font-size: 12px; color: #666;">(จะอ่านหน้าอื่นๆ ที่ลิงก์ไปถึงด้วย ลึกสูงสุด 2
+                        ระดับ)</span>
+                </div>
+            </div>
+
             <p style="font-size:12px; color:#666; margin-top:-10px; margin-bottom:20px;">
                 *ระบบจะดึงข้อความทั้งหมดจากหน้าเว็บนี้ (ระวังเว็บที่มี JavaScript เยอะๆ อาจดึงไม่ติด)
             </p>
@@ -325,7 +336,7 @@
         if (accessToken) showTrainingSection();
 
         function switchTab(t) {
-          
+
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
 
@@ -336,10 +347,10 @@
                 document.querySelector('.tabs button:nth-child(2)').classList.add('active');
                 document.getElementById('tab-url').classList.add('active');
             } else if (t === 'file') {
-                document.querySelector('.tabs button:nth-child(3)').classList.add('active'); 
+                document.querySelector('.tabs button:nth-child(3)').classList.add('active');
                 document.getElementById('tab-file').classList.add('active');
             } else { // text
-                document.querySelector('.tabs button:nth-child(4)').classList.add('active'); 
+                document.querySelector('.tabs button:nth-child(4)').classList.add('active');
             }
         }
 
@@ -459,6 +470,7 @@
         async function sendUrlData() {
             const u = document.getElementById('urlInput').value;
             const n = document.getElementById('namespaceInput').value;
+            const rec = document.getElementById('recursiveUrlInput').checked; // ✅ รับค่า Checkbox
 
             if (!u) return alert('ใส่ URL ก่อนครับ');
             if (!u.startsWith('http')) return alert('URL ต้องขึ้นต้นด้วย http:// หรือ https://');
@@ -469,7 +481,8 @@
                 const res = await fetch(API_URL + '/train/url', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${accessToken}` },
-                    body: JSON.stringify({ url: u, namespace: n })
+                    // ✅ ส่งค่า recursive ไปด้วย
+                    body: JSON.stringify({ url: u, namespace: n, recursive: rec })
                 });
 
                 if (!res.ok) throw new Error("Server Error");
