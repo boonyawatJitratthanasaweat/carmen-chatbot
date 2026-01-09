@@ -15,6 +15,11 @@ import io
 import pandas as pd
 from pathlib import Path
 
+from google.oauth2 import service_account
+from googleapiclient.discovery import build
+from googleapiclient.http import MediaIoBaseDownload
+import io
+
 # AI & LangChain
 from langchain_google_genai import GoogleGenerativeAIEmbeddings, ChatGoogleGenerativeAI
 from langchain_pinecone import PineconeVectorStore
@@ -563,39 +568,86 @@ def process_drive_training(folder_id: str, key_path: str, namespace: str, user_n
 
     try:
         add_log(f"📁 กำลังเชื่อมต่อ Google Drive (Folder ID: {folder_id})")
-        add_log("🔑 ตรวจสอบกุญแจ Service Account...")
+        
+        # -----------------------------------------------------
+        # 🔧 1. เชื่อมต่อ Google Drive API แบบ Manual
+        # -----------------------------------------------------
+        creds = service_account.Credentials.from_service_account_file(
+            key_path, scopes=['https://www.googleapis.com/auth/drive.readonly']
+        )
+        service = build('drive', 'v3', credentials=creds)
 
-        # 1. โหลดข้อมูลจาก Drive
-        try:
-            loader = GoogleDriveLoader(
-                folder_id=folder_id,
-                service_account_key=key_path,
-                recursive=False  # ถ้าอยากให้อ่าน Folder ย่อยด้วย ให้แก้เป็น True
-            )
-            docs = loader.load()
-            add_log(f"✅ พบไฟล์ใน Folder จำนวน {len(docs)} ไฟล์")
+        # -----------------------------------------------------
+        # 🔍 2. ค้นหาไฟล์ใน Folder (รองรับทุกนามสกุล)
+        # -----------------------------------------------------
+        results = service.files().list(
+            q=f"'{folder_id}' in parents and trashed=false",
+            fields="files(id, name, mimeType)",
+            pageSize=1000
+        ).execute()
+        
+        items = results.get('files', [])
+        add_log(f"✅ พบไฟล์ทั้งหมด {len(items)} ไฟล์ (กำลังคัดกรอง...)")
+
+        docs = []
+        
+        for item in items:
+            # เช็ค Cancel
+            if training_state["abort"]: break
             
-            # โชว์รายชื่อไฟล์
-            add_log("📋 รายชื่อไฟล์ที่พบ:")
-            for i, doc in enumerate(docs):
-                source = doc.metadata.get('source', 'Unknown')
-                title = doc.metadata.get('title', source)
-                add_log(f"   📄 {i+1}. {title}")
+            file_id = item['id']
+            name = item['name']
+            mime = item['mimeType']
+            content = ""
+
+            try:
+                # 📄 Case A: เป็น Google Docs (ต้อง Export เป็น Text)
+                if mime == 'application/vnd.google-apps.document':
+                    add_log(f"   🔄 กำลังแปลง G-Doc: {name}")
+                    request = service.files().export_media(fileId=file_id, mimeType='text/plain')
+                    content = request.execute().decode('utf-8')
+
+                # 📝 Case B: เป็นไฟล์ Text/Markdown (.md, .txt, .json, .py, etc.)
+                # หรือไฟล์ที่ MIME type ขึ้นต้นด้วย text/
+                elif name.endswith(('.md', '.txt', '.json', '.py', '.js', '.csv')) or mime.startswith('text/'):
+                    add_log(f"   ⬇️ กำลังโหลดไฟล์: {name}")
+                    request = service.files().get_media(fileId=file_id)
+                    fh = io.BytesIO()
+                    downloader = MediaIoBaseDownload(fh, request)
+                    done = False
+                    while done is False:
+                        status, done = downloader.next_chunk()
+                    
+                    fh.seek(0)
+                    content = fh.read().decode('utf-8', errors='ignore') # ignore error ภาษาต่างดาว
                 
-        except Exception as e:
-            add_log(f"❌ เชื่อมต่อ Drive ไม่สำเร็จ: {e}")
-            add_log("💡 คำแนะนำ: เช็คว่าแชร์ Folder ให้ email ของ Service Account หรือยัง?")
-            training_state["status"] = "Failed"
-            training_state["is_running"] = False
-            return
+                else:
+                    # ข้ามไฟล์ที่ไม่รู้จัก (เช่น รูปภาพ, วิดีโอ)
+                    add_log(f"   ⚠️ ข้ามไฟล์: {name} (ประเภท {mime} ไม่รองรับ)")
+                    continue
 
+                # สร้าง Document Object ถ้ามีเนื้อหา
+                if content.strip():
+                    doc = Document(
+                        page_content=content,
+                        metadata={"source": name, "title": name, "file_id": file_id}
+                    )
+                    docs.append(doc)
+
+            except Exception as e:
+                add_log(f"   ❌ อ่านไฟล์ {name} ไม่สำเร็จ: {str(e)}")
+
+        # -----------------------------------------------------
+        
         if not docs:
-            add_log("⚠️ ไม่พบไฟล์ที่อ่านได้ (รองรับ Google Docs, PDF, Text)")
+            add_log("❌ ไม่พบเนื้อหาที่อ่านได้เลย")
             training_state["status"] = "Failed"
             training_state["is_running"] = False
             return
 
-        # 2. หั่นข้อมูล (Splitting)
+        add_log(f"✅ ได้เอกสารพร้อมเทรนทั้งหมด {len(docs)} ฉบับ")
+
+        # 3. หั่นข้อมูล (Splitting) - Logic เดิม
         add_log(f"✂️ กำลังหั่นเนื้อหา...")
         text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
         chunks = text_splitter.split_documents(docs)
@@ -604,14 +656,14 @@ def process_drive_training(folder_id: str, key_path: str, namespace: str, user_n
         training_state["total_chunks"] = total_chunks
         add_log(f"📦 เตรียมส่งข้อมูล {total_chunks} ชิ้น")
 
-        # 3. ใส่ Metadata
+        # 4. ใส่ Metadata เพิ่มเติม
         for chunk in chunks:
             chunk.metadata["added_by"] = user_name
             chunk.metadata["timestamp"] = str(datetime.now())
             chunk.metadata["source_type"] = "google_drive"
             chunk.metadata["folder_id"] = folder_id
 
-        # 4. ทยอยส่ง (Loop เดิม)
+        # 5. ทยอยส่ง (Loop เดิม)
         batch_size = 30
         sleep_time = 20
         
@@ -653,7 +705,7 @@ def process_drive_training(folder_id: str, key_path: str, namespace: str, user_n
     except Exception as e:
         training_state["status"] = "Error"
         training_state["is_running"] = False
-        add_log(f"⚠️ Error: {str(e)}")        
+        add_log(f"⚠️ Error: {str(e)}")      
 
 def process_github_training(repo_name: str, token: str, namespace: str, user_name: str, incremental: bool = False):
     global training_state
