@@ -450,6 +450,21 @@ def process_url_training(url: str, namespace: str, user_name: str, recursive: bo
         )
             docs = loader.load()
             add_log(f"✅ เจอหน้าเว็บทั้งหมด {len(docs)} หน้า")
+            add_log("📋 รายการ URL ที่ค้นพบ:")
+        
+        # วนลูปโชว์ชื่อลิงก์ (จำกัดไว้ 50 อัน กัน Log ระเบิดถ้าเจอเยอะจัด)
+        for i, doc in enumerate(docs):
+            # ดึง URL จาก Metadata
+            url_found = doc.metadata.get("source", "Unknown URL")
+            title_found = doc.metadata.get("title", "") # บาง Loader อาจไม่มี title ไม่เป็นไร
+            
+            # แสดงผล
+            if title_found:
+                add_log(f"   👉 {i+1}. {url_found} ({title_found})")
+            else:
+                add_log(f"   👉 {i+1}. {url_found}")
+        
+                add_log("-----------------------------------------------------")
         else:
             add_log("📄 Mode: Single Page (อ่านเฉพาะหน้านี้)")
             loader = WebBaseLoader(url)
