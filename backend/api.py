@@ -569,30 +569,53 @@ def process_drive_training(folder_id: str, key_path: str, namespace: str, user_n
     try:
         add_log(f"📁 กำลังเชื่อมต่อ Google Drive (Folder ID: {folder_id})")
         
-        # -----------------------------------------------------
-        # 🔧 1. เชื่อมต่อ Google Drive API แบบ Manual
-        # -----------------------------------------------------
+        # 1. เชื่อมต่อ API
         creds = service_account.Credentials.from_service_account_file(
             key_path, scopes=['https://www.googleapis.com/auth/drive.readonly']
         )
         service = build('drive', 'v3', credentials=creds)
 
         # -----------------------------------------------------
-        # 🔍 2. ค้นหาไฟล์ใน Folder (รองรับทุกนามสกุล)
+        # 🔍 2. ค้นหาไฟล์แบบ Recursive (เจาะทุกชั้น)
         # -----------------------------------------------------
-        results = service.files().list(
-            q=f"'{folder_id}' in parents and trashed=false",
-            fields="files(id, name, mimeType)",
-            pageSize=1000
-        ).execute()
+        all_items = []
+        folders_stack = [folder_id] # เริ่มจากโฟลเดอร์ตั้งต้น
         
-        items = results.get('files', [])
-        add_log(f"✅ พบไฟล์ทั้งหมด {len(items)} ไฟล์ (กำลังคัดกรอง...)")
+        add_log("🕷️ เริ่มค้นหาไฟล์ในทุก Folder ย่อย...")
+        
+        while folders_stack:
+            if training_state["abort"]: break
+            
+            current_folder = folders_stack.pop()
+            
+            # ดึงของใน Folder ปัจจุบัน
+            try:
+                results = service.files().list(
+                    q=f"'{current_folder}' in parents and trashed=false",
+                    fields="files(id, name, mimeType)",
+                    pageSize=1000
+                ).execute()
+                items = results.get('files', [])
+                
+                for item in items:
+                    # ถ้าเป็น Folder -> เก็บเข้า Stack เพื่อรอไปค้นต่อรอบหน้า
+                    if item['mimeType'] == 'application/vnd.google-apps.folder':
+                        folders_stack.append(item['id'])
+                    # ถ้าเป็น File -> เก็บเข้า list เตรียมโหลด
+                    else:
+                        all_items.append(item)
+                        
+            except Exception as e:
+                add_log(f"⚠️ เข้าถึง Folder {current_folder} ไม่ได้: {e}")
+
+        add_log(f"✅ พบไฟล์ทั้งหมด {len(all_items)} ไฟล์ (จากทุกชั้น)")
+
+        # -----------------------------------------------------
 
         docs = []
         
-        for item in items:
-            # เช็ค Cancel
+        # 3. ไล่โหลดเนื้อหาทีละไฟล์
+        for idx, item in enumerate(all_items):
             if training_state["abort"]: break
             
             file_id = item['id']
@@ -601,16 +624,15 @@ def process_drive_training(folder_id: str, key_path: str, namespace: str, user_n
             content = ""
 
             try:
-                # 📄 Case A: เป็น Google Docs (ต้อง Export เป็น Text)
+                # 📄 Case A: Google Docs
                 if mime == 'application/vnd.google-apps.document':
-                    add_log(f"   🔄 กำลังแปลง G-Doc: {name}")
+                    add_log(f"   [{idx+1}/{len(all_items)}] 🔄 แปลง G-Doc: {name}")
                     request = service.files().export_media(fileId=file_id, mimeType='text/plain')
                     content = request.execute().decode('utf-8')
 
-                # 📝 Case B: เป็นไฟล์ Text/Markdown (.md, .txt, .json, .py, etc.)
-                # หรือไฟล์ที่ MIME type ขึ้นต้นด้วย text/
+                # 📝 Case B: Text Files (.md, .txt, etc)
                 elif name.endswith(('.md', '.txt', '.json', '.py', '.js', '.csv')) or mime.startswith('text/'):
-                    add_log(f"   ⬇️ กำลังโหลดไฟล์: {name}")
+                    add_log(f"   [{idx+1}/{len(all_items)}] ⬇️ โหลดไฟล์: {name}")
                     request = service.files().get_media(fileId=file_id)
                     fh = io.BytesIO()
                     downloader = MediaIoBaseDownload(fh, request)
@@ -619,14 +641,13 @@ def process_drive_training(folder_id: str, key_path: str, namespace: str, user_n
                         status, done = downloader.next_chunk()
                     
                     fh.seek(0)
-                    content = fh.read().decode('utf-8', errors='ignore') # ignore error ภาษาต่างดาว
+                    content = fh.read().decode('utf-8', errors='ignore')
                 
+                # 🖼️ Case C: ข้าม
                 else:
-                    # ข้ามไฟล์ที่ไม่รู้จัก (เช่น รูปภาพ, วิดีโอ)
-                    add_log(f"   ⚠️ ข้ามไฟล์: {name} (ประเภท {mime} ไม่รองรับ)")
+                    # add_log(f"   ⚠️ ข้าม: {name}") # ปิด Log นี้ก็ได้จะได้ไม่รก
                     continue
 
-                # สร้าง Document Object ถ้ามีเนื้อหา
                 if content.strip():
                     doc = Document(
                         page_content=content,
@@ -635,10 +656,8 @@ def process_drive_training(folder_id: str, key_path: str, namespace: str, user_n
                     docs.append(doc)
 
             except Exception as e:
-                add_log(f"   ❌ อ่านไฟล์ {name} ไม่สำเร็จ: {str(e)}")
+                add_log(f"   ❌ Error {name}: {str(e)}")
 
-        # -----------------------------------------------------
-        
         if not docs:
             add_log("❌ ไม่พบเนื้อหาที่อ่านได้เลย")
             training_state["status"] = "Failed"
@@ -647,7 +666,7 @@ def process_drive_training(folder_id: str, key_path: str, namespace: str, user_n
 
         add_log(f"✅ ได้เอกสารพร้อมเทรนทั้งหมด {len(docs)} ฉบับ")
 
-        # 3. หั่นข้อมูล (Splitting) - Logic เดิม
+        # 4. หั่นข้อมูล (Splitting)
         add_log(f"✂️ กำลังหั่นเนื้อหา...")
         text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
         chunks = text_splitter.split_documents(docs)
@@ -656,14 +675,13 @@ def process_drive_training(folder_id: str, key_path: str, namespace: str, user_n
         training_state["total_chunks"] = total_chunks
         add_log(f"📦 เตรียมส่งข้อมูล {total_chunks} ชิ้น")
 
-        # 4. ใส่ Metadata เพิ่มเติม
+        # 5. ใส่ Metadata และส่ง Pinecone
         for chunk in chunks:
             chunk.metadata["added_by"] = user_name
             chunk.metadata["timestamp"] = str(datetime.now())
             chunk.metadata["source_type"] = "google_drive"
             chunk.metadata["folder_id"] = folder_id
 
-        # 5. ทยอยส่ง (Loop เดิม)
         batch_size = 30
         sleep_time = 20
         
@@ -705,7 +723,7 @@ def process_drive_training(folder_id: str, key_path: str, namespace: str, user_n
     except Exception as e:
         training_state["status"] = "Error"
         training_state["is_running"] = False
-        add_log(f"⚠️ Error: {str(e)}")      
+        add_log(f"⚠️ Error: {str(e)}")  
 
 def process_github_training(repo_name: str, token: str, namespace: str, user_name: str, incremental: bool = False):
     global training_state
