@@ -1,7 +1,6 @@
 import time
 from langchain_community.document_loaders import GoogleDriveLoader
 import shutil 
-import sqlite3 
 import os
 from datetime import datetime, timedelta 
 from fastapi import FastAPI, HTTPException, BackgroundTasks, Depends, Request, Form, File, UploadFile
@@ -39,68 +38,45 @@ from langchain_community.document_loaders import RecursiveUrlLoader
 from bs4 import BeautifulSoup as Soup 
 
 # Import ไฟล์ระบบ
-from .database import Base, engine
+# ✅ เพิ่ม TokenLog และ SessionLocal เข้ามา
 from .auth import get_db, create_access_token, get_current_user, get_password_hash, User as UserModel, ChatHistory
+from .database import Base, engine, SessionLocal, TokenLog 
 
 # โหลด ENV
 env_path = Path(__file__).parent / '.env'
 load_dotenv(dotenv_path=env_path)
 
 # --- สร้างตารางใน Database หลัก (Postgres/SQLAlchemy) ---
+# บรรทัดนี้จะสร้างตาราง token_logs ให้เองอัตโนมัติ
 Base.metadata.create_all(bind=engine)
 
 # ==========================================
-# 🛠️ 1. สร้างตารางเก็บ Log Token (SQLite แยก)
+# 🛠️ ฟังก์ชันบันทึก Log (PostgreSQL Version)
 # ==========================================
-LOG_DB_NAME = "carmen_logs.db"
-
-def init_log_db():
-    """สร้างตาราง chat_logs ถ้ายังไม่มี"""
-    try:
-        conn = sqlite3.connect(LOG_DB_NAME)
-        cursor = conn.cursor()
-        sql_create_table = """
-        CREATE TABLE IF NOT EXISTS chat_logs (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-            namespace TEXT NOT NULL,
-            user_query TEXT,
-            model_name TEXT,
-            input_tokens INTEGER DEFAULT 0,
-            output_tokens INTEGER DEFAULT 0,
-            total_tokens INTEGER DEFAULT 0,
-            latency_ms REAL DEFAULT 0.0
-        );
-        """
-        cursor.execute(sql_create_table)
-        conn.commit()
-        conn.close()
-        print("✅ Log Database Initialized (chat_logs table ready).")
-    except Exception as e:
-        print(f"❌ Log DB Error: {e}")
-
-# เรียกใช้งานทันทีเมื่อเริ่มแอป
-init_log_db()
-
-# ฟังก์ชันบันทึก Log (Background Task)
 def log_token_usage(namespace: str, model: str, input_tk: int, output_tk: int, query: str = ""):
+    """บันทึกข้อมูลการใช้ Token ลง Postgres"""
+    db = SessionLocal() # เปิด Connection ใหม่
     try:
         total_tk = input_tk + output_tk
-        conn = sqlite3.connect(LOG_DB_NAME)
-        cursor = conn.cursor()
         
-        sql = """
-            INSERT INTO chat_logs (namespace, model_name, input_tokens, output_tokens, total_tokens, user_query, timestamp)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        """
-        cursor.execute(sql, (namespace, model, input_tk, output_tk, total_tk, query, datetime.now()))
+        new_log = TokenLog(
+            namespace=namespace,
+            model_name=model,
+            input_tokens=input_tk,
+            output_tokens=output_tk,
+            total_tokens=total_tk,
+            user_query=query,
+            timestamp=datetime.now()
+        )
         
-        conn.commit()
-        conn.close()
+        db.add(new_log)
+        db.commit()
         print(f"📝 Token Log saved: {total_tk} tokens (Client: {namespace})")
         
     except Exception as e:
         print(f"⚠️ Failed to save token log: {e}")
+    finally:
+        db.close() # ปิด Connection เสมอ
 
 # ==========================================
 
@@ -179,25 +155,21 @@ async def get_chat_history(
                 .limit(50).all()
     return history[::-1] 
 
-# --- 📜 API สำหรับ Admin ดู Log Token (เพิ่มใหม่) ---
+# --- 📊 API สำหรับ Admin ดู Log Token (PostgreSQL) ---
 @app.get("/admin/logs")
-async def get_token_logs(current_user: UserModel = Depends(get_current_user)):
+async def get_token_logs(
+    current_user: UserModel = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
     # เช็คสิทธิ์ Admin (สมมติว่าถ้า client_id = global คือ admin)
     if current_user.client_id != "global":
         raise HTTPException(status_code=403, detail="Admin access only")
     
-    try:
-        conn = sqlite3.connect(LOG_DB_NAME)
-        conn.row_factory = sqlite3.Row # ให้ดึงข้อมูลเป็น Dictionary
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM chat_logs ORDER BY id DESC LIMIT 50")
-        rows = cursor.fetchall()
-        conn.close()
-        return [dict(row) for row in rows]
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    # ดึงข้อมูลจากตาราง TokenLog
+    logs = db.query(TokenLog).order_by(desc(TokenLog.timestamp)).limit(50).all()
+    return logs
 
-# --- 💬 Chat API (แก้ใหม่ให้เก็บ Token) ---
+# --- 💬 Chat API (Updated with Token Logging) ---
 class Question(BaseModel):
     text: str
 
