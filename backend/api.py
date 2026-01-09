@@ -3,7 +3,7 @@ from langchain_community.document_loaders import GoogleDriveLoader # ✅ เพ�
 import shutil # เอาไว้เซฟไฟล์ JSON ชั่วคราว
 import os
 from datetime import datetime, timedelta 
-from fastapi import FastAPI, HTTPException, Depends, status, BackgroundTasks, UploadFile, File
+from fastapi import FastAPI, HTTPException, BackgroundTasks, Depends, Request, Form, File, UploadFile
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
