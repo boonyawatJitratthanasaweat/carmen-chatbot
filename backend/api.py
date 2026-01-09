@@ -1,5 +1,5 @@
 import time
-from datetime import datetime
+from datetime import datetime, timedelta 
 from fastapi import FastAPI, HTTPException, Depends, status, BackgroundTasks, UploadFile, File
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
@@ -283,6 +283,41 @@ async def train_upload(
         raise HTTPException(status_code=500, detail=str(e))
 
 # 3. GitHub Logic
+
+def get_modified_files(repo, days=30):
+    """หาไฟล์ที่มีการแก้ไขใน X วันที่ผ่านมา"""
+    print(f"🕵️‍♂️ Checking for updates in the last {days} days...")
+    since_date = datetime.now() - timedelta(days=days)
+    
+    modified_files = set()
+    try:
+        # ดึง Commit ย้อนหลัง
+        commits = repo.get_commits(since=since_date)
+        
+        for commit in commits:
+            for file in commit.files:
+                # เลือกเฉพาะไฟล์นามสกุลที่รองรับ
+                if file.filename.endswith((".md", ".mdx", ".txt", ".csv", ".py", ".js", ".ts", ".html", ".css", ".json")):
+                    modified_files.add(file.filename)
+                    
+        print(f"   ✨ Found {len(modified_files)} modified files.")
+        return list(modified_files)
+    except Exception as e:
+        print(f"   ❌ Error getting commits: {e}")
+        return []
+
+def get_file_content(repo, file_path):
+    """โหลดเนื้อหาไฟล์เดียว (ระบุ Path)"""
+    try:
+        file_content = repo.get_contents(file_path)
+        return Document(
+            page_content=file_content.decoded_content.decode("utf-8"),
+            metadata={"source": file_content.html_url, "file_path": file_path}
+        )
+    except Exception as e:
+        print(f"   ⚠️ Error reading {file_path}: {e}")
+        return None
+
 def get_github_docs(repo_name, access_token):
     print(f"🕵️‍♂️ Connecting to GitHub Repo: '{repo_name}'")
     
@@ -362,7 +397,8 @@ training_state = {
     "status": "Idle",
     "logs": [],             # เก็บ Log ย้อนหลัง 10 บรรทัด
     "start_time": 0,
-    "estimated_remaining": 0 # วินาที
+    "estimated_remaining": 0,# วินาที
+    "abort": False
 }    
     
 def add_log(message: str):
@@ -374,7 +410,7 @@ def add_log(message: str):
     if len(training_state["logs"]) > 20:
         training_state["logs"].pop(0)    
 
-def process_github_training(repo_name: str, token: str, namespace: str, user_name: str):
+def process_github_training(repo_name: str, token: str, namespace: str, user_name: str, incremental: bool = False):
     global training_state
     
     # Reset State
@@ -386,23 +422,59 @@ def process_github_training(repo_name: str, token: str, namespace: str, user_nam
         "status": "Starting",
         "logs": [],
         "start_time": time.time(),
-        "estimated_remaining": 0
+        "estimated_remaining": 0,
+        "abort": False  # ✅ 1. ตั้งค่าเริ่มต้นธงยกเลิก
     })
 
     try:
         add_log(f"🚀 เริ่มต้นเชื่อมต่อ GitHub Repo: {repo_name}")
+        if incremental:
+            add_log(f"🔄 Mode: Incremental Update (อัปเดตเฉพาะที่เปลี่ยนใน 30 วัน)")
+        else:
+            add_log(f"💿 Mode: Full Load (โหลดใหม่ทั้งหมด)")
+
+        # 1. เชื่อมต่อ GitHub
+        if token: g = Github(token)
+        else: g = Github()
+        repo = g.get_repo(repo_name)
+
+        docs = []
         
-        # 1. ดูดข้อมูล
-        docs = get_github_docs(repo_name, token)
+        # ✅ แยก Logic ตามโหมด
+        if incremental:
+            # 1.1 หาไฟล์ที่เปลี่ยน
+            file_paths = get_modified_files(repo, days=30)
+            if not file_paths:
+                add_log("✅ ไม่พบการอัปเดตใหม่ๆ ในช่วง 30 วันที่ผ่านมา")
+                training_state["status"] = "Completed"
+                training_state["progress"] = 100
+                training_state["is_running"] = False
+                return
+            
+            # 1.2 โหลดเนื้อหาทีละไฟล์
+            add_log(f"📥 กำลังดาวน์โหลด {len(file_paths)} ไฟล์ใหม่...")
+            for idx, path in enumerate(file_paths):
+                # 🛑 เช็ค Cancel ระหว่างดาวน์โหลดไฟล์ (เผื่อไฟล์เยอะ)
+                if training_state["abort"]:
+                    add_log("⛔ ยกเลิกการดาวน์โหลด")
+                    training_state["status"] = "Cancelled"
+                    training_state["is_running"] = False
+                    return
+
+                doc = get_file_content(repo, path)
+                if doc: docs.append(doc)
+        else:
+            # 1.1 โหลดทั้งหมด (Logic เดิม)
+            docs = get_github_docs(repo_name, token)
+
         if not docs:
-            add_log("❌ ไม่พบเอกสาร หรือเกิดข้อผิดพลาดในการเชื่อมต่อ")
+            add_log("❌ ไม่พบเอกสารที่จะประมวลผล")
             training_state["status"] = "Failed"
             training_state["is_running"] = False
             return
 
         add_log(f"✂️ กำลังหั่นเนื้อหาจาก {len(docs)} ไฟล์...")
         
-        # 2. หั่นข้อมูล
         text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
         chunks = text_splitter.split_documents(docs)
         
@@ -410,32 +482,32 @@ def process_github_training(repo_name: str, token: str, namespace: str, user_nam
         training_state["total_chunks"] = total_chunks
         add_log(f"📦 เตรียมส่งข้อมูลทั้งหมด {total_chunks} ชิ้น (Chunks)")
 
-        # 3. เตรียม Metadata
         for chunk in chunks:
             chunk.metadata["added_by"] = user_name
             chunk.metadata["timestamp"] = str(datetime.now())
             chunk.metadata["source_type"] = "github_repo"
 
-        # 4. ทยอยส่ง (Safe Mode)
         batch_size = 30  
         sleep_time = 20  
         
         for i in range(0, total_chunks, batch_size):
-            # --- คำนวณเวลา ---
+            # 🛑 2. เช็คธงแดง ก่อนส่งแต่ละ Batch
+            if training_state["abort"]:
+                add_log("⛔ กระบวนการถูกยกเลิกโดย Admin")
+                training_state["status"] = "Cancelled"
+                training_state["is_running"] = False
+                return # จบการทำงานทันที
+            
+            # คำนวณเวลา
             current_time = time.time()
             elapsed_time = current_time - training_state["start_time"]
-            
-            # ส่งไปแล้วกี่ชิ้น
             processed = i
-            
-            # ความเร็วเฉลี่ย (ชิ้น/วินาที)
             if processed > 0:
                 speed = processed / elapsed_time
                 remaining_chunks = total_chunks - processed
                 eta = remaining_chunks / speed if speed > 0 else 0
                 training_state["estimated_remaining"] = int(eta)
             
-            # อัปเดต %
             percent = int((i / total_chunks) * 100)
             training_state["progress"] = percent
             training_state["processed_chunks"] = i
@@ -443,23 +515,34 @@ def process_github_training(repo_name: str, token: str, namespace: str, user_nam
             
             add_log(f"📤 กำลังส่ง Batch {(i//batch_size)+1} (Process: {i}/{total_chunks}) - ETA: {int(training_state['estimated_remaining'])}s")
 
-            # --- ส่งเข้า Pinecone ---
             batch = chunks[i : i + batch_size]
             vectorstore.add_documents(documents=batch, namespace=namespace)
             
             add_log(f"✅ Batch {(i//batch_size)+1} สำเร็จ! พักหายใจ {sleep_time} วินาที...")
-            time.sleep(sleep_time) 
             
-        # จบงาน
+            # 🛑 3. Smart Sleep (เช็ค Cancel ทุกวินาที ระหว่างพัก)
+            for _ in range(sleep_time):
+                if training_state["abort"]: break
+                time.sleep(1)
+            
         training_state["progress"] = 100
         training_state["status"] = "Completed"
         training_state["is_running"] = False
-        add_log(f"🎉 เสร็จสมบูรณ์! ข้อมูล {total_chunks} ชิ้น พร้อมใช้งานแล้ว")
+        add_log(f"🎉 เสร็จสมบูรณ์! อัปเดตข้อมูล {total_chunks} ชิ้นเรียบร้อย")
         
     except Exception as e:
         training_state["status"] = "Error"
         training_state["is_running"] = False
-        add_log(f"⚠️ เกิดข้อผิดพลาดร้ายแรง: {str(e)}")
+        add_log(f"⚠️ Error: {str(e)}")
+
+@app.post("/train/cancel")
+async def cancel_training(current_user: UserModel = Depends(get_current_user)):
+    global training_state
+    if training_state["is_running"]:
+        training_state["abort"] = True
+        training_state["status"] = "Cancelling..."
+        add_log("🛑 ได้รับคำสั่งยกเลิก! กำลังหยุดกระบวนการ...")
+    return {"status": "success", "message": "Cancellation requested"}        
 
 # ✅ API สำหรับให้หน้าเว็บมาดึงข้อมูล
 @app.get("/train/status")
@@ -469,7 +552,8 @@ async def get_training_status():
 class GithubRequest(BaseModel):
     repo_name: str
     github_token: str
-    namespace: str = "global" # ✅ เปลี่ยน default เป็น global
+    namespace: str = "global"
+    incremental: bool = False 
 
 @app.post("/train/github")
 async def train_github(
@@ -486,10 +570,12 @@ async def train_github(
         request.repo_name, 
         request.github_token, 
         request.namespace, 
-        current_user.username
+        current_user.username,
+        request.incremental
     )
     
-    return {"status": "success", "message": f"ระบบเริ่มดูดข้อมูลจาก {request.repo_name} แล้ว! (ทำงานเบื้องหลัง)"}
+    mode_text = "Incremental Update" if request.incremental else "Full Load"
+    return {"status": "success", "message": f"เริ่มกระบวนการ {mode_text} แล้ว!"}
 
 
 # --- 🛠️ Debug / Reset DB API ---
