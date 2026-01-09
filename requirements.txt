@@ -24,3 +24,8 @@ PyGithub
 
 beautifulsoup4
 validators
+
+
+# google drive
+google-api-python-client
+google-auth-httplib2
