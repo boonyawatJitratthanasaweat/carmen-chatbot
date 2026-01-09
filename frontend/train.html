@@ -91,7 +91,12 @@
             background: #2563eb;
         }
 
-        /* --- 🛠️ MODAL STYLES (ส่วนสำคัญ) --- */
+        button.action-btn:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+
+        /* --- 🛠️ MODAL STYLES --- */
         #processModal {
             display: none;
             position: fixed;
@@ -167,16 +172,40 @@
             font-size: 18px;
         }
 
-        .close-modal-btn {
+        /* ปุ่มใน Modal */
+        .modal-btn-group {
             margin-top: 15px;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .cancel-btn {
             background: #ef4444;
             color: white;
             border: none;
             padding: 10px 20px;
             border-radius: 8px;
             cursor: pointer;
+            font-weight: bold;
+        }
+
+        .close-btn {
+            background: #374151;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
             display: none;
-            /* ซ่อนก่อน */
+        }
+
+        .cancel-btn:hover {
+            background: #dc2626;
+        }
+
+        .close-btn:hover {
+            background: #4b5563;
         }
     </style>
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600&display=swap" rel="stylesheet">
@@ -186,9 +215,12 @@
 
     <div id="loginSection" class="card">
         <h2>🔐 Admin Login</h2>
-        <input type="text" id="loginUser" placeholder="Username">
-        <input type="password" id="loginPass" placeholder="Password">
-        <button class="action-btn" onclick="doLogin()">Login</button>
+        <input type="text" id="loginUser" placeholder="Username (admin)">
+        <input type="password" id="loginPass" placeholder="Password (admin)">
+        <button id="loginBtn" class="action-btn" onclick="doLogin()">Login</button>
+        <p style="font-size:12px; color:#666; text-align:center; margin-top:10px;">
+            *ถ้ากดแล้วนิ่ง แปลว่า Server กำลังตื่น (รอประมาณ 1 นาที)
+        </p>
     </div>
 
     <div id="trainingSection" class="card" style="display:none;">
@@ -206,6 +238,7 @@
 
         <div class="tabs">
             <button class="tab-btn active" onclick="switchTab('github')">🐙 GitHub Repo</button>
+            <button class="tab-btn" onclick="switchTab('url')">🌐 URL Website</button>
             <button class="tab-btn" onclick="switchTab('file')">📂 Upload File</button>
             <button class="tab-btn" onclick="switchTab('text')">✍️ Text</button>
         </div>
@@ -226,6 +259,15 @@
             </div>
 
             <button class="action-btn" onclick="sendGithubData()">เริ่มทำงาน 🚀</button>
+        </div>
+
+        <div id="tab-url" class="tab-content">
+            <label>URL เว็บไซต์:</label>
+            <input type="text" id="urlInput" placeholder="https://example.com/policy">
+            <p style="font-size:12px; color:#666; margin-top:-10px; margin-bottom:20px;">
+                *ระบบจะดึงข้อความทั้งหมดจากหน้าเว็บนี้ (ระวังเว็บที่มี JavaScript เยอะๆ อาจดึงไม่ติด)
+            </p>
+            <button class="action-btn" onclick="sendUrlData()">เริ่มดูดข้อมูล 🚀</button>
         </div>
 
         <div id="tab-file" class="tab-content">
@@ -266,7 +308,10 @@
                 <div class="log-line">> System Initialized...</div>
             </div>
 
-            <button id="closeModalBtn" class="close-modal-btn" onclick="closeModal()">ปิดหน้าต่าง</button>
+            <div class="modal-btn-group">
+                <button id="cancelBtn" class="cancel-btn" onclick="doCancel()">🛑 ยกเลิก (Cancel)</button>
+                <button id="closeModalBtn" class="close-btn" onclick="closeModal()">ปิดหน้าต่าง</button>
+            </div>
         </div>
     </div>
 
@@ -276,7 +321,7 @@
         let pollInterval;
 
         // Init
-        document.getElementById('processModal').style.display = 'none'; // ซ่อนก่อน
+        document.getElementById('processModal').style.display = 'none';
         if (accessToken) showTrainingSection();
 
         // --- Functions ---
@@ -284,6 +329,10 @@
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
             if (t === 'github') { document.querySelector('.tabs button:nth-child(1)').classList.add('active'); document.getElementById('tab-github').classList.add('active'); }
+            else if (t === 'url') {
+                document.querySelector('.tabs button:nth-child(2)').classList.add('active');
+                document.getElementById('tab-url').classList.add('active');
+            }
             else if (t === 'file') { document.querySelector('.tabs button:nth-child(2)').classList.add('active'); document.getElementById('tab-file').classList.add('active'); }
             else { document.querySelector('.tabs button:nth-child(3)').classList.add('active'); document.getElementById('tab-text').classList.add('active'); }
         }
@@ -291,42 +340,141 @@
         async function doLogin() {
             const u = document.getElementById('loginUser').value;
             const p = document.getElementById('loginPass').value;
+            const btn = document.getElementById('loginBtn');
+            btn.innerText = "⏳ กำลังปลุก Server...";
+            btn.disabled = true;
+
             try {
-                const fd = new URLSearchParams(); fd.append('username', u); fd.append('password', p);
-                const r = await fetch(API_URL + '/token', { method: 'POST', body: fd });
+                const fd = new URLSearchParams();
+                fd.append('username', u);
+                fd.append('password', p);
+
+                const r = await fetch(API_URL + '/token', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: fd
+                });
+
                 if (r.ok) {
-                    const d = await r.json(); accessToken = d.access_token; localStorage.setItem('carmen_admin_token', accessToken); showTrainingSection();
-                } else alert('Login Failed');
-            } catch (e) { alert(e.message); }
+                    const d = await r.json();
+                    accessToken = d.access_token;
+                    localStorage.setItem('carmen_admin_token', accessToken);
+                    showTrainingSection();
+                } else {
+                    alert('❌ Login Failed: Username หรือ Password ผิด');
+                }
+            } catch (e) {
+                alert('⚠️ Connection Error: ' + e.message + "\n(ลองกด Login ใหม่อีกครั้ง)");
+            } finally {
+                btn.innerText = "Login";
+                btn.disabled = false;
+            }
         }
-        function showTrainingSection() { document.getElementById('loginSection').style.display = 'none'; document.getElementById('trainingSection').style.display = 'block'; }
-        function doLogout() { localStorage.removeItem('carmen_admin_token'); location.reload(); }
+
+        function showTrainingSection() {
+            document.getElementById('loginSection').style.display = 'none';
+            document.getElementById('trainingSection').style.display = 'block';
+        }
+        function doLogout() {
+            localStorage.removeItem('carmen_admin_token');
+            location.reload();
+        }
 
         // --- GitHub Logic ---
         async function sendGithubData() {
             const r = document.getElementById('repoInput').value;
             const t = document.getElementById('ghTokenInput').value;
             const n = document.getElementById('namespaceInput').value;
-            const inc = document.getElementById('incrementalInput').checked; // ✅ รับค่า Checkbox
+            const inc = document.getElementById('incrementalInput').checked;
 
             if (!r) return alert('ใส่ Repo Name ก่อน');
 
+            // ✅ เปิด Modal (โค้ดนี้แหละที่ Error เพราะหาปุ่มไม่เจอ)
             openModal();
 
-            await fetch(API_URL + '/train/github', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${accessToken}` },
-                body: JSON.stringify({
-                    repo_name: r,
-                    github_token: t,
-                    namespace: n,
-                    incremental: inc
-                })
-            });
+            try {
+                const res = await fetch(API_URL + '/train/github', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${accessToken}` },
+                    body: JSON.stringify({ repo_name: r, github_token: t, namespace: n, incremental: inc })
+                });
 
-            startPolling();
+                if (!res.ok) {
+                    if (res.status === 401) { alert("Session หมดอายุ กรุณา Login ใหม่"); doLogout(); return; }
+                    throw new Error("Server Error");
+                }
+                startPolling();
+            } catch (e) {
+                alert("Error: " + e.message);
+                closeModal();
+            }
         }
 
+        // --- File Logic ---
+        async function sendFileData() {
+            const f = document.getElementById('fileInput').files[0];
+            const n = document.getElementById('namespaceInput').value;
+            if (!f) return alert('เลือกไฟล์ก่อน');
+
+            openModal();
+            // ซ่อนปุ่ม Cancel เพราะ Upload เร็วมาก ยกเลิกไม่ทัน
+            document.getElementById('cancelBtn').style.display = 'none';
+
+            const fd = new FormData(); fd.append('file', f);
+            await fetch(`${API_URL}/train/upload?namespace=${n}`, {
+                method: 'POST', headers: { 'Authorization': `Bearer ${accessToken}` }, body: fd
+            });
+
+            document.getElementById('modalTitle').innerText = "✅ อัปโหลดเสร็จสิ้น!";
+            document.getElementById('modalProgressBar').style.width = "100%";
+            document.getElementById('percentTxt').innerText = "100%";
+            document.getElementById('closeModalBtn').style.display = 'block';
+        }
+
+        async function sendTextData() {
+            const text = document.getElementById('knowledgeInput').value;
+            const n = document.getElementById('namespaceInput').value;
+            if (!text) return alert("พิมพ์เนื้อหาก่อน");
+
+            const btn = document.querySelector('#tab-text button');
+            btn.innerText = "Saving...";
+
+            await fetch(API_URL + '/train', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${accessToken}` },
+                body: JSON.stringify({ text: text, namespace: n, source: "Admin Manual" })
+            });
+
+            alert("บันทึกเรียบร้อย!");
+            document.getElementById('knowledgeInput').value = "";
+            btn.innerText = "Save 💾";
+        }
+
+        async function sendUrlData() {
+            const u = document.getElementById('urlInput').value;
+            const n = document.getElementById('namespaceInput').value;
+
+            if (!u) return alert('ใส่ URL ก่อนครับ');
+            if (!u.startsWith('http')) return alert('URL ต้องขึ้นต้นด้วย http:// หรือ https://');
+
+            openModal();
+
+            try {
+                const res = await fetch(API_URL + '/train/url', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${accessToken}` },
+                    body: JSON.stringify({ url: u, namespace: n })
+                });
+
+                if (!res.ok) throw new Error("Server Error");
+                startPolling();
+            } catch (e) {
+                alert("Error: " + e.message);
+                closeModal();
+            }
+        }
+
+        // --- Cancel Logic ---
         async function doCancel() {
             if (!confirm("⚠️ แน่ใจนะว่าจะหยุดการดูดข้อมูล?")) return;
 
@@ -341,41 +489,24 @@
                 });
             } catch (e) {
                 alert("Error sending cancel command");
+                btn.disabled = false;
+                btn.innerText = "🛑 ยกเลิก (Cancel)";
             }
         }
 
-        // --- File Logic ---
-        async function sendFileData() {
-            const f = document.getElementById('fileInput').files[0];
-            const n = document.getElementById('namespaceInput').value;
-            if (!f) return alert('เลือกไฟล์ก่อน');
-
-            openModal(); // เปิดรอไว้เลย (ถึงแม้มันจะเร็ว แต่เปิดให้ดูเท่ๆ ก็ได้ หรือจะทำ Status แยกก็ได้)
-
-            const fd = new FormData(); fd.append('file', f);
-            await fetch(`${API_URL}/train/upload?namespace=${n}`, {
-                method: 'POST', headers: { 'Authorization': `Bearer ${accessToken}` }, body: fd
-            });
-
-            // File Upload ปกติเร็วมาก ไม่ต้อง Polling ก็ได้ แต่ถ้าไฟล์ใหญ่ก็ใช้ได้
-            // ในที่นี้ขอปิด Modal เลยเมื่อเสร็จ (เพราะ API upload รอ response)
-            document.getElementById('modalTitle').innerText = "✅ อัปโหลดเสร็จสิ้น!";
-            document.getElementById('modalProgressBar').style.width = "100%";
-            document.getElementById('percentTxt').innerText = "100%";
-            document.getElementById('closeModalBtn').style.display = 'block';
-        }
-
-        // --- Modal & Polling System 🚀 ---
+        // --- Modal & Polling System ---
         function openModal() {
             document.getElementById('processModal').style.display = 'flex';
             document.getElementById('closeModalBtn').style.display = 'none'; // ซ่อนปุ่มปิด
 
+            // ✅ โชว์ปุ่ม Cancel (ที่เคย Error เพราะไม่มี Element นี้)
             const cancelBtn = document.getElementById('cancelBtn');
-            cancelBtn.style.display = 'block'; // โชว์ปุ่มยกเลิก
+            cancelBtn.style.display = 'block';
             cancelBtn.innerText = "🛑 ยกเลิก (Cancel)";
             cancelBtn.disabled = false;
 
             document.getElementById('modalTitle').innerText = "🚀 กำลังประมวลผล...";
+            document.getElementById('modalTitle').style.color = "white";
             document.getElementById('logTerminal').innerHTML = "";
         }
 
@@ -391,20 +522,25 @@
                     const res = await fetch(API_URL + '/train/status');
                     const data = await res.json();
 
-                    // ... (Update UI เหมือนเดิม) ...
                     document.getElementById('percentTxt').innerText = data.progress + "%";
                     document.getElementById('modalProgressBar').style.width = data.progress + "%";
                     document.getElementById('statusTxt').innerText = data.status;
-                    // ... (Logs เหมือนเดิม) ...
 
-                    // ✅ เพิ่มเงื่อนไขเช็ค Cancelled
-                    if (data.status === 'Completed' || data.status === 'Failed' || data.status === 'Error' || data.status === 'Cancelled') {
+                    const sec = data.estimated_remaining;
+                    document.getElementById('timeLeftTxt').innerText = `${Math.floor(sec / 60)}m ${sec % 60}s`;
 
+                    const logBox = document.getElementById('logTerminal');
+                    logBox.innerHTML = "";
+                    data.logs.forEach(line => { logBox.innerHTML += `<div class="log-line">${line}</div>`; });
+                    logBox.scrollTop = logBox.scrollHeight;
+
+                    // เช็คสถานะจบ
+                    if (['Completed', 'Failed', 'Error', 'Cancelled'].includes(data.status)) {
                         if (data.status === 'Completed') document.getElementById('modalTitle').innerText = "🎉 เสร็จสมบูรณ์!";
                         else if (data.status === 'Cancelled') document.getElementById('modalTitle').innerText = "⛔ ยกเลิกแล้ว";
                         else document.getElementById('modalTitle').innerText = "❌ เกิดข้อผิดพลาด";
 
-                        // สลับปุ่ม
+                        // ✅ สลับปุ่ม
                         document.getElementById('cancelBtn').style.display = 'none';
                         document.getElementById('closeModalBtn').style.display = 'block';
 

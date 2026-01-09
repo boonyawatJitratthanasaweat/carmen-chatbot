@@ -24,6 +24,9 @@ from github import Github
 
 from dotenv import load_dotenv
 
+from langchain_community.document_loaders import WebBaseLoader # ✅ เพิ่มตัวนี้
+import validators # (Optional: ไว้เช็คว่า URL ถูกต้องไหม แต่ถ้าไม่มีไม่เป็นไร)
+
 # Import ไฟล์ระบบ
 from .database import Base, engine
 from .auth import get_db, create_access_token, get_current_user, get_password_hash, User as UserModel, ChatHistory
@@ -410,6 +413,97 @@ def add_log(message: str):
     if len(training_state["logs"]) > 20:
         training_state["logs"].pop(0)    
 
+def process_url_training(url: str, namespace: str, user_name: str):
+    global training_state
+    
+    # Reset State
+    training_state.update({
+        "is_running": True,
+        "progress": 0,
+        "total_chunks": 0,
+        "processed_chunks": 0,
+        "status": "Starting",
+        "logs": [],
+        "start_time": time.time(),
+        "estimated_remaining": 0,
+        "abort": False 
+    })
+
+    try:
+        add_log(f"🌐 กำลังเชื่อมต่อเว็บไซต์: {url}")
+        
+        # 1. โหลดข้อมูลจาก URL
+        try:
+            loader = WebBaseLoader(url)
+            docs = loader.load()
+            add_log(f"✅ โหลดสำเร็จ! ได้เนื้อหายาว {len(docs[0].page_content)} ตัวอักษร")
+        except Exception as e:
+            add_log(f"❌ โหลด URL ไม่สำเร็จ: {e}")
+            training_state["status"] = "Failed"
+            training_state["is_running"] = False
+            return
+
+        # 2. หั่นข้อมูล (Splitting)
+        add_log("✂️ กำลังหั่นเนื้อหา...")
+        text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+        chunks = text_splitter.split_documents(docs)
+        
+        total_chunks = len(chunks)
+        training_state["total_chunks"] = total_chunks
+        add_log(f"📦 เตรียมส่งข้อมูล {total_chunks} ชิ้น (Chunks)")
+
+        # 3. ใส่ Metadata
+        for chunk in chunks:
+            chunk.metadata["added_by"] = user_name
+            chunk.metadata["timestamp"] = str(datetime.now())
+            chunk.metadata["source_type"] = "web_url"
+            chunk.metadata["source"] = url # เก็บลิงก์ต้นทางไว้
+
+        # 4. ทยอยส่ง (Loop พร้อมระบบ Cancel)
+        batch_size = 30
+        sleep_time = 20
+        
+        for i in range(0, total_chunks, batch_size):
+            if training_state["abort"]:
+                add_log("⛔ กระบวนการถูกยกเลิก")
+                training_state["status"] = "Cancelled"
+                training_state["is_running"] = False
+                return
+
+            # คำนวณเวลา
+            current_time = time.time()
+            elapsed_time = current_time - training_state["start_time"]
+            processed = i
+            if processed > 0:
+                speed = processed / elapsed_time
+                remaining_chunks = total_chunks - processed
+                eta = remaining_chunks / speed if speed > 0 else 0
+                training_state["estimated_remaining"] = int(eta)
+            
+            percent = int((i / total_chunks) * 100)
+            training_state["progress"] = percent
+            training_state["status"] = "Processing"
+            add_log(f"📤 กำลังส่ง Batch {(i//batch_size)+1} (Process: {i}/{total_chunks})")
+
+            batch = chunks[i : i + batch_size]
+            vectorstore.add_documents(documents=batch, namespace=namespace)
+            
+            add_log(f"✅ Batch {(i//batch_size)+1} สำเร็จ! พัก {sleep_time} วิ...")
+            
+            for _ in range(sleep_time):
+                if training_state["abort"]: break
+                time.sleep(1)
+
+        training_state["progress"] = 100
+        training_state["status"] = "Completed"
+        training_state["is_running"] = False
+        add_log("🎉 เสร็จสมบูรณ์! เว็บไซต์ถูกบันทึกเรียบร้อย")
+
+    except Exception as e:
+        training_state["status"] = "Error"
+        training_state["is_running"] = False
+        add_log(f"⚠️ Error: {str(e)}")
+
 def process_github_training(repo_name: str, token: str, namespace: str, user_name: str, incremental: bool = False):
     global training_state
     
@@ -577,6 +671,26 @@ async def train_github(
     mode_text = "Incremental Update" if request.incremental else "Full Load"
     return {"status": "success", "message": f"เริ่มกระบวนการ {mode_text} แล้ว!"}
 
+class UrlRequest(BaseModel):
+    url: str
+    namespace: str = "global"
+
+@app.post("/train/url")
+async def train_url(
+    request: UrlRequest,
+    background_tasks: BackgroundTasks,
+    current_user: UserModel = Depends(get_current_user)
+):
+    if current_user.client_id != "global" and request.namespace != current_user.client_id:
+         raise HTTPException(status_code=403, detail="ไม่มีสิทธิ์")
+
+    background_tasks.add_task(
+        process_url_training, 
+        request.url, 
+        request.namespace, 
+        current_user.username
+    )
+    return {"status": "success", "message": "Start processing URL"}
 
 # --- 🛠️ Debug / Reset DB API ---
 @app.get("/debug/init-db")
