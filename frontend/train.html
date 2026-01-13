@@ -1,656 +1,325 @@
 <!DOCTYPE html>
-<html lang="th">
-
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Carmen Trainer - Super Admin</title>
+    <title>Carmen AI - Advanced Training</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
-        body {
-            font-family: 'Sarabun', sans-serif;
-            max-width: 600px;
-            margin: 40px auto;
-            padding: 20px;
-            background: #f3f4f6;
-        }
-
-        .card {
-            background: white;
-            padding: 30px;
-            border-radius: 16px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-            margin-bottom: 20px;
-        }
-
-        h2 {
-            margin-top: 0;
-            color: #111827;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: bold;
-            color: #374151;
-        }
-
-        input,
-        textarea,
-        select {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid #d1d5db;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            box-sizing: border-box;
-        }
-
-        .tabs {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-
-        .tab-btn {
-            flex: 1;
-            padding: 10px;
-            background: #e5e7eb;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: bold;
-            color: #6b7280;
-        }
-
-        .tab-btn.active {
-            background: #000;
-            color: white;
-        }
-
-        .tab-content {
-            display: none;
-        }
-
-        .tab-content.active {
-            display: block;
-        }
-
-        button.action-btn {
-            background: #000;
-            color: white;
-            border: none;
-            padding: 12px;
-            border-radius: 8px;
-            font-weight: bold;
-            cursor: pointer;
-            width: 100%;
-            transition: 0.2s;
-        }
-
-        button.action-btn:hover {
-            background: #2563eb;
-        }
-
-        button.action-btn:disabled {
-            background: #9ca3af;
-            cursor: not-allowed;
-        }
-
-        /* --- 🛠️ MODAL STYLES --- */
-        #processModal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.85);
-            z-index: 9999;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .modal-content {
-            background: #1f2937;
-            color: white;
-            width: 90%;
-            max-width: 500px;
-            padding: 25px;
-            border-radius: 16px;
-            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
-            text-align: center;
-        }
-
-        .progress-container {
-            width: 100%;
-            background: #374151;
-            height: 14px;
-            border-radius: 7px;
-            margin: 20px 0;
-            overflow: hidden;
-        }
-
-        .progress-bar {
-            height: 100%;
-            background: #10b981;
-            width: 0%;
-            transition: width 0.5s ease;
-            box-shadow: 0 0 10px #10b981;
-        }
-
-        .log-terminal {
-            background: #000;
-            color: #0f0;
-            font-family: 'Courier New', monospace;
-            font-size: 12px;
-            text-align: left;
-            padding: 15px;
-            border-radius: 8px;
-            height: 200px;
-            overflow-y: auto;
-            border: 1px solid #374151;
-            margin-top: 15px;
-        }
-
-        .log-line {
-            margin-bottom: 4px;
-            border-bottom: 1px solid #111;
-            padding-bottom: 2px;
-        }
-
-        .stat-grid {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 10px;
-            font-size: 14px;
-            color: #9ca3af;
-        }
-
-        .stat-value {
-            color: white;
-            font-weight: bold;
-            font-size: 18px;
-        }
-
-        /* ปุ่มใน Modal */
-        .modal-btn-group {
-            margin-top: 15px;
-            display: flex;
-            gap: 10px;
-            justify-content: center;
-        }
-
-        .cancel-btn {
-            background: #ef4444;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: bold;
-        }
-
-        .close-btn {
-            background: #374151;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 8px;
-            cursor: pointer;
-            display: none;
-        }
-
-        .cancel-btn:hover {
-            background: #dc2626;
-        }
-
-        .close-btn:hover {
-            background: #4b5563;
-        }
+        /* ... (CSS เดิมทั้งหมด ไม่ต้องแก้) ... */
+        :root { --bg-body: #f8fafc; --bg-card: #ffffff; --text-main: #0f172a; --text-muted: #64748b; --border-color: #e2e8f0; --primary-blue: #2563eb; --success-green: #10b981; --error-red: #ef4444; }
+        body { background-color: var(--bg-body); color: var(--text-main); font-family: 'Inter', sans-serif; margin: 0; padding: 20px; font-size: 14px; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; background: white; padding: 16px 24px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+        .header h1 { margin: 0; color: var(--primary-blue); font-size: 20px; display:flex; align-items:center; gap:10px; }
+        .btn-back { background: white; border: 1px solid var(--border-color); padding: 8px 16px; border-radius: 6px; cursor: pointer; color: var(--text-muted); font-weight:500; transition:0.2s; }
+        .btn-back:hover { border-color: var(--primary-blue); color: var(--primary-blue); }
+        .container { max-width: 900px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .card { background: white; border-radius: 12px; padding: 24px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); height: fit-content; }
+        .train-tabs { display: flex; gap: 8px; margin-bottom: 20px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; overflow-x: auto; }
+        .t-btn { background: none; border: none; padding: 8px 12px; cursor: pointer; font-size: 13px; color: var(--text-muted); font-weight: 500; border-radius: 6px; transition:0.2s; white-space: nowrap; }
+        .t-btn:hover { background: #f1f5f9; color: var(--primary-blue); }
+        .t-btn.active { background: #eff6ff; color: var(--primary-blue); font-weight: 600; }
+        .tab-panel { display: none; animation: fadeIn 0.3s ease; }
+        .tab-panel.active { display: block; }
+        @keyframes fadeIn { from { opacity:0; transform:translateY(5px); } to { opacity:1; transform:translateY(0); } }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 6px; font-weight: 500; font-size: 13px; color: #334155; }
+        .input-box { width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 8px; box-sizing: border-box; font-family: 'Inter', sans-serif; font-size: 14px; }
+        .input-box:focus { outline: none; border-color: var(--primary-blue); ring: 2px solid #bfdbfe; }
+        .checkbox-group { display: flex; align-items: center; gap: 8px; font-size: 13px; margin-top: 5px; }
+        .btn-train { width: 100%; padding: 12px; background: var(--primary-blue); color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: 0.2s; margin-top:10px; display: flex; justify-content: center; align-items: center; gap: 8px; }
+        .btn-train:hover { background: #1e40af; }
+        .btn-train:disabled { background: #94a3b8; cursor: not-allowed; }
+        .btn-cancel { background: #fee2e2; color: #991b1b; margin-top: 10px; width: 100%; padding: 10px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; display: none; }
+        .btn-cancel:hover { background: #fecaca; }
+        .status-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid #334155; padding-bottom: 10px; }
+        .status-indicator { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; }
+        .dot { width: 8px; height: 8px; border-radius: 50%; background: #64748b; }
+        .dot.active { background: #10b981; box-shadow: 0 0 8px #10b981; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+        .console-box { background: #0f172a; color: #10b981; font-family: 'Courier New', monospace; padding: 15px; border-radius: 8px; height: 300px; overflow-y: auto; font-size: 12px; border: 1px solid #1e293b; display: flex; flex-direction: column; gap: 4px; }
+        .log-line { border-bottom: 1px solid #1e293b; padding-bottom: 2px; }
+        .progress-container { margin-top: 20px; }
+        .progress-bar-bg { width: 100%; height: 8px; background: #334155; border-radius: 4px; overflow: hidden; }
+        .progress-bar-fill { height: 100%; background: #3b82f6; width: 0%; transition: width 0.3s ease; }
+        .progress-text { display: flex; justify-content: space-between; font-size: 12px; color: #cbd5e1; margin-top: 5px; }
+        .info-card { background: #f8fafc; border: 1px dashed #cbd5e1; padding: 15px; border-radius: 8px; font-size: 12px; color: #475569; margin-top: 15px; }
     </style>
-    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600&display=swap" rel="stylesheet">
 </head>
-
 <body>
 
-    <div id="loginSection" class="card">
-        <h2>🔐 Admin Login</h2>
-        <input type="text" id="loginUser" placeholder="Username (admin)">
-        <input type="password" id="loginPass" placeholder="Password (admin)">
-        <button id="loginBtn" class="action-btn" onclick="doLogin()">Login</button>
-        <p style="font-size:12px; color:#666; text-align:center; margin-top:10px;">
-            *ถ้ากดแล้วนิ่ง แปลว่า Server กำลังตื่น (รอประมาณ 1 นาที)
-        </p>
+    <div class="header">
+        <h1>⚙️ Carmen Data Engine</h1>
+        <button class="btn-back" onclick="window.location.href='dashboard.html'">← Back to Dashboard</button>
     </div>
 
-    <div id="trainingSection" class="card" style="display:none;">
-        <div style="display:flex; justify-content:space-between; margin-bottom:15px;">
-            <h2>👩‍🏫 Carmen Trainer</h2>
-            <button onclick="doLogout()" style="background:none;border:none;color:red;cursor:pointer;">Logout</button>
-        </div>
-
-        <label>Namespace:</label>
-        <select id="namespaceInput">
-            <option value="global" selected>🌐 ทุกคน (Global)</option>
-            <option value="hotel-seaside">🏖️ Seaside</option>
-            <option value="hotel-city">🏙️ City</option>
-        </select>
-
-        <div class="tabs">
-            <button class="tab-btn active" onclick="switchTab('github')">🐙 GitHub Repo</button>
-            <button class="tab-btn" onclick="switchTab('url')">🌐 URL Website</button>
-            <button class="tab-btn" onclick="switchTab('drive')">📁 Google Drive</button> <button class="tab-btn"
-                onclick="switchTab('file')">📂 Upload File</button>
-            <button class="tab-btn" onclick="switchTab('text')">✍️ Text</button>
-        </div>
-
-        <div id="tab-github" class="tab-content active">
-            <label>Repo Name:</label>
-            <input type="text" id="repoInput" placeholder="user/repo">
-            <label>Token:</label>
-            <input type="password" id="ghTokenInput" placeholder="ghp_xxxx">
-
-            <div
-                style="margin-bottom: 20px; display: flex; align-items: center; gap: 10px; background: #fff; padding: 10px; border-radius: 8px; border: 1px solid #ddd;">
-                <input type="checkbox" id="incrementalInput" style="width: 20px; margin: 0;">
-                <div>
-                    <strong style="display:block;">🔄 อัปเดตเฉพาะข้อมูลใหม่ (Incremental)</strong>
-                    <span style="font-size: 12px; color: #666;">(เช็คเฉพาะไฟล์ที่มีการ Commit ใน 30 วันที่ผ่านมา)</span>
-                </div>
+    <div class="container">
+        <div class="card">
+            <h2 style="margin-top:0;">Input Source</h2>
+            <div class="train-tabs">
+                <button class="t-btn active" onclick="switchTab('file')">📄 PDF/File</button>
+                <button class="t-btn" onclick="switchTab('url')">🌐 URL</button>
+                <button class="t-btn" onclick="switchTab('repo')">🐱 GitHub</button>
+                <button class="t-btn" onclick="switchTab('drive')">📂 Drive</button>
+                <button class="t-btn" onclick="switchTab('manual')">✍️ Text</button>
             </div>
 
-            <button class="action-btn" onclick="sendGithubData()">เริ่มทำงาน 🚀</button>
-        </div>
-
-        <div id="tab-url" class="tab-content">
-            <label>URL เว็บไซต์:</label>
-            <input type="text" id="urlInput" placeholder="https://example.com/policy">
-
-            <div
-                style="margin-bottom: 20px; background: #fff; padding: 15px; border-radius: 8px; border: 1px solid #ddd;">
-                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
-                    <input type="checkbox" id="recursiveUrlInput" style="width: 20px; margin: 0;"
-                        onchange="toggleDepthInput()">
-                    <strong>🕷️ ค้นหาลิงก์ภายในเว็บ (Crawl Links)</strong>
+            <div id="panel-file" class="tab-panel active">
+                <div class="form-group">
+                    <label>Target Namespace</label>
+                    <select id="ns-file" class="input-box namespace-select"></select>
                 </div>
-
-                <div id="depthOption" style="display:none; margin-left: 30px; align-items: center; gap: 10px;">
-                    <label style="margin:0; font-weight:normal;">ความลึก (Depth):</label>
-                    <input type="number" id="depthInput" value="2" min="1" max="10"
-                        style="width: 80px; margin:0; padding:5px;">
-                    <span style="font-size: 12px; color: #666;">(แนะนำ 2-3)</span>
-                </div>
+                <div class="form-group"><label>File (PDF, CSV, TXT)</label><input type="file" id="file-input" class="input-box"></div>
+                <button class="btn-train" onclick="startFile()">🚀 Upload & Train</button>
             </div>
 
-            <button class="action-btn" onclick="sendUrlData()">เริ่มดูดข้อมูล 🚀</button>
-        </div>
-
-        <div id="tab-drive" class="tab-content">
-            <label>Google Drive Folder ID (หรือ Link):</label>
-            <input type="text" id="gdriveIdInput" placeholder="วางลิงก์ Folder หรือ ID เช่น 1A2B3C...">
-
-            <label>Service Account Key (JSON):</label>
-            <input type="file" id="gdriveKeyInput" accept=".json">
-            <p style="font-size:12px; color:#666; margin-top:-10px;">
-                *ไฟล์ JSON ที่ได้จาก Google Cloud Console (ระบบจะใช้เพื่อยืนยันตัวตนเท่านั้น)
-            </p>
-
-            <div
-                style="background:#fff3cd; padding:10px; border-radius:8px; margin-bottom:20px; border:1px solid #ffeeba;">
-                <strong style="color:#856404;">⚠️ อย่าลืม!</strong>
-                <p style="margin:5px 0 0; font-size:13px; color:#856404;">
-                    คุณต้องกด <b>Share</b> โฟลเดอร์ใน Google Drive ให้กับอีเมลของบอท <br>
-                    (ดูอีเมลได้ในไฟล์ JSON บรรทัด "client_email")
-                </p>
+            <div id="panel-url" class="tab-panel">
+                <div class="form-group">
+                    <label>Target Namespace</label>
+                    <select id="ns-url" class="input-box namespace-select"></select>
+                </div>
+                <div class="form-group"><label>Website URL</label><input type="text" id="url-input" class="input-box" placeholder="https://example.com"></div>
+                <div class="form-group" style="display:flex; gap:10px;">
+                    <div style="flex:1;"><label>Depth</label><input type="number" id="url-depth" class="input-box" value="2" min="1" max="5"></div>
+                    <div style="flex:1; display:flex; align-items:center; margin-top:20px;">
+                        <label class="checkbox-group"><input type="checkbox" id="url-recursive"> Recursive Crawl</label>
+                    </div>
+                </div>
+                <div class="info-card">💡 Recursive will follow links inside the website up to the specified depth.</div>
+                <button class="btn-train" onclick="startUrl()">🕷️ Start Crawling</button>
             </div>
 
-            <button class="action-btn" onclick="sendDriveData()">เชื่อมต่อ Google Drive 🚀</button>
+            <div id="panel-repo" class="tab-panel">
+                <div class="form-group">
+                    <label>Target Namespace</label>
+                    <select id="ns-repo" class="input-box namespace-select"></select>
+                </div>
+                <div class="form-group"><label>Repository (user/repo)</label><input type="text" id="repo-name" class="input-box" placeholder="carmen-org/backend-api"></div>
+                <div class="form-group"><label>Access Token (Optional for Public)</label><input type="password" id="repo-token" class="input-box" placeholder="ghp_xxxxxxxxxxxx"></div>
+                <div class="form-group"><label class="checkbox-group"><input type="checkbox" id="repo-incremental"> Incremental Update (Last 30 days)</label></div>
+                <button class="btn-train" onclick="startGithub()">🐱 Clone & Learn</button>
+            </div>
+
+            <div id="panel-drive" class="tab-panel">
+                <div class="form-group">
+                    <label>Target Namespace</label>
+                    <select id="ns-drive" class="input-box namespace-select"></select>
+                </div>
+                <div class="form-group"><label>Folder ID</label><input type="text" id="drive-id" class="input-box" placeholder="1A2B3C..."></div>
+                <div class="form-group"><label>Service Account Key (.json)</label><input type="file" id="drive-key" class="input-box" accept=".json"></div>
+                <button class="btn-train" onclick="startDrive()">📂 Scan Drive</button>
+            </div>
+
+            <div id="panel-manual" class="tab-panel">
+                <div class="form-group">
+                    <label>Target Namespace</label>
+                    <select id="ns-text" class="input-box namespace-select"></select>
+                </div>
+                <div class="form-group"><label>Text Content</label><textarea id="text-input" class="input-box" rows="8" placeholder="Paste knowledge here..."></textarea></div>
+                <button class="btn-train" onclick="startText()">💾 Save to Memory</button>
+            </div>
+
         </div>
 
-        <div id="tab-file" class="tab-content">
-            <input type="file" id="fileInput" accept=".pdf,.csv,.txt,.md">
-            <button class="action-btn" onclick="sendFileData()">Upload 🚀</button>
-        </div>
-
-        <div id="tab-text" class="tab-content">
-            <textarea id="knowledgeInput" rows="5" placeholder="Content..."></textarea>
-            <button class="action-btn" onclick="sendTextData()">Save 💾</button>
-        </div>
-    </div>
-
-    <div id="processModal" style="display:flex;">
-        <div class="modal-content">
-            <h3 id="modalTitle">🚀 กำลังทำงาน...</h3>
-
-            <div class="stat-grid">
-                <div>
-                    <div>Progress</div>
-                    <div id="percentTxt" class="stat-value">0%</div>
+        <div class="card" style="background:#1e293b; color:white; border:none;">
+            <div class="status-header">
+                <div class="status-indicator">
+                    <div id="status-dot" class="dot"></div>
+                    <span id="status-text">System Idle</span>
                 </div>
-                <div>
-                    <div>Status</div>
-                    <div id="statusTxt" class="stat-value" style="color:#fbbf24;">Starting</div>
-                </div>
-                <div>
-                    <div>Time Left</div>
-                    <div id="timeLeftTxt" class="stat-value">--:--</div>
-                </div>
+                <span id="timer" style="font-size:12px; color:#94a3b8; font-family:monospace;">00:00:00</span>
+            </div>
+
+            <div id="console" class="console-box">
+                <div class="log-line">[System] Ready to accept jobs.</div>
             </div>
 
             <div class="progress-container">
-                <div id="modalProgressBar" class="progress-bar"></div>
+                <div class="progress-bar-bg"><div id="progress-fill" class="progress-bar-fill"></div></div>
+                <div class="progress-text">
+                    <span id="progress-percent">0%</span>
+                    <span id="progress-details">0/0 Chunks</span>
+                </div>
+                <div class="progress-text">
+                    <span>ETA: <span id="eta">--</span>s</span>
+                </div>
             </div>
 
-            <div class="log-terminal" id="logTerminal">
-                <div class="log-line">> System Initialized...</div>
-            </div>
-
-            <div class="modal-btn-group">
-                <button id="cancelBtn" class="cancel-btn" onclick="doCancel()">🛑 ยกเลิก (Cancel)</button>
-                <button id="closeModalBtn" class="close-btn" onclick="closeModal()">ปิดหน้าต่าง</button>
-            </div>
+            <button class="btn-cancel" id="btn-cancel" onclick="cancelJob()">⛔ Emergency Stop</button>
         </div>
     </div>
 
     <script>
-        const API_URL = "https://carmen-chatbot-api.onrender.com";
-        let accessToken = localStorage.getItem('carmen_admin_token');
-        let pollInterval;
+        const API_BASE = "http://127.0.0.1:8000";
+        let monitorInterval;
+        let isRunning = false;
 
-        // Init
-        document.getElementById('processModal').style.display = 'none';
-        if (accessToken) showTrainingSection();
-
-        function switchTab(t) {
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-
-            if (t === 'github') {
-                document.querySelector('.tabs button:nth-child(1)').classList.add('active');
-                document.getElementById('tab-github').classList.add('active');
+        // Auth Check & Load Namespaces
+        window.onload = function() {
+            if (!localStorage.getItem("admin_token")) {
+                alert("⛔ Admin Access Required!");
+                window.location.href = "index.html";
+            } else {
+                loadNamespaces(); // ✅ โหลด Namespace อัตโนมัติ
             }
-            else if (t === 'url') {
-                document.querySelector('.tabs button:nth-child(2)').classList.add('active');
-                document.getElementById('tab-url').classList.add('active');
-            }
-            else if (t === 'drive') { // ✅ เพิ่มส่วนนี้
-                document.querySelector('.tabs button:nth-child(3)').classList.add('active');
-                document.getElementById('tab-drive').classList.add('active');
-            }
-            else if (t === 'file') {
-                document.querySelector('.tabs button:nth-child(4)').classList.add('active');
-                document.getElementById('tab-file').classList.add('active');
-            }
-            else {
-                document.querySelector('.tabs button:nth-child(5)').classList.add('active');
-                document.getElementById('tab-text').classList.add('active');
-            }
-        }
+        };
 
-        // ฟังก์ชันส่งข้อมูล Drive
-        async function sendDriveData() {
-            let fid = document.getElementById('gdriveIdInput').value;
-            const keyFile = document.getElementById('gdriveKeyInput').files[0];
-            const n = document.getElementById('namespaceInput').value;
-
-            if (!fid) return alert('ใส่ Folder ID หรือ Link ก่อนครับ');
-            if (!keyFile) return alert('อัปโหลดไฟล์ JSON Key ก่อนครับ');
-
-            // ดึง ID ออกจาก Link (ถ้าผู้ใช้แปะมาทั้งลิงก์)
-            // ลิงก์มักจะเป็น https://drive.google.com/drive/folders/1H-xxxxxx?usp=sharing
-            if (fid.includes('folders/')) {
-                fid = fid.split('folders/')[1].split('?')[0].split('/')[0];
-            }
-
-            openModal();
-
+        // ✅ ฟังก์ชันโหลด Namespace จาก API
+        async function loadNamespaces() {
+            const token = localStorage.getItem("admin_token");
             try {
-                const fd = new FormData();
-                fd.append('folder_id', fid);
-                fd.append('namespace', n);
-                fd.append('file', keyFile); // ส่งไฟล์ JSON ไปด้วย
-
-                const res = await fetch(API_URL + '/train/drive', {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${accessToken}` },
-                    body: fd
+                const res = await fetch(`${API_BASE}/admin/users-namespaces`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
                 });
-
-                if (!res.ok) throw new Error("Server Error");
-                startPolling();
+                
+                if (res.ok) {
+                    const options = await res.json();
+                    
+                    // กระจายไปทุก Dropdown (ที่มี class 'namespace-select')
+                    const selects = document.querySelectorAll('.namespace-select');
+                    selects.forEach(select => {
+                        select.innerHTML = options.map(opt => 
+                            `<option value="${opt.value}">${opt.label}</option>`
+                        ).join('');
+                    });
+                }
             } catch (e) {
-                alert("Error: " + e.message);
-                closeModal();
+                console.error("Failed to load namespaces:", e);
+                // Fallback เผื่อ API พัง
+                document.querySelectorAll('.namespace-select').forEach(s => {
+                    s.innerHTML = '<option value="global">Global (Fallback)</option>';
+                });
             }
         }
 
-        async function doLogin() {
-            const u = document.getElementById('loginUser').value;
-            const p = document.getElementById('loginPass').value;
-            const btn = document.getElementById('loginBtn');
-            btn.innerText = "⏳ กำลังปลุก Server...";
-            btn.disabled = true;
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-panel').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.t-btn').forEach(el => el.classList.remove('active'));
+            document.getElementById(`panel-${tab}`).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        // --- Core Functions ---
+
+        async function startFile() {
+            const file = document.getElementById('file-input').files[0];
+            if(!file) return alert("Please select a file");
+            
+            const fd = new FormData();
+            fd.append("file", file);
+            fd.append("namespace", document.getElementById('ns-file').value);
+
+            await sendRequest(`${API_BASE}/train/upload`, fd, true);
+        }
+
+        async function startUrl() {
+            const payload = {
+                url: document.getElementById('url-input').value,
+                namespace: document.getElementById('ns-url').value,
+                recursive: document.getElementById('url-recursive').checked,
+                depth: parseInt(document.getElementById('url-depth').value)
+            };
+            if(!payload.url) return alert("Enter URL");
+            await sendRequest(`${API_BASE}/train/url`, JSON.stringify(payload));
+        }
+
+        async function startGithub() {
+            const payload = {
+                repo_name: document.getElementById('repo-name').value,
+                github_token: document.getElementById('repo-token').value,
+                namespace: document.getElementById('ns-repo').value,
+                incremental: document.getElementById('repo-incremental').checked
+            };
+            if(!payload.repo_name) return alert("Enter Repo Name");
+            await sendRequest(`${API_BASE}/train/github`, JSON.stringify(payload));
+        }
+
+        async function startDrive() {
+            const file = document.getElementById('drive-key').files[0];
+            if(!file) return alert("Upload Service Account JSON key");
+
+            const fd = new FormData();
+            fd.append("folder_id", document.getElementById('drive-id').value);
+            fd.append("namespace", document.getElementById('ns-drive').value);
+            fd.append("file", file);
+
+            await sendRequest(`${API_BASE}/train/drive`, fd, true);
+        }
+
+        async function startText() {
+            const payload = {
+                text: document.getElementById('text-input').value,
+                namespace: document.getElementById('ns-text').value
+            };
+            if(!payload.text) return alert("Enter text");
+            await sendRequest(`${API_BASE}/train`, JSON.stringify(payload));
+        }
+
+        async function cancelJob() {
+            if(!confirm("Are you sure you want to stop?")) return;
+            const token = localStorage.getItem("admin_token");
+            await fetch(`${API_BASE}/train/cancel`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}` }});
+        }
+
+        // --- Helper & Monitor ---
+
+        async function sendRequest(url, body, isFile=false) {
+            const token = localStorage.getItem("admin_token");
+            const headers = { 'Authorization': `Bearer ${token}` };
+            if (!isFile) headers['Content-Type'] = 'application/json';
 
             try {
-                const fd = new URLSearchParams();
-                fd.append('username', u);
-                fd.append('password', p);
-
-                const r = await fetch(API_URL + '/token', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: fd
-                });
-
-                if (r.ok) {
-                    const d = await r.json();
-                    accessToken = d.access_token;
-                    localStorage.setItem('carmen_admin_token', accessToken);
-                    showTrainingSection();
+                const res = await fetch(url, { method: 'POST', headers, body });
+                const data = await res.json();
+                
+                if (res.ok) {
+                    alert(`✅ Job Started: ${data.message}`);
+                    startMonitoring();
                 } else {
-                    alert('❌ Login Failed: Username หรือ Password ผิด');
+                    alert(`❌ Error: ${data.detail}`);
                 }
-            } catch (e) {
-                alert('⚠️ Connection Error: ' + e.message + "\n(ลองกด Login ใหม่อีกครั้ง)");
-            } finally {
-                btn.innerText = "Login";
-                btn.disabled = false;
-            }
+            } catch (e) { alert(`Network Error: ${e.message}`); }
         }
 
-        function showTrainingSection() {
-            document.getElementById('loginSection').style.display = 'none';
-            document.getElementById('trainingSection').style.display = 'block';
-        }
-        function doLogout() {
-            localStorage.removeItem('carmen_admin_token');
-            location.reload();
-        }
-
-        // --- GitHub Logic ---
-        async function sendGithubData() {
-            const r = document.getElementById('repoInput').value;
-            const t = document.getElementById('ghTokenInput').value;
-            const n = document.getElementById('namespaceInput').value;
-            const inc = document.getElementById('incrementalInput').checked;
-
-            if (!r) return alert('ใส่ Repo Name ก่อน');
-
-            // ✅ เปิด Modal (โค้ดนี้แหละที่ Error เพราะหาปุ่มไม่เจอ)
-            openModal();
-
-            try {
-                const res = await fetch(API_URL + '/train/github', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${accessToken}` },
-                    body: JSON.stringify({ repo_name: r, github_token: t, namespace: n, incremental: inc })
-                });
-
-                if (!res.ok) {
-                    if (res.status === 401) { alert("Session หมดอายุ กรุณา Login ใหม่"); doLogout(); return; }
-                    throw new Error("Server Error");
-                }
-                startPolling();
-            } catch (e) {
-                alert("Error: " + e.message);
-                closeModal();
-            }
-        }
-
-        // --- File Logic ---
-        async function sendFileData() {
-            const f = document.getElementById('fileInput').files[0];
-            const n = document.getElementById('namespaceInput').value;
-            if (!f) return alert('เลือกไฟล์ก่อน');
-
-            openModal();
-            // ซ่อนปุ่ม Cancel เพราะ Upload เร็วมาก ยกเลิกไม่ทัน
-            document.getElementById('cancelBtn').style.display = 'none';
-
-            const fd = new FormData(); fd.append('file', f);
-            await fetch(`${API_URL}/train/upload?namespace=${n}`, {
-                method: 'POST', headers: { 'Authorization': `Bearer ${accessToken}` }, body: fd
-            });
-
-            document.getElementById('modalTitle').innerText = "✅ อัปโหลดเสร็จสิ้น!";
-            document.getElementById('modalProgressBar').style.width = "100%";
-            document.getElementById('percentTxt').innerText = "100%";
-            document.getElementById('closeModalBtn').style.display = 'block';
-        }
-
-        async function sendTextData() {
-            const text = document.getElementById('knowledgeInput').value;
-            const n = document.getElementById('namespaceInput').value;
-            if (!text) return alert("พิมพ์เนื้อหาก่อน");
-
-            const btn = document.querySelector('#tab-text button');
-            btn.innerText = "Saving...";
-
-            await fetch(API_URL + '/train', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${accessToken}` },
-                body: JSON.stringify({ text: text, namespace: n, source: "Admin Manual" })
-            });
-
-            alert("บันทึกเรียบร้อย!");
-            document.getElementById('knowledgeInput').value = "";
-            btn.innerText = "Save 💾";
-        }
-
-        async function sendUrlData() {
-            const u = document.getElementById('urlInput').value;
-            const n = document.getElementById('namespaceInput').value;
-            const rec = document.getElementById('recursiveUrlInput').checked;
-            // เอาค่า depth มา (ถ้าไม่ติ๊ก ให้ส่ง 2 เป็น default)
-            const d = document.getElementById('depthInput').value || 2;
-
-            if (!u) return alert('ใส่ URL ก่อนครับ');
-            if (!u.startsWith('http')) return alert('URL ต้องขึ้นต้นด้วย http:// หรือ https://');
-
-            openModal();
-
-            try {
-                const res = await fetch(API_URL + '/train/url', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${accessToken}` },
-                    // ✅ ส่ง depth ไปด้วย (แปลงเป็น int)
-                    body: JSON.stringify({
-                        url: u,
-                        namespace: n,
-                        recursive: rec,
-                        depth: parseInt(d)
-                    })
-                });
-
-                if (!res.ok) throw new Error("Server Error");
-                startPolling();
-            } catch (e) {
-                alert("Error: " + e.message);
-                closeModal();
-            }
-        }
-
-        // --- Cancel Logic ---
-        async function doCancel() {
-            if (!confirm("⚠️ แน่ใจนะว่าจะหยุดการดูดข้อมูล?")) return;
-
-            const btn = document.getElementById('cancelBtn');
-            btn.innerText = "⏳ กำลังหยุด...";
-            btn.disabled = true;
-
-            try {
-                await fetch(API_URL + '/train/cancel', {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${accessToken}` }
-                });
-            } catch (e) {
-                alert("Error sending cancel command");
-                btn.disabled = false;
-                btn.innerText = "🛑 ยกเลิก (Cancel)";
-            }
-        }
-
-        function toggleDepthInput() {
-            const chk = document.getElementById('recursiveUrlInput').checked;
-            document.getElementById('depthOption').style.display = chk ? 'flex' : 'none';
-        }
-
-        // --- Modal & Polling System ---
-        function openModal() {
-            document.getElementById('processModal').style.display = 'flex';
-            document.getElementById('closeModalBtn').style.display = 'none'; // ซ่อนปุ่มปิด
-
-            // ✅ โชว์ปุ่ม Cancel (ที่เคย Error เพราะไม่มี Element นี้)
-            const cancelBtn = document.getElementById('cancelBtn');
-            cancelBtn.style.display = 'block';
-            cancelBtn.innerText = "🛑 ยกเลิก (Cancel)";
-            cancelBtn.disabled = false;
-
-            document.getElementById('modalTitle').innerText = "🚀 กำลังประมวลผล...";
-            document.getElementById('modalTitle').style.color = "white";
-            document.getElementById('logTerminal').innerHTML = "";
-        }
-
-        function closeModal() {
-            document.getElementById('processModal').style.display = 'none';
-            if (pollInterval) clearInterval(pollInterval);
-        }
-
-        function startPolling() {
-            if (pollInterval) clearInterval(pollInterval);
-            pollInterval = setInterval(async () => {
+        function startMonitoring() {
+            if (isRunning) return;
+            isRunning = true;
+            document.getElementById('btn-cancel').style.display = 'block';
+            
+            monitorInterval = setInterval(async () => {
                 try {
-                    const res = await fetch(API_URL + '/train/status');
-                    const data = await res.json();
+                    const res = await fetch(`${API_BASE}/train/status`);
+                    const state = await res.json();
+                    updateUI(state);
 
-                    document.getElementById('percentTxt').innerText = data.progress + "%";
-                    document.getElementById('modalProgressBar').style.width = data.progress + "%";
-                    document.getElementById('statusTxt').innerText = data.status;
-
-                    const sec = data.estimated_remaining;
-                    document.getElementById('timeLeftTxt').innerText = `${Math.floor(sec / 60)}m ${sec % 60}s`;
-
-                    const logBox = document.getElementById('logTerminal');
-                    logBox.innerHTML = "";
-                    data.logs.forEach(line => { logBox.innerHTML += `<div class="log-line">${line}</div>`; });
-                    logBox.scrollTop = logBox.scrollHeight;
-
-                    // เช็คสถานะจบ
-                    if (['Completed', 'Failed', 'Error', 'Cancelled'].includes(data.status)) {
-                        if (data.status === 'Completed') document.getElementById('modalTitle').innerText = "🎉 เสร็จสมบูรณ์!";
-                        else if (data.status === 'Cancelled') document.getElementById('modalTitle').innerText = "⛔ ยกเลิกแล้ว";
-                        else document.getElementById('modalTitle').innerText = "❌ เกิดข้อผิดพลาด";
-
-                        // ✅ สลับปุ่ม
-                        document.getElementById('cancelBtn').style.display = 'none';
-                        document.getElementById('closeModalBtn').style.display = 'block';
-
-                        clearInterval(pollInterval);
+                    if (!state.is_running && state.progress === 100) {
+                        stopMonitoring(true);
+                    } else if (!state.is_running && state.status === "Failed") {
+                        stopMonitoring(false);
                     }
-                } catch (e) { console.log("Polling Error", e); }
-            }, 1500);
+                } catch (e) { console.error(e); }
+            }, 1000);
+        }
+
+        function stopMonitoring(success) {
+            clearInterval(monitorInterval);
+            isRunning = false;
+            document.getElementById('btn-cancel').style.display = 'none';
+            document.getElementById('status-dot').className = "dot";
+            if(success) alert("🎉 Job Completed Successfully!");
+        }
+
+        function updateUI(state) {
+            document.getElementById('status-text').innerText = state.status;
+            document.getElementById('status-dot').className = state.is_running ? "dot active" : "dot";
+            document.getElementById('progress-fill').style.width = `${state.progress}%`;
+            document.getElementById('progress-percent').innerText = `${state.progress}%`;
+            document.getElementById('progress-details').innerText = `${state.processed_chunks}/${state.total_chunks} Chunks`;
+            document.getElementById('eta').innerText = state.estimated_remaining;
+            const consoleBox = document.getElementById('console');
+            consoleBox.innerHTML = state.logs.map(l => `<div class="log-line">${l}</div>`).join('');
+            consoleBox.scrollTop = consoleBox.scrollHeight;
         }
     </script>
 </body>
-
 </html>

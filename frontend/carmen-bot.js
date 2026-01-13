@@ -1,10 +1,15 @@
 (function() {
-    // ⚠️ แก้ URL ตรงนี้ให้เป็นของคุณ
-    const API_URL_CHAT = "https://carmen-chatbot-api.onrender.com/chat"; 
-    // ✅ เพิ่ม URL สำหรับดึงประวัติแชท
-    const API_URL_HISTORY = "https://carmen-chatbot-api.onrender.com/chat/history";
+    // ===============================================
+    // ⚙️ ตั้งค่า Server
+    // ===============================================
+    // const BASE_URL = "https://carmen-chatbot-api.onrender.com"; // ☁️ สำหรับ Render
+    const BASE_URL = "http://127.0.0.1:8000"; // 🏠 สำหรับ Localhost
 
-    // 💡 รายการคำถามแนะนำ (ชุดใหม่ของคุณ)
+    const API_URL_CHAT = `${BASE_URL}/chat`; 
+    const API_URL_HISTORY = `${BASE_URL}/chat/history`;
+    // ===============================================
+
+    // 💡 รายการคำถามแนะนำ
     const SUGGESTED_QUESTIONS = [
         "Voucher มีกี่ประเภทอะไรบ้าง",
         "ขั้นตอน Create Vendor มีอะไรบ้าง",
@@ -25,92 +30,158 @@
         document.body.appendChild(container);
     }
 
-    // CSS Style
+    // 🎨 CSS Style (เขียนใหม่ แก้ Bug ทับกัน)
     const styles = `
       @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600&display=swap');
-      #carmen-chat-widget { position: fixed; bottom: 20px; right: 20px; z-index: 99990; font-family: 'Sarabun', sans-serif; }
       
-      .chat-btn { width: 65px; height: 65px; background: #000; border-radius: 50%; box-shadow: 0 8px 24px rgba(0,0,0,0.25); cursor: pointer; display: flex; justify-content: center; align-items: center; transition: all 0.3s; }
-      .chat-btn:hover { transform: scale(1.1) rotate(5deg); }
-      .chat-btn svg { width: 32px; height: 32px; fill: white; }
+      #carmen-chat-widget { 
+          position: fixed; bottom: 20px; right: 20px; z-index: 99990; 
+          font-family: 'Sarabun', sans-serif; 
+      }
+      
+      /* ปุ่มเปิดแชท (กลมๆ มุมขวาล่าง) */
+      .chat-btn { 
+          width: 60px; height: 60px; 
+          background: #2563eb; /* สีน้ำเงิน */
+          border-radius: 50%; 
+          box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4); 
+          cursor: pointer; 
+          display: flex; justify-content: center; align-items: center; 
+          transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+      }
+      .chat-btn:hover { transform: scale(1.1); background: #1e40af; }
+      .chat-btn svg { width: 28px; height: 28px; fill: white; }
 
-      .chat-box { position: absolute; bottom: 85px; right: 0; width: 400px; height: 600px; background: white; border-radius: 20px; box-shadow: 0 12px 48px rgba(0,0,0,0.15); display: none; flex-direction: column; overflow: hidden; border: 1px solid #eee; }
+      /* หน้าต่างแชทหลัก */
+      .chat-box { 
+          position: absolute; bottom: 80px; right: 0; 
+          width: 380px; height: 550px; max-height: 80vh; 
+          background: #ffffff; 
+          border-radius: 16px; 
+          box-shadow: 0 5px 40px rgba(0,0,0,0.16); 
+          display: none; flex-direction: column; overflow: hidden; 
+          border: 1px solid #e5e7eb;
+          animation: slideUp 0.3s ease;
+      }
       .chat-box.open { display: flex; }
+      @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 
-      .chat-header { background: #000; color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; }
-      .header-tools { display: flex; gap: 10px; }
-      .icon-btn { cursor: pointer; opacity: 0.8; transition: 0.2s; display: flex; align-items: center; }
+      /* ส่วนหัว (Header) */
+      .chat-header { 
+          background: #2563eb; 
+          color: white; 
+          padding: 16px; 
+          display: flex; justify-content: space-between; align-items: center; 
+          border-bottom: 1px solid #1e40af;
+      }
+      .chat-header h3 { margin: 0; font-size: 16px; font-weight: 600; }
+      .chat-header span { font-size: 12px; opacity: 0.9; }
+      .header-tools { display: flex; gap: 12px; }
+      .icon-btn { cursor: pointer; opacity: 0.8; transition: 0.2s; }
       .icon-btn:hover { opacity: 1; transform: scale(1.1); }
-      .icon-btn svg { width: 20px; height: 20px; fill: white; }
+      .icon-btn svg { width: 18px; height: 18px; fill: white; }
 
-      .chat-body { flex: 1; padding: 20px; overflow-y: auto; background: #f8f9fa; display: flex; flex-direction: column; gap: 10px; }
+      /* พื้นที่แชท (Body) - จุดสำคัญที่แก้ Bug */
+      .chat-body { 
+          flex: 1; 
+          padding: 16px; 
+          overflow-y: auto; 
+          background: #f8fafc; /* พื้นหลังสีเทาอ่อนมาก */
+          display: flex; 
+          flex-direction: column; /* เรียงแนวตั้ง */
+          gap: 12px; /* ระยะห่างระหว่างข้อความ */
+      }
       
-      .msg { max-width: 85%; padding: 10px 14px; font-size: 14px; line-height: 1.6; border-radius: 12px; word-wrap: break-word; position: relative; }
-      .msg.user { background: #000; color: white; align-self: flex-end; border-radius: 18px 18px 4px 18px; }
+      /* กล่องข้อความ (Common) */
+      .msg { 
+          max-width: 80%; 
+          padding: 12px 16px; 
+          font-size: 14px; 
+          line-height: 1.5; 
+          border-radius: 12px; 
+          word-wrap: break-word; 
+          position: relative; 
+          box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+      }
+
+      /* ข้อความ User (ขวา/สีน้ำเงิน) */
+      .msg.user { 
+          background: #2563eb; 
+          color: white; 
+          align-self: flex-end; /* ชิดขวา */
+          border-radius: 12px 12px 2px 12px; 
+      }
       
+      /* ข้อความ Bot (ซ้าย/สีขาว) */
       .msg.bot { 
           background: white; 
-          color: #333; 
-          align-self: flex-start; 
-          border-radius: 18px 18px 18px 4px; 
-          border: 1px solid #ddd; 
-          padding-bottom: 28px; 
+          color: #334155; 
+          align-self: flex-start; /* ชิดซ้าย */
+          border-radius: 12px 12px 12px 2px; 
+          border: 1px solid #e2e8f0; 
+          padding-bottom: 32px; /* เผื่อที่ให้ปุ่ม Copy/Feedback */
       }
-      .msg.bot:hover .copy-btn { opacity: 1; }
 
-      .suggestions-container { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 5px; margin-bottom: 10px; padding: 0 10px; animation: fadeIn 0.5s ease; }
+      /* Suggestion Chips (ปุ่มคำถามแนะนำ) */
+      .suggestions-container { 
+          display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; 
+          animation: fadeIn 0.5s ease; align-self: flex-end; justify-content: flex-end;
+      }
       .suggestion-chip {
-          background: #fff;
-          border: 1px solid #ddd;
-          border-radius: 16px;
-          padding: 8px 14px;
-          font-size: 13px;
-          color: #555;
-          cursor: pointer;
-          transition: all 0.2s;
-          white-space: nowrap;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+          background: white; border: 1px solid #cbd5e1; border-radius: 20px;
+          padding: 6px 12px; font-size: 12px; color: #475569; cursor: pointer;
+          transition: 0.2s;
       }
-      .suggestion-chip:hover {
-          background: #000;
-          color: #fff;
-          border-color: #000;
-          transform: translateY(-2px);
-      }
+      .suggestion-chip:hover { background: #2563eb; color: white; border-color: #2563eb; }
 
+      /* ปุ่ม Copy & Feedback */
       .copy-btn {
-          position: absolute;
-          bottom: 4px; right: 6px;
+          position: absolute; bottom: 6px; right: 8px;
           width: 24px; height: 24px;
           background: transparent; border: none; cursor: pointer;
-          opacity: 0; transition: opacity 0.2s;
-          display: flex; align-items: center; justify-content: center;
-          border-radius: 4px; z-index: 10;
+          opacity: 0.6; transition: 0.2s; display: flex; align-items: center; justify-content: center;
       }
-      .copy-btn:hover { background: #f0f0f0; }
-      .copy-btn svg { width: 14px; height: 14px; fill: #aaa; }
-      .copy-btn.copied svg { fill: #10b981; }
+      .copy-btn:hover { opacity: 1; background: #f1f5f9; border-radius: 4px; }
+      .copy-btn svg { width: 14px; height: 14px; fill: #64748b; }
+      
+      .feedback-container {
+          position: absolute; bottom: 6px; right: 40px; /* อยู่ซ้ายปุ่ม Copy */
+          display: flex; gap: 8px;
+      }
+      .feedback-btn { font-size: 12px; cursor: pointer; opacity: 0.5; transition: 0.2s; }
+      .feedback-btn:hover { opacity: 1; transform: scale(1.2); }
 
-      .msg.bot.typing::after { content: '▋'; animation: blink 1s infinite; font-size: 12px; margin-left: 2px; }
+      /* Animation ตอนพิมพ์ */
+      .typing-indicator { font-size: 12px; color: #94a3b8; margin-left: 16px; margin-bottom: 5px; display: none; }
+      .msg.bot.typing::after { content: '▋'; animation: blink 1s infinite; }
       @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
 
-      .video-wrapper { position: relative; width: 100%; padding-bottom: 56.25%; height: 0; margin-top: 10px; margin-bottom: 5px; border-radius: 12px; overflow: hidden; background: #000; animation: fadeIn 0.5s ease; }
-      .video-wrapper iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0; }
-      @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-
-      .chat-footer { padding: 10px; background: white; border-top: 1px solid #eee; display: flex; gap: 5px; align-items: center; }
-      .chat-input { flex: 1; padding: 10px 15px; border-radius: 20px; border: 1px solid #ddd; outline: none; background: #f9f9f9; font-family: 'Sarabun', sans-serif;}
+      /* ส่วน Footer (ช่องพิมพ์) */
+      .chat-footer { 
+          padding: 12px; background: white; border-top: 1px solid #e5e7eb; 
+          display: flex; gap: 8px; align-items: center; 
+      }
+      .chat-input { 
+          flex: 1; padding: 10px 14px; 
+          border-radius: 24px; border: 1px solid #cbd5e1; outline: none; 
+          background: #f8fafc; font-family: 'Sarabun', sans-serif; font-size: 14px;
+      }
+      .chat-input:focus { border-color: #2563eb; background: white; }
       
-      .send-btn { width: 40px; height: 40px; background: #000; color: white; border: none; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
-      .send-btn:hover { background: #333; }
-      .send-btn svg { width: 18px; height: 18px; fill: white; } 
-      
-      .typing-indicator { font-size: 12px; color: #888; margin-left: 20px; display: none; margin-bottom: 5px; }
+      .send-btn { 
+          width: 36px; height: 36px; 
+          background: #2563eb; color: white; border: none; border-radius: 50%; 
+          cursor: pointer; display: flex; align-items: center; justify-content: center; 
+          transition: 0.2s; 
+      }
+      .send-btn:hover { background: #1e40af; }
+      .send-btn svg { width: 16px; height: 16px; fill: white; }
     `;
     const styleSheet = document.createElement("style");
     styleSheet.innerText = styles;
     document.head.appendChild(styleSheet);
 
+    // HTML Structure
     container.innerHTML = `
       <div class="chat-btn" onclick="window.carmenToggleChat()">
         <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
@@ -118,17 +189,19 @@
       <div class="chat-box" id="carmenChatWindow">
         <div class="chat-header">
            <div style="display:flex; align-items:center; gap:10px;">
-             <span>👩‍💼</span>
-             <div><strong style="font-size:14px;">Carmen</strong><br><span style="font-size:10px; opacity:0.8;" id="carmenUserDisplay">Guest</span></div>
+             <div style="font-size:24px;">👩‍💼</div>
+             <div>
+               <h3>Carmen AI</h3>
+               <span id="carmenUserDisplay">Guest Mode</span>
+             </div>
            </div>
            <div class="header-tools">
              <div class="icon-btn" onclick="window.carmenClearChat()" title="ล้างแชท"><svg viewBox="0 0 24 24"><path d="M15 16h4v2h-4zm0-8h7v2h-7zm0 4h6v2h-6zM3 18c0 1.1.9 2 2 2h6c1.1 0 2-.9 2-2V8H3v10zM14 5h-3l-1-1H6L5 5H2v2h12z"/></svg></div>
-             <div class="icon-btn" onclick="window.carmenLogoutAction()" title="ออกจากระบบ"><svg viewBox="0 0 24 24"><path d="M10.09 15.59L11.5 17l5-5-5-5-1.41 1.41L12.67 11H3v2h9.67l-2.58 2.59zM19 3H5c-1.11 0-2 .9-2 2v4h2V5h14v14H5v-4H3v4c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z"/></svg></div>
              <div class="icon-btn" onclick="window.carmenToggleChat()"><svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></div>
            </div>
         </div>
         <div class="chat-body" id="carmenChatBody"></div>
-        <div class="typing-indicator" id="carmenTypingIndicator">กำลังพิมพ์...</div>
+        <div class="typing-indicator" id="carmenTypingIndicator">Carmen กำลังพิมพ์...</div>
         <div class="chat-footer">
           <input type="text" id="carmenUserInput" class="chat-input" placeholder="พิมพ์ข้อความ..." onkeypress="window.carmenCheckEnter(event)">
           <button class="send-btn" onclick="window.carmenSendMessage()">
@@ -138,7 +211,10 @@
       </div>
     `;
 
-    // Global Functions (✅ เพิ่ม Logic โหลด History กลับมาให้ครับ)
+    // ==========================================
+    // 🧠 Javascript Logic
+    // ==========================================
+
     window.carmenStartSession = async function(token, username) {
         accessToken = token;
         currentUser = username;
@@ -147,10 +223,9 @@
         document.getElementById('carmenChatWindow').classList.add('open');
 
         const body = document.getElementById('carmenChatBody');
-        body.innerHTML = ''; // ล้างก่อนเสมอ
+        body.innerHTML = ''; 
 
         try {
-            // ดึงประวัติ 3 ข้อความล่าสุด
             const res = await fetch(API_URL_HISTORY, {
                 headers: { 'Authorization': `Bearer ${accessToken}` }
             });
@@ -160,21 +235,20 @@
                     history.forEach(msg => {
                         addMessage(msg.message, msg.sender, false);
                     });
+                    // ขีดคั่นประวัติ
                     const divider = document.createElement('div');
-                    divider.style.cssText = 'text-align:center; font-size:10px; color:#ccc; margin:10px 0;';
-                    divider.innerText = '--- ประวัติการสนทนาล่าสุด ---';
+                    divider.style.cssText = 'text-align:center; font-size:11px; color:#94a3b8; margin:10px 0;';
+                    divider.innerText = '— ประวัติการสนทนาล่าสุด —';
                     body.appendChild(divider);
                 } else {
                     addMessage(`สวัสดีค่ะคุณ ${username} 👋<br>มีอะไรให้ Carmen ช่วยไหมคะ?`, 'bot', true);
                 }
             }
         } catch (e) {
-            // ถ้า Error หรือยังไม่มีประวัติ ก็ทักทายปกติ
             addMessage(`สวัสดีค่ะคุณ ${username} 👋<br>มีอะไรให้ Carmen ช่วยไหมคะ?`, 'bot', true);
         }
 
-        // ✅ โชว์คำถามแนะนำชุดใหม่เสมอ
-        setTimeout(() => addSuggestions(), 1000); 
+        setTimeout(() => addSuggestions(), 800); 
     };
 
     window.carmenLogoutAction = function() {
@@ -206,6 +280,7 @@
         addMessage(text, 'user', false);
         input.value = '';
         
+        // ซ่อน Suggestion เดิม
         const suggestions = document.querySelectorAll('.suggestions-container');
         suggestions.forEach(el => el.style.display = 'none');
 
@@ -249,9 +324,6 @@
 
     function addSuggestions() {
         const body = document.getElementById('carmenChatBody');
-        // เช็คว่ามี suggestion อยู่แล้วไหม ถ้ามีไม่ต้องเพิ่มซ้ำ
-        if (body.querySelector('.suggestions-container')) return;
-
         const div = document.createElement('div');
         div.className = 'suggestions-container';
 
@@ -270,10 +342,7 @@
         scrollToBottom();
     }
 
-    // ===============================================
-    // 🪄 Main Message Function
-    // ===============================================
-    // ✅ 1. เพิ่ม parameter 'msgId' ต่อท้ายสุด (ค่า default เป็น null)
+    // 🪄 Create Message Element
     function addMessage(text, sender, animate = false, msgId = null) {
         const body = document.getElementById('carmenChatBody');
         const div = document.createElement('div');
@@ -281,33 +350,35 @@
         
         let formattedText = text.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>').replace(/\n/g, '<br>');
 
+        // YouTube Logic
         let videoContent = "";
         const urlRegex = /(https?:\/\/(?:www\.)?(?:youtube\.com|youtu\.be)[^\s<)"']+)/g;
         formattedText = formattedText.replace(urlRegex, (url) => {
             const videoId = getYoutubeId(url);
             if (videoId) {
-                videoContent += `<div class="video-wrapper"><iframe src="https://www.youtube.com/embed/${videoId}?rel=0" frameborder="0" allowfullscreen></iframe></div>`;
-                return `<a href="${url}" target="_blank" style="color:#2563eb; text-decoration:underline;">(ลิงก์วิดีโอ)</a>`; 
+                videoContent += `<div style="position:relative; width:100%; padding-bottom:56.25%; height:0; border-radius:8px; overflow:hidden; margin-top:8px;">
+                                    <iframe src="https://www.youtube.com/embed/${videoId}?rel=0" style="position:absolute; top:0; left:0; width:100%; height:100%; border:0;" allowfullscreen></iframe>
+                                 </div>`;
+                return `<a href="${url}" target="_blank" style="color:#2563eb; text-decoration:underline;">(ดูวิดีโอ)</a>`; 
             }
-            return `<a href="${url}" target="_blank" style="color:#2563eb;">เปิดลิงก์</a>`;
+            return `<a href="${url}" target="_blank" style="color:#2563eb;">${url}</a>`;
         });
 
-        // ✅ 2. สร้าง HTML เครื่องมือ (ปุ่ม Copy + ปุ่ม Feedback)
+        // Tools HTML
         let toolsHTML = '';
         if (sender === 'bot') {
-            // ปุ่ม Copy (อันเดิม)
+            // Copy Button
             toolsHTML += `
                 <button class="copy-btn" title="คัดลอก">
                     <svg viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
                 </button>
             `;
-            
-            // ✅ ปุ่ม Feedback (จะโชว์เฉพาะถ้ามี msgId ส่งมา)
+            // Feedback Buttons
             if (msgId) {
                 toolsHTML += `
-                    <div class="feedback-container" style="display:flex; justify-content:flex-end; gap:10px; margin-top:8px; padding-top:5px; border-top:1px dashed #eee;">
-                        <div style="cursor:pointer; font-size:14px; opacity:0.6; transition:0.2s;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.6" onclick="window.carmenRate(${msgId}, 1, this)" title="คำตอบนี้มีประโยชน์">👍</div>
-                        <div style="cursor:pointer; font-size:14px; opacity:0.6; transition:0.2s;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.6" onclick="window.carmenRate(${msgId}, -1, this)" title="คำตอบนี้ไม่ถูกต้อง">👎</div>
+                    <div class="feedback-container">
+                        <div class="feedback-btn" onclick="window.carmenRate(${msgId}, 1, this)" title="มีประโยชน์">👍</div>
+                        <div class="feedback-btn" onclick="window.carmenRate(${msgId}, -1, this)" title="ไม่ถูกต้อง">👎</div>
                     </div>
                 `;
             }
@@ -315,30 +386,25 @@
 
         body.appendChild(div);
 
-        function attachCopyEvent() {
-            const btn = div.querySelector('.copy-btn');
-            if (btn) {
-                btn.onclick = function() {
-                    const rawText = text.replace(/\*\*/g, '').replace(/<br>/g, '\n'); 
-                    navigator.clipboard.writeText(rawText).then(() => {
-                        btn.classList.add('copied');
-                        btn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>`;
-                        setTimeout(() => {
-                            btn.classList.remove('copied');
-                            btn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>`;
-                        }, 2000);
-                    });
-                };
-            }
+        // Copy Logic
+        const btn = div.querySelector('.copy-btn');
+        if (btn) {
+            btn.onclick = function() {
+                const rawText = text.replace(/\*\*/g, '').replace(/<br>/g, '\n'); 
+                navigator.clipboard.writeText(rawText).then(() => {
+                    btn.innerHTML = `<svg viewBox="0 0 24 24" style="fill:#16a34a"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>`;
+                    setTimeout(() => {
+                        btn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>`;
+                    }, 2000);
+                });
+            };
         }
 
+        // Display Content
         if (sender === 'bot' && animate) {
             div.classList.add('typing');
-            // ซ่อน Tools ไว้ก่อนตอนกำลังพิมพ์
-            
             let i = 0;
-            const speed = 15;
-
+            const speed = 10; // พิมพ์เร็วขึ้นนิดนึง
             function typeWriter() {
                 if (i < formattedText.length) {
                     if (formattedText.charAt(i) === '<') {
@@ -354,18 +420,14 @@
                     setTimeout(typeWriter, speed);
                 } else {
                     div.classList.remove('typing');
-                    // ✅ พิมพ์เสร็จแล้ว ค่อยเอา Tools มาแปะต่อท้าย
-                    div.innerHTML = formattedText + videoContent + toolsHTML;
-                    attachCopyEvent();
+                    div.innerHTML = formattedText + videoContent + toolsHTML; // แปะ Tools ตอนจบ
                     scrollToBottom();
                 }
             }
             div.innerHTML = ""; 
             typeWriter();
         } else {
-            // ✅ ถ้าไม่ต้องพิมพ์ ก็แปะ Tools ไปเลย
             div.innerHTML = formattedText + videoContent + toolsHTML;
-            attachCopyEvent();
             scrollToBottom();
         }
     }
@@ -375,16 +437,14 @@
         body.scrollTop = body.scrollHeight;
     }
 
-    // ✅ 3. เพิ่มฟังก์ชันกดโหวต (เอาไปวางต่อท้าย scrollToBottom ได้เลยครับ)
     window.carmenRate = async function(msgId, score, btnElement) {
-        // เปลี่ยนหน้าตาปุ่มเมื่อกดแล้ว
         const parent = btnElement.parentElement;
         parent.innerHTML = score === 1 
-            ? '<span style="font-size:12px; color:#10b981;">ขอบคุณค่ะ ❤️</span>' 
-            : '<span style="font-size:12px; color:#ef4444;">ขอบคุณค่ะ เราจะปรับปรุง 🙏</span>';
+            ? '<span style="font-size:11px; color:#16a34a;">ขอบคุณค่ะ ❤️</span>' 
+            : '<span style="font-size:11px; color:#991b1b;">ขอบคุณค่ะ 🙏</span>';
         
         try {
-            await fetch(`https://carmen-chatbot-api.onrender.com/chat/feedback/${msgId}`, {
+            await fetch(`${BASE_URL}/chat/feedback/${msgId}`, {
                 method: 'POST',
                 headers: { 
                     'Content-Type': 'application/json',
@@ -392,12 +452,7 @@
                 },
                 body: JSON.stringify({ score: score })
             });
-        } catch(e) {
-            console.error("Feedback failed", e);
-        }
+        } catch(e) { console.error(e); }
     };
 
 })();
-
-
-

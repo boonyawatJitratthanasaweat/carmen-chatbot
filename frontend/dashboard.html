@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carmen Admin Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-body: #f1f5f9;
+            --bg-card: #ffffff;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --border-color: #e2e8f0;
+            --primary-blue: #2563eb;
+        }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 20px;
+            font-size: 14px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            background: white;
+            padding: 16px 24px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        }
+
+        .header h1 {
+            margin: 0;
+            color: var(--primary-blue);
+            font-size: 20px;
+        }
+
+        /* ปุ่มต่างๆ */
+        .btn-green {
+            background: #16a34a;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: 0.2s;
+        }
+
+        .btn-green:hover {
+            background: #15803d;
+        }
+
+        .btn-refresh {
+            background: var(--primary-blue);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .btn-refresh:hover {
+            background: #1e40af;
+        }
+
+        .btn-logout {
+            background: #fee2e2;
+            color: #991b1b;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: 0.2s;
+        }
+
+        .btn-logout:hover {
+            background: #fecaca;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .tab-btn {
+            padding: 10px 20px;
+            border: none;
+            background: #e2e8f0;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            color: #64748b;
+            transition: 0.2s;
+        }
+
+        .tab-btn.active {
+            background: var(--primary-blue);
+            color: white;
+            box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(5px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .table-container {
+            background: var(--bg-card);
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+
+        th {
+            background: #f8fafc;
+            color: #475569;
+            font-weight: 600;
+            padding: 14px 20px;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        td {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border-color);
+            color: #334155;
+        }
+
+        tr:hover {
+            background-color: #f8fafc;
+        }
+
+        .cost {
+            font-family: monospace;
+            font-weight: 600;
+            color: var(--primary-blue);
+        }
+
+        .badge {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .model-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .model-item:hover {
+            background: #f8fafc;
+        }
+
+        .tag {
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+        .tag-free {
+            background: #dcfce7;
+            color: #166534;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="login-overlay"
+        style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:9999; display:flex; justify-content:center; align-items:center;">
+        <div style="background:white; padding:40px; border-radius:12px; text-align:center; width:300px;">
+            <h2>🔒 Admin Only</h2>
+            <input type="password" id="password" placeholder="Password (admin)"
+                style="width:100%; padding:10px; margin-bottom:10px;">
+            <button onclick="doLogin()"
+                style="width:100%; padding:10px; background:#2563eb; color:white; border:none; border-radius:6px; cursor:pointer;">Login</button>
+        </div>
+    </div>
+
+    <div id="dashboard-content" style="display:none;">
+        <div class="header">
+            <h1>📊 Carmen Dashboard</h1>
+            <div style="display:flex; gap:10px;">
+                <button onclick="window.location.href='train.html'" class="btn-green">
+                    <span>+</span> Add Knowledge
+                </button>
+
+                <button class="btn-refresh" onclick="fetchData()">
+                    <span>↻</span> Refresh
+                </button>
+
+                <button onclick="doLogout()" class="btn-logout">Logout</button>
+            </div>
+        </div>
+
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('logs')">📋 Logs</button>
+            <button class="tab-btn" onclick="switchTab('analytics')">📊 Analytics</button>
+            <button class="tab-btn" onclick="switchTab('knowledge')">🗂️ Knowledge</button>
+            <button class="tab-btn" onclick="switchTab('models')">⚙️ Models</button>
+        </div>
+
+        <div id="tab-logs" class="tab-content active">
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>User</th>
+                            <th>Model</th>
+                            <th>Duration</th>
+                            <th>Tokens</th>
+                            <th>Cost</th>
+                        </tr>
+                    </thead>
+                    <tbody id="logsBody"></tbody>
+                </table>
+            </div>
+        </div>
+        <div id="tab-analytics" class="tab-content">
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Namespace (Client)</th>
+                            <th>Requests</th>
+                            <th>Total Tokens</th>
+                            <th>Total Cost</th>
+                        </tr>
+                    </thead>
+                    <tbody id="analyticsBody"></tbody>
+                </table>
+            </div>
+        </div>
+        <div id="tab-knowledge" class="tab-content">
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Namespace</th>
+                            <th>Count</th>
+                            <th>Progress</th>
+                        </tr>
+                    </thead>
+                    <tbody id="knowledgeBody"></tbody>
+                </table>
+            </div>
+        </div>
+        <div id="tab-models" class="tab-content">
+            <div style="margin-bottom:15px; display:flex; justify-content:space-between;">
+                <h3>Saved Models</h3>
+                <button onclick="openModelModal()"
+                    style="background:#2563eb; color:white; border:none; padding:8px 16px; border-radius:6px; cursor:pointer;">🌐
+                    Browse OpenRouter</button>
+            </div>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Status</th>
+                            <th>Model ID</th>
+                            <th>Input Price ($/1M)</th>
+                            <th>Output Price ($/1M)</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="modelsBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div style="text-align:right; margin-top:10px; color:#94a3b8; font-size:12px;">
+            Auto-refreshing every 10 seconds...
+        </div>
+    </div>
+
+    <div id="orModal" class="modal">
+        <div class="modal-content">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                <h2 style="margin:0;">OpenRouter Models</h2>
+                <button onclick="closeModelModal()"
+                    style="border:none; background:none; font-size:20px; cursor:pointer;">×</button>
+            </div>
+            <input type="text" id="orSearch" placeholder="🔍 Search models (e.g. llama, gpt, gemma)"
+                style="width:100%; padding:10px; margin-bottom:10px; box-sizing:border-box; border:1px solid #ccc; border-radius:6px;"
+                onkeyup="filterModels()">
+            <div id="orList" style="border:1px solid #eee; border-radius:6px; max-height:400px; overflow-y:auto;">
+                <div style="padding:20px; text-align:center;">Loading...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ... (Code ส่วน Login/Logout/Initial เหมือนเดิม) ...
+        const API_BASE = "http://127.0.0.1:8000";
+        let allORModels = [];
+        let autoRefreshInterval;
+
+        window.onload = function () {
+            if (!localStorage.getItem("admin_token")) {
+                window.location.href = "index.html";
+            } else {
+                showDashboard();
+            }
+        };
+
+        function showDashboard() {
+            document.getElementById("login-overlay").style.display = "none";
+            document.getElementById("dashboard-content").style.display = "block";
+            fetchData();
+            if (autoRefreshInterval) clearInterval(autoRefreshInterval);
+            autoRefreshInterval = setInterval(fetchData, 10000);
+        }
+
+        async function doLogin() { /* ... เหมือนเดิม ... */ }
+        function doLogout() { localStorage.removeItem("admin_token"); window.location.href = "index.html"; }
+        function switchTab(t) { /* ... เหมือนเดิม ... */
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            document.getElementById(`tab-${t}`).classList.add('active');
+            event.target.classList.add('active');
+            if (t === 'models') fetchLocalModels();
+        }
+
+        async function fetchData() { /* ... เหมือนเดิม ... */
+            const token = localStorage.getItem("admin_token");
+            if (!token) return;
+            try {
+                const [resL, resS, resK] = await Promise.all([
+                    fetch(`${API_BASE}/admin/logs`, { headers: { 'Authorization': `Bearer ${token}` } }),
+                    fetch(`${API_BASE}/admin/analytics`, { headers: { 'Authorization': `Bearer ${token}` } }),
+                    fetch(`${API_BASE}/admin/vectors`, { headers: { 'Authorization': `Bearer ${token}` } })
+                ]);
+                if (resL.ok) renderLogs(await resL.json());
+                else if (resL.status === 401) doLogout();
+                if (resS.ok) renderStats(await resS.json());
+                if (resK.ok) renderKnowledge(await resK.json());
+                if (document.getElementById('tab-models').classList.contains('active')) fetchLocalModels();
+            } catch (e) { }
+        }
+
+        function renderLogs(logs) { /* ... เหมือนเดิม ... */
+            const tbody = document.getElementById('logsBody');
+            tbody.innerHTML = logs.map(log => `<tr><td>${new Date(log.timestamp).toLocaleTimeString()}</td><td>${log.username}</td><td>${log.model_name}</td><td>${log.duration?.toFixed(2)}s</td><td>${log.total_tokens}</td><td class="cost">$${(log.cost || 0).toFixed(6)}</td></tr>`).join('');
+        }
+        function renderStats(stats) {
+            const tbody = document.getElementById('analyticsBody');
+            tbody.innerHTML = stats.map(st => `
+                <tr>
+                    <td style="font-weight:bold; color:#2563eb;">${st.namespace}</td>
+                    <td>${st.total_requests}</td>
+                    <td>${st.total_tokens.toLocaleString()}</td>
+                    <td class="cost">$${st.total_cost.toFixed(6)}</td>
+                </tr>
+            `).join('');
+        }
+        function renderKnowledge(data) { /* ... เหมือนเดิม ... */
+            document.getElementById('knowledgeBody').innerHTML = (data.namespaces || []).map(ns => `<tr><td>${ns.namespace}</td><td>${ns.count}</td><td>${ns.percent.toFixed(1)}%</td></tr>`).join('');
+        }
+
+        // ===========================================
+        // ⚙️ Models Logic (แก้ใหม่ เพิ่มปุ่มลบ)
+        // ===========================================
+
+        async function fetchLocalModels() {
+            const token = localStorage.getItem("admin_token");
+            try {
+                const res = await fetch(`${API_BASE}/admin/models/local`, { headers: { 'Authorization': `Bearer ${token}` } });
+                if (res.ok) {
+                    const models = await res.json();
+                    const tbody = document.getElementById('modelsBody');
+
+                    if (models.length === 0) {
+                        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:20px; color:#666;">No models saved. Click "Browse OpenRouter" to add one.</td></tr>`;
+                        return;
+                    }
+
+                    tbody.innerHTML = models.map(m => `
+                        <tr style="${m.is_active ? 'background:#eff6ff;' : ''}">
+                            <td>${m.is_active ? '<span class="tag tag-free">● ACTIVE</span>' : '<span style="color:#aaa;">● Inactive</span>'}</td>
+                            <td style="font-weight:bold;">${m.model_name}</td>
+                            <td>$${(m.input_rate * 1000000).toFixed(2)}</td>
+                            <td>$${(m.output_rate * 1000000).toFixed(2)}</td>
+                            <td>
+                                ${!m.is_active ? `
+                                    <div style="display:flex; gap:5px;">
+                                        <button onclick="activateModel('${m.model_name}', ${m.input_rate}, ${m.output_rate})" style="cursor:pointer; background:#2563eb; color:white; border:none; padding:6px 12px; border-radius:4px;">Switch</button>
+                                        <button onclick="deleteModel('${m.model_name}')" style="cursor:pointer; background:#fee2e2; color:#991b1b; border:1px solid #fecaca; padding:6px 12px; border-radius:4px;">🗑️</button>
+                                    </div>
+                                ` : '<span style="color:#2563eb; font-weight:bold; font-size:12px;">Currently Used</span>'}
+                            </td>
+                        </tr>
+                    `).join('');
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        async function deleteModel(id) {
+            if (!confirm(`Are you sure you want to DELETE model: ${id}?`)) return;
+
+            const token = localStorage.getItem("admin_token");
+            // ส่ง input_rate/output_rate ไปมั่วๆ ก็ได้ เพราะ Backend ไม่ได้ใช้ตอนลบ แต่ ModelUpdate บังคับใส่
+            const body = JSON.stringify({ model_id: id, input_rate: 0, output_rate: 0 });
+
+            const res = await fetch(`${API_BASE}/admin/models/delete`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: body
+            });
+
+            if (res.ok) {
+                fetchLocalModels(); // Refresh Table
+            } else {
+                const err = await res.json();
+                alert("Error: " + err.detail);
+            }
+        }
+
+        async function activateModel(id, inp, out) { /* ... เหมือนเดิม ... */
+            if (!confirm(`Switch to ${id}?`)) return;
+            const token = localStorage.getItem("admin_token");
+            await fetch(`${API_BASE}/admin/models/activate`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ model_id: id, input_rate: inp, output_rate: out })
+            });
+            fetchLocalModels();
+        }
+        async function openModelModal() { /* ... เหมือนเดิม ... */
+            document.getElementById('orModal').style.display = 'flex';
+            const token = localStorage.getItem("admin_token");
+            const res = await fetch(`${API_BASE}/admin/openrouter/models`, { headers: { 'Authorization': `Bearer ${token}` } });
+            if (res.ok) {
+                allORModels = await res.json();
+                renderORList(allORModels);
+            }
+        }
+        function closeModelModal() { document.getElementById('orModal').style.display = 'none'; }
+        function renderORList(models) { /* ... เหมือนเดิม ... */
+            document.getElementById('orList').innerHTML = models.map(m => {
+                const inpCost = (m.input_rate * 1000000).toFixed(2);
+                const outCost = (m.output_rate * 1000000).toFixed(2);
+                return `<div class="model-item"><div><div style="font-weight:bold;">${m.name}</div><div style="font-size:11px; color:#666;">ID: ${m.id} | In: $${inpCost} / Out: $${outCost}</div></div><button onclick="addAndActivate('${m.id}', ${m.input_rate}, ${m.output_rate})" style="border:1px solid #2563eb; color:#2563eb; background:white; padding:4px 10px; border-radius:4px; cursor:pointer;">Select</button></div>`;
+            }).join('');
+        }
+        function filterModels() { /* ... เหมือนเดิม ... */
+            const q = document.getElementById('orSearch').value.toLowerCase();
+            renderORList(allORModels.filter(m => m.name.toLowerCase().includes(q) || m.id.toLowerCase().includes(q)));
+        }
+        async function addAndActivate(id, inp, out) { /* ... เหมือนเดิม ... */
+            if (!confirm(`Add and Activate ${id}?`)) return;
+            const token = localStorage.getItem("admin_token");
+            const body = JSON.stringify({ model_id: id, input_rate: inp, output_rate: out });
+            await fetch(`${API_BASE}/admin/models/add`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body });
+            await fetch(`${API_BASE}/admin/models/activate`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body });
+            closeModelModal(); fetchLocalModels();
+        }
+    </script>
+</body>
+
+</html>

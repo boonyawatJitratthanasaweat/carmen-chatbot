@@ -3,95 +3,92 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Carmen AI - Secure Login</title>
+    <title>Carmen AI - Welcome</title>
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --primary-blue: #2563eb;
+            --dark-blue: #1e3a8a;
+            --bg-color: #f0f4f8;
+            --text-color: #334155;
+        }
+
         body {
-            margin: 0;
-            padding: 0;
+            margin: 0; padding: 0;
             font-family: 'Sarabun', sans-serif;
-            background-color: #f3f4f6;
+            background: linear-gradient(135deg, #e0e7ff 0%, #f0f4f8 100%);
             height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
+            color: var(--text-color);
         }
 
-        /* 🔐 หน้าต่าง Login (Overlay) */
-        #login-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(5px);
-            z-index: 99999;
-            display: flex; /* แสดงผลตอนแรก */
-            justify-content: center;
-            align-items: center;
-            flex-direction: column;
-            transition: opacity 0.5s ease;
-        }
-
+        /* 🔐 Login Card Style */
         .login-card {
             background: white;
             padding: 40px;
-            border-radius: 20px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            border-radius: 24px;
+            box-shadow: 0 20px 50px rgba(37, 99, 235, 0.15); /* เงาสีฟ้าอ่อน */
             width: 100%;
-            max-width: 400px;
+            max-width: 380px;
             text-align: center;
+            transition: transform 0.3s ease;
         }
+        
+        .login-card:hover { transform: translateY(-5px); }
 
-        .login-card h2 { margin-top: 0; color: #333; }
-        .login-card p { color: #666; margin-bottom: 30px; }
+        .logo { font-size: 60px; margin-bottom: 10px; display: inline-block; animation: float 3s ease-in-out infinite; }
+        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+
+        h2 { color: var(--dark-blue); margin: 0 0 10px 0; font-weight: 700; }
+        p { color: #64748b; margin-bottom: 30px; font-size: 14px; }
 
         .form-group { margin-bottom: 20px; text-align: left; }
-        .form-group label { display: block; margin-bottom: 8px; font-weight: 600; color: #444; }
+        .form-group label { display: block; margin-bottom: 8px; font-weight: 600; color: var(--dark-blue); font-size: 14px; }
         .form-group input {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            font-size: 16px;
-            box-sizing: border-box; /* สำคัญ! ให้ Padding ไม่ดันกล่อง */
-            font-family: 'Sarabun', sans-serif;
+            width: 100%; padding: 12px;
+            border: 2px solid #e2e8f0; border-radius: 12px;
+            font-size: 16px; outline: none; transition: 0.3s;
+            font-family: 'Sarabun', sans-serif; box-sizing: border-box;
         }
+        .form-group input:focus { border-color: var(--primary-blue); box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1); }
 
         .btn-login {
-            width: 100%;
-            padding: 14px;
-            background: #000;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            cursor: pointer;
-            transition: 0.3s;
+            width: 100%; padding: 14px;
+            background: linear-gradient(to right, var(--primary-blue), var(--dark-blue));
+            color: white; border: none; border-radius: 12px;
+            font-size: 16px; font-weight: 600; cursor: pointer;
+            transition: 0.3s; box-shadow: 0 10px 20px rgba(37, 99, 235, 0.2);
         }
-        .btn-login:hover { background: #333; transform: translateY(-2px); }
-        .error-message { color: #dc2626; margin-top: 15px; min-height: 20px; font-size: 14px; }
+        .btn-login:hover { transform: translateY(-2px); box-shadow: 0 15px 30px rgba(37, 99, 235, 0.3); }
+        .btn-login:disabled { background: #cbd5e1; cursor: not-allowed; transform: none; box-shadow: none; }
 
-        /* พื้นหลังหน้าหลัก (Demo) */
-        .main-content { text-align: center; display: none; }
+        .error-message { color: #ef4444; margin-top: 15px; font-size: 14px; min-height: 20px; }
+
+        /* Main Content (ซ่อนอยู่) */
+        #main-content { display: none; text-align: center; animation: fadeIn 0.8s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .welcome-box h1 { color: var(--dark-blue); font-size: 2.5rem; margin-bottom: 10px; }
+        .welcome-box p { color: #64748b; font-size: 1.1rem; }
     </style>
 </head>
 <body>
 
-    <div id="login-overlay">
+    <div id="login-section">
         <div class="login-card">
-            <div style="font-size: 50px; margin-bottom: 10px;">👩‍💼</div>
-            <h2>Carmen AI Assistant</h2>
-            <p>กรุณาเข้าสู่ระบบเพื่อเริ่มใช้งาน</p>
+            <div class="logo">💎</div>
+            <h2>Carmen AI</h2>
+            <p>ระบบผู้ช่วยอัจฉริยะสำหรับองค์กร</p>
             
             <div class="form-group">
-                <label>Username</label>
-                <input type="text" id="username" placeholder="เช่น manager_seaside">
+                <label>ชื่อผู้ใช้งาน</label>
+                <input type="text" id="username" placeholder="เช่น admin" value="admin"> 
             </div>
             <div class="form-group">
-                <label>Password</label>
-                <input type="password" id="password" placeholder="••••••••" onkeypress="handleEnter(event)">
+                <label>รหัสผ่าน</label>
+                <input type="password" id="password" placeholder="••••••••" onkeypress="handleEnter(event)" value="admin">
             </div>
 
             <button class="btn-login" onclick="performLogin()" id="btnLogin">เข้าสู่ระบบ</button>
@@ -99,17 +96,16 @@
         </div>
     </div>
 
-    <div class="main-content" id="mainContent">
-        <h1>ยินดีต้อนรับสู่ Dashboard</h1>
-        <p>คุณสามารถใช้งาน Chatbot ได้ที่มุมขวาล่างค่ะ ↘️</p>
+    <div id="main-content" class="welcome-box">
+        <h1>ยินดีต้อนรับ, <span id="userDisplayName" style="color: #2563eb;">User</span></h1>
+        <p>คุณสามารถสอบถามข้อมูลต่างๆ ได้ที่มุมขวาล่างค่ะ ↘️</p>
+        <button onclick="logout()" style="margin-top:20px; padding:10px 20px; border:2px solid #2563eb; color:#2563eb; background:none; border-radius:8px; cursor:pointer;">ออกจากระบบ</button>
     </div>
 
-    <script src="carmen-bot.js?v=3"></script> 
+    <script src="carmen-bot.js?v=5"></script>
 
     <script>
-        // 🔐 Logic Login หน้าบ้าน (คุยกับ API ตรงนี้เลย)
-        // อย่าลืมแก้ URL ตรงนี้ให้เป็นของคุณ!
-        const API_URL_TOKEN = "https://carmen-chatbot-api.onrender.com/token"; 
+        const API_URL_TOKEN = "http://127.0.0.1:8000/token"; 
 
         async function performLogin() {
             const user = document.getElementById('username').value.trim();
@@ -119,9 +115,7 @@
 
             if(!user || !pass) { err.innerText = "กรุณากรอกข้อมูลให้ครบ"; return; }
 
-            btn.disabled = true;
-            btn.innerText = "กำลังตรวจสอบ...";
-            err.innerText = "";
+            btn.disabled = true; btn.innerText = "กำลังตรวจสอบ..."; err.innerText = "";
 
             try {
                 const formData = new URLSearchParams();
@@ -134,42 +128,44 @@
                     body: formData
                 });
 
-                if(!res.ok) throw new Error("ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง");
+                if(!res.ok) throw new Error("ข้อมูลไม่ถูกต้อง");
 
                 const data = await res.json();
                 
-                // ✅ Login ผ่าน!
-                // 1. ซ่อนหน้า Login
-                document.getElementById('login-overlay').style.display = 'none';
-                // 2. โชว์เนื้อหาเว็บ
-                document.getElementById('mainContent').style.display = 'block';
-                // 3. ปลุก Chatbot ให้ตื่น! (ส่ง Token และ Username เข้าไป)
-                if(window.carmenStartSession) {
-                    window.carmenStartSession(data.access_token, user);
+                // ✅ Logic การแบ่งแยกชนชั้น (Routing)
+                if (data.client_namespace === 'global') { // หรือเช็ค user === 'admin'
+                    // ถ้าเป็น Admin -> ไป Dashboard
+                    localStorage.setItem('admin_token', data.access_token);
+                    localStorage.setItem('admin_user', user);
+                    window.location.href = 'dashboard.html'; // 🚀 วาร์ปไป Dashboard
+                } else {
+                    // ถ้าเป็น User ทั่วไป -> อยู่หน้านี้แหละ แต่เปิดแชท
+                    showUserInterface(data.access_token, user);
                 }
 
             } catch (e) {
-                err.innerText = e.message;
+                err.innerText = "ชื่อผู้ใช้หรือรหัสผ่านผิดพลาด";
             } finally {
-                btn.disabled = false;
-                btn.innerText = "เข้าสู่ระบบ";
+                btn.disabled = false; btn.innerText = "เข้าสู่ระบบ";
             }
         }
 
+        function showUserInterface(token, user) {
+            document.getElementById('login-section').style.display = 'none';
+            document.getElementById('main-content').style.display = 'block';
+            document.getElementById('userDisplayName').innerText = user;
+            
+            // เริ่มต้น Chatbot
+            if(window.carmenStartSession) {
+                window.carmenStartSession(token, user);
+            }
+        }
+
+        function logout() {
+            location.reload();
+        }
+
         function handleEnter(e) { if(e.key === 'Enter') performLogin(); }
-
-        // ฟังก์ชัน Logout (เรียกจาก Widget)
-        window.onCarmenLogout = function() {
-            // 1. โชว์หน้า Login กลับมา
-            document.getElementById('login-overlay').style.display = 'flex';
-            document.getElementById('mainContent').style.display = 'none';
-            // 2. ล้างค่า Input
-            document.getElementById('password').value = '';
-            document.getElementById('errorMsg').innerText = '';
-            // 3. แจ้งเตือน
-            alert("ออกจากระบบเรียบร้อยแล้วค่ะ 👋");
-        };
     </script>
-
 </body>
 </html>

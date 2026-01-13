@@ -1,58 +1,53 @@
-from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
-from sqlalchemy.orm import Session, relationship
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, Text, DateTime
 from datetime import datetime, timedelta
 from typing import Optional
 from jose import JWTError, jwt
 from passlib.context import CryptContext
+from fastapi import Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer
+from sqlalchemy.orm import Session
+from sqlalchemy import Column, Integer, String, DateTime, Text # ✅ Import Text มาด้วย
 import os
-from .database import Base
 
-# --- Config ---
-SECRET_KEY = os.environ.get("SECRET_KEY", "secret")
+# Import จากไฟล์ database ของเรา
+from .database import SessionLocal, Base 
+
+# Key สำหรับเข้ารหัส (เปลี่ยนได้)
+SECRET_KEY = os.environ.get("SECRET_KEY", "supersecretkey")
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30 * 24 * 60  # 60 วัน
+ACCESS_TOKEN_EXPIRE_MINUTES = 300
 
-# --- Password Hashing ---
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
-# --- Database Models ---
+# ==========================================
+# 📊 Database Models (แก้ไขเพื่อรองรับ MySQL)
+# ==========================================
 
-# ประกาศ Class User
 class User(Base):
     __tablename__ = "users"
-    __table_args__ = {'extend_existing': True} # ป้องกัน Error สร้างตารางซ้ำ
-    
-    id = Column(Integer, primary_key=True, index=True)
-    username = Column(String, unique=True, index=True)
-    hashed_password = Column(String)
-    full_name = Column(String, nullable=True)
-    disabled = Column(Boolean, default=False)
-    client_id = Column(String, default="global")
-    
-    # ใช้ String "ChatHistory" แทน Class โดยตรง เพื่อป้องกัน Circular Import
-    history = relationship("ChatHistory", back_populates="owner")
 
-# ประกาศ Class ChatHistory
+    id = Column(Integer, primary_key=True, index=True)
+    # ✅ MySQL ต้องระบุความยาว String เช่น String(150)
+    username = Column(String(150), unique=True, index=True) 
+    hashed_password = Column(String(255))
+    client_id = Column(String(100), default="global") # ระบุ Namespace
+    full_name = Column(String(200), nullable=True)
+
 class ChatHistory(Base):
     __tablename__ = "chat_history"
-    __table_args__ = {'extend_existing': True}
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"))
-    sender = Column(String)   # 'user' หรือ 'bot'
-    message = Column(Text)
-    timestamp = Column(DateTime, default=datetime.utcnow)
-    
-    # ✅ เพิ่ม 2 ช่องนี้ครับ
-    feedback = Column(Integer, nullable=True) # 1=Like, -1=Dislike, 0/Null=เฉยๆ
-    feedback_reason = Column(String, nullable=True) # เก็บเหตุผลเผื่อลูกค้าพิมพ์บอก
-    
-    owner = relationship("User", back_populates="history")
+    user_id = Column(Integer, index=True)
+    session_id = Column(String(100), index=True, nullable=True) # ✅ ใส่ความยาว
+    sender = Column(String(50)) # 'user' or 'bot' ✅ ใส่ความยาว
+    message = Column(Text) # ✅ ใช้ Text แทน String สำหรับข้อความยาวๆ (MySQL ชอบแบบนี้)
+    feedback = Column(Integer, default=0) # 0=none, 1=like, -1=dislike
+    timestamp = Column(DateTime, default=datetime.now)
 
-# --- Helper Functions ---
+# ==========================================
+# 🔐 Authentication Logic
+# ==========================================
+
 def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)
 
@@ -69,9 +64,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
-# --- Dependency ---
-from .database import SessionLocal
-
+# Dependency สำหรับดึง DB Session
 def get_db():
     db = SessionLocal()
     try:
@@ -79,6 +72,7 @@ def get_db():
     finally:
         db.close()
 
+# Dependency สำหรับเช็ค User ปัจจุบัน
 async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -92,7 +86,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = De
             raise credentials_exception
     except JWTError:
         raise credentials_exception
-        
+    
     user = db.query(User).filter(User.username == username).first()
     if user is None:
         raise credentials_exception
