@@ -30,7 +30,7 @@ class User(Base):
     # ✅ MySQL ต้องระบุความยาว String เช่น String(150)
     username = Column(String(150), unique=True, index=True) 
     hashed_password = Column(String(255))
-    client_id = Column(String(100), default="global") # ระบุ Namespace
+    client_id = Column(String(100), default="global") 
     full_name = Column(String(200), nullable=True)
 
 class ChatHistory(Base):
