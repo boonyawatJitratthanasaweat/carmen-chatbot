@@ -3,7 +3,7 @@
     // ⚙️ ตั้งค่า Server
     // ===============================================
     // const BASE_URL = "https://carmen-chatbot-api.onrender.com"; // ☁️ สำหรับ Render
-    const BASE_URL = "http://127.0.0.1:8000"; // 🏠 สำหรับ Localhost
+    const BASE_URL = ""; 
 
     const API_URL_CHAT = `${BASE_URL}/chat`; 
     const API_URL_HISTORY = `${BASE_URL}/chat/history`;
