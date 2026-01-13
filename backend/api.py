@@ -463,7 +463,7 @@ app.mount("/static", StaticFiles(directory="frontend"), name="static")
 @app.get("/")
 async def read_root(): return FileResponse('frontend/index.html')
 
-@app.get("/dashboard")
+@app.get("/dashboard.html")
 async def read_dashboard(): return FileResponse('frontend/dashboard.html')
 
 # ✅ เพิ่มทางเข้าสำหรับไฟล์ Chat Widget
