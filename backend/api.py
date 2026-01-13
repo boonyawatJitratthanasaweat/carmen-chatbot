@@ -466,6 +466,17 @@ async def read_root(): return FileResponse('frontend/index.html')
 @app.get("/dashboard")
 async def read_dashboard(): return FileResponse('frontend/dashboard.html')
 
+# ✅ เพิ่มทางเข้าสำหรับไฟล์ Chat Widget
+@app.get("/carmen-bot.js")
+async def read_widget_js():
+    return FileResponse('frontend/carmen-bot.js')
+
+# ✅ เพิ่มทางเข้าสำหรับหน้า Training
+@app.get("/train.html")
+async def read_train_page():
+    return FileResponse('frontend/train.html')
+
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))
     uvicorn.run(app, host="0.0.0.0", port=port)
