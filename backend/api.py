@@ -382,7 +382,7 @@ def process_github_training(repo_name, token, namespace, user, incremental=False
         docs = [d for d in docs if d] # Filter None
         if not docs: add_log("❌ No docs found"); training_state["is_running"] = False; return
 
-        text_splitter = RecursiveCharacterTextSplitter(chunk_size=2500, chunk_overlap=500)
+        text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
         chunks = text_splitter.split_documents(docs)
         
         for i, chunk in enumerate(chunks):
@@ -404,7 +404,7 @@ def process_url_training(url, namespace, user, recursive=False, depth=2):
         else: loader = WebBaseLoader(url)
         docs = loader.load()
         
-        text_splitter = RecursiveCharacterTextSplitter(chunk_size=2500, chunk_overlap=500)
+        text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
         chunks = text_splitter.split_documents(docs)
         
         for i, chunk in enumerate(chunks):
@@ -429,7 +429,7 @@ async def train_manual(req: TrainingRequest, current_user: UserModel = Depends(g
 @app.post("/train/upload")
 async def train_upload(file: UploadFile = File(...), namespace: str = "global", current_user: UserModel = Depends(get_current_user)):
     content = (await file.read()).decode("utf-8", errors="ignore")
-    chunks = RecursiveCharacterTextSplitter(chunk_size=2500).split_text(content)
+    chunks = RecursiveCharacterTextSplitter(chunk_size=1000).split_text(content)
     vectorstore.add_texts(chunks, metadatas=[{"source": file.filename, "added_by": current_user.username} for _ in chunks], namespace=namespace)
     return {"status": "success"}
 
