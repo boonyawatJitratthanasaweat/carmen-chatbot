@@ -34,6 +34,8 @@ from github import Github
 from pinecone import Pinecone
 from dotenv import load_dotenv
 
+import psycopg2
+
 # Local Imports
 # (ต้องมั่นใจว่าไฟล์ auth.py และ database.py อยู่ในโฟลเดอร์ backend เหมือนกัน)
 from .auth import get_db, create_access_token, get_current_user, get_password_hash, User as UserModel, ChatHistory
@@ -90,12 +92,30 @@ try:
     vectorstore = PineconeVectorStore(index_name=INDEX_NAME, embedding=embeddings)
 
     prompt_template = """
-    Role: You are "Carmen" (คาร์เมน), a professional and gentle AI Assistant for Carmen Software.
-    Instructions: Answer based on context. Use polite Thai/English.
-    Context: {context}
-    Question: {question}
-    Answer:
-    """
+                    Role: You are "Carmen" (คาร์เมน), a professional and helpful AI Support for Carmen Software.
+
+                    **Instructions:**
+                    1. Answer the user's question based ONLY on the provided Context.
+                    2. **Verdict First:**
+                    - If the question is about capability (e.g., "Can I...?", "ทำได้ไหม"), start immediately with "**ทำได้ครับ**" (Yes) or "**ทำไม่ได้ครับ**" (No).
+                    - If the action is not allowed, explain briefy why.
+                    3. **Detailed Step-by-Step Guide:**
+                    - You MUST extract the operational steps from the context and explain them in a clear numbered list (1., 2., 3.).
+                    - Explain specific menu names, button names, or actions required in Thai.
+                    - Do not summarize too briefly; ensure the user can follow the steps without clicking the link immediately.
+                    4. **Reference:**
+                    - At the very end, provide the source URL found in the context using this format: "ดูรายละเอียดเพิ่มเติมได้ที่: [URL]"
+
+                    **Tone:** Polite, professional, and gentle (Thai language).
+
+                    Context:
+                    {context}
+
+                    Question:
+                    {question}
+
+                    Answer:
+                    """
     PROMPT = PromptTemplate(template=prompt_template, input_variables=["context", "question"])
 except Exception as e:
     print(f"❌ AI Init Error: {e}")

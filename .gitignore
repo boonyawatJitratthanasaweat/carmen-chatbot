@@ -7,3 +7,6 @@ ingest*.py
 *.pyc
 backend/.env
 scripts/
+
+carmen-chatbot-widget/
+
