@@ -384,7 +384,7 @@ def process_github_training(repo_name, token, namespace, user, incremental=False
         if not docs: add_log("❌ No docs found"); training_state["is_running"] = False; return
 
         # ✅ เพิ่ม Chunk Size ให้ใหญ่ขึ้น (ตามที่เราคุยกันก่อนหน้านี้) เพื่อให้เนื้อหาไม่ขาด
-        text_splitter = RecursiveCharacterTextSplitter(chunk_size=2000, chunk_overlap=400)
+        text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
         chunks = text_splitter.split_documents(docs)
         
         total_chunks = len(chunks)
@@ -436,7 +436,7 @@ def process_url_training(url, namespace, user, recursive=False, depth=2):
         docs = loader.load()
         
         # ✅ ใช้ Chunk Size ใหญ่
-        text_splitter = RecursiveCharacterTextSplitter(chunk_size=2000, chunk_overlap=400)
+        text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
         chunks = text_splitter.split_documents(docs)
         
         total_chunks = len(chunks)
@@ -484,7 +484,7 @@ async def train_upload(file: UploadFile = File(...), namespace: str = "global", 
     content = (await file.read()).decode("utf-8", errors="ignore")
     
     # หั่น
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=2000, chunk_overlap=400)
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
     chunks = text_splitter.create_documents([content]) # ใช้ create_documents เพื่อให้ได้ Object Document ง่ายต่อการใส่ metadata
     
     # ใส่ Metadata
