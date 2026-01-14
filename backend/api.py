@@ -194,8 +194,8 @@ async def chat_endpoint(question: Question, background_tasks: BackgroundTasks, c
         # Search & Score Filter
         raw_results = []
         if client_ns != "global":
-            raw_results += vectorstore.similarity_search_with_score(user_message, k=4, namespace=client_ns)
-        raw_results += vectorstore.similarity_search_with_score(user_message, k=4, namespace="global")
+            raw_results += vectorstore.similarity_search_with_score(user_message, k=8, namespace=client_ns)
+        raw_results += vectorstore.similarity_search_with_score(user_message, k=8, namespace="global")
 
         passed_docs = [doc for doc, score in raw_results if score >= SCORE_THRESHOLD]
         bot_ans = ""
@@ -387,7 +387,7 @@ def process_github_training(repo_name, token, namespace, user, incremental=False
         if not docs: add_log("❌ No docs found"); training_state["is_running"] = False; return
 
         # ✅ เพิ่ม Chunk Size ให้ใหญ่ขึ้น (ตามที่เราคุยกันก่อนหน้านี้) เพื่อให้เนื้อหาไม่ขาด
-        text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+        text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=300)
         chunks = text_splitter.split_documents(docs)
         
         total_chunks = len(chunks)
@@ -439,7 +439,7 @@ def process_url_training(url, namespace, user, recursive=False, depth=2):
         docs = loader.load()
         
         # ✅ ใช้ Chunk Size ใหญ่
-        text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+        text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=300)
         chunks = text_splitter.split_documents(docs)
         
         total_chunks = len(chunks)
@@ -487,7 +487,7 @@ async def train_upload(file: UploadFile = File(...), namespace: str = "global", 
     content = (await file.read()).decode("utf-8", errors="ignore")
     
     # หั่น
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=300)
     chunks = text_splitter.create_documents([content]) # ใช้ create_documents เพื่อให้ได้ Object Document ง่ายต่อการใส่ metadata
     
     # ใส่ Metadata
