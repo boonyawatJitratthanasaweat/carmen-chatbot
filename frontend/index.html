@@ -6,7 +6,6 @@
     <title>Carmen AI - Welcome</title>
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
-        /* ... (CSS ส่วนเดิมทั้งหมด คงไว้เหมือนเดิมได้เลยครับ) ... */
         :root {
             --primary-blue: #2563eb;
             --dark-blue: #1e3a8a;
@@ -85,7 +84,7 @@
             
             <div class="form-group">
                 <label>ชื่อผู้ใช้งาน</label>
-                <input type="text" id="username" placeholder="Enter Username" value=""> 
+                <input type="text" id="username" placeholder="Username" value=""> 
             </div>
             <div class="form-group">
                 <label>รหัสผ่าน</label>
@@ -104,22 +103,16 @@
     </div>
 
     <script type="module">
+        // Import Widget
         import { CarmenBot } from 'https://esm.sh/carmen-chatbot-widget@latest';
 
         const API_URL_TOKEN = "/token"; 
-
         let bot = null;
 
+        // ❌ เอาส่วน window.onload ที่เช็ค Token ออกแล้ว
+        // ทำให้ทุกครั้งที่ Refresh จะต้อง Login ใหม่เสมอ
 
-        window.onload = () => {
-            const token = localStorage.getItem("carmen_token");
-            if(token) {
-        
-                showUserInterface(token, "User (Auto)"); 
-            }
-        };
-
-        // ฟังก์ชัน Login
+        // 1. ฟังก์ชัน Login
         async function performLogin() {
             const user = document.getElementById('username').value.trim();
             const pass = document.getElementById('password').value.trim();
@@ -131,7 +124,6 @@
             btn.disabled = true; btn.innerText = "กำลังตรวจสอบ..."; err.innerText = "";
 
             try {
-                // 1. เรียก API Login ของเราเองเพื่อเช็คว่าเป็น Admin หรือไม่
                 const formData = new URLSearchParams();
                 formData.append('username', user);
                 formData.append('password', pass);
@@ -146,15 +138,13 @@
 
                 const data = await res.json();
                 
-                // 2. Logic แบ่งแยกชนชั้น
                 if (data.client_namespace === 'global') { 
-                    // Admin -> ไป Dashboard
+                    // Admin
                     localStorage.setItem('admin_token', data.access_token);
                     window.location.href = 'dashboard.html'; 
                 } else {
-            
-                    localStorage.setItem("carmen_token", data.access_token);
-                    
+                    // User: ส่ง Token เข้าไปใช้ แต่ไม่จำเป็นต้อง Save ลง LocalStorage แบบถาวรก็ได้
+                    // ถ้า Widget ต้องการ
                     showUserInterface(data.access_token, user);
                 }
 
@@ -166,28 +156,26 @@
             }
         }
 
+        // 2. แสดงหน้าหลักและเริ่มบอท
         function showUserInterface(token, user) {
             document.getElementById('login-section').style.display = 'none';
             document.getElementById('main-content').style.display = 'block';
             document.getElementById('userDisplayName').innerText = user;
             
+            // เริ่มต้น Widget
             if (!bot) {
-                // ✅ ส่ง Token และ User เข้าไปใน Widget โดยตรง
-                bot = new CarmenBot({ 
+                bot = new CarmenBot({
                     token: token,
                     user: user
-                }); 
+                });
             }
-            
         }
 
+        // 3. Logout (แค่ Refresh หน้าเว็บ)
         function logout() {
-            localStorage.removeItem("carmen_token"); 
-            localStorage.removeItem("admin_token");
             location.reload();
         }
 
-        // Bind Events (เพราะ Module Script ไม่เห็น Global Scope ของ HTML onclick)
         document.getElementById('btnLogin').addEventListener('click', performLogin);
         document.getElementById('btnLogout').addEventListener('click', logout);
         document.getElementById('password').addEventListener('keypress', (e) => {
