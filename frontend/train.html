@@ -5,46 +5,108 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Carmen AI - Advanced Training</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-    <style>
-        /* ... (CSS เดิมทั้งหมด ไม่ต้องแก้) ... */
-        :root { --bg-body: #f8fafc; --bg-card: #ffffff; --text-main: #0f172a; --text-muted: #64748b; --border-color: #e2e8f0; --primary-blue: #2563eb; --success-green: #10b981; --error-red: #ef4444; }
-        body { background-color: var(--bg-body); color: var(--text-main); font-family: 'Inter', sans-serif; margin: 0; padding: 20px; font-size: 14px; }
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; background: white; padding: 16px 24px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
-        .header h1 { margin: 0; color: var(--primary-blue); font-size: 20px; display:flex; align-items:center; gap:10px; }
-        .btn-back { background: white; border: 1px solid var(--border-color); padding: 8px 16px; border-radius: 6px; cursor: pointer; color: var(--text-muted); font-weight:500; transition:0.2s; }
-        .btn-back:hover { border-color: var(--primary-blue); color: var(--primary-blue); }
-        .container { max-width: 900px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-        .card { background: white; border-radius: 12px; padding: 24px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); height: fit-content; }
-        .train-tabs { display: flex; gap: 8px; margin-bottom: 20px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; overflow-x: auto; }
-        .t-btn { background: none; border: none; padding: 8px 12px; cursor: pointer; font-size: 13px; color: var(--text-muted); font-weight: 500; border-radius: 6px; transition:0.2s; white-space: nowrap; }
-        .t-btn:hover { background: #f1f5f9; color: var(--primary-blue); }
-        .t-btn.active { background: #eff6ff; color: var(--primary-blue); font-weight: 600; }
-        .tab-panel { display: none; animation: fadeIn 0.3s ease; }
-        .tab-panel.active { display: block; }
-        @keyframes fadeIn { from { opacity:0; transform:translateY(5px); } to { opacity:1; transform:translateY(0); } }
-        .form-group { margin-bottom: 15px; }
-        .form-group label { display: block; margin-bottom: 6px; font-weight: 500; font-size: 13px; color: #334155; }
-        .input-box { width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 8px; box-sizing: border-box; font-family: 'Inter', sans-serif; font-size: 14px; }
-        .input-box:focus { outline: none; border-color: var(--primary-blue); ring: 2px solid #bfdbfe; }
-        .checkbox-group { display: flex; align-items: center; gap: 8px; font-size: 13px; margin-top: 5px; }
-        .btn-train { width: 100%; padding: 12px; background: var(--primary-blue); color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: 0.2s; margin-top:10px; display: flex; justify-content: center; align-items: center; gap: 8px; }
-        .btn-train:hover { background: #1e40af; }
-        .btn-train:disabled { background: #94a3b8; cursor: not-allowed; }
-        .btn-cancel { background: #fee2e2; color: #991b1b; margin-top: 10px; width: 100%; padding: 10px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; display: none; }
-        .btn-cancel:hover { background: #fecaca; }
-        .status-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid #334155; padding-bottom: 10px; }
-        .status-indicator { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; }
-        .dot { width: 8px; height: 8px; border-radius: 50%; background: #64748b; }
-        .dot.active { background: #10b981; box-shadow: 0 0 8px #10b981; animation: pulse 1.5s infinite; }
-        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
-        .console-box { background: #0f172a; color: #10b981; font-family: 'Courier New', monospace; padding: 15px; border-radius: 8px; height: 300px; overflow-y: auto; font-size: 12px; border: 1px solid #1e293b; display: flex; flex-direction: column; gap: 4px; }
-        .log-line { border-bottom: 1px solid #1e293b; padding-bottom: 2px; }
-        .progress-container { margin-top: 20px; }
-        .progress-bar-bg { width: 100%; height: 8px; background: #334155; border-radius: 4px; overflow: hidden; }
-        .progress-bar-fill { height: 100%; background: #3b82f6; width: 0%; transition: width 0.3s ease; }
-        .progress-text { display: flex; justify-content: space-between; font-size: 12px; color: #cbd5e1; margin-top: 5px; }
-        .info-card { background: #f8fafc; border: 1px dashed #cbd5e1; padding: 15px; border-radius: 8px; font-size: 12px; color: #475569; margin-top: 15px; }
-    </style>
+   <style>
+    /* ... (CSS เดิมของคุณ) ... */
+    :root { --bg-body: #f8fafc; --bg-card: #ffffff; --text-main: #0f172a; --text-muted: #64748b; --border-color: #e2e8f0; --primary-blue: #2563eb; --success-green: #10b981; --error-red: #ef4444; }
+    
+    /* ✅ เพิ่ม: Box Sizing และกันจอเลื่อน */
+    * { box-sizing: border-box; }
+
+    body { background-color: var(--bg-body); color: var(--text-main); font-family: 'Inter', sans-serif; margin: 0; padding: 20px; font-size: 14px; overflow-x: hidden; }
+    
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; background: white; padding: 16px 24px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+    .header h1 { margin: 0; color: var(--primary-blue); font-size: 20px; display:flex; align-items:center; gap:10px; }
+    
+    .btn-back { background: white; border: 1px solid var(--border-color); padding: 8px 16px; border-radius: 6px; cursor: pointer; color: var(--text-muted); font-weight:500; transition:0.2s; white-space: nowrap; text-decoration: none; display: inline-block; }
+    .btn-back:hover { border-color: var(--primary-blue); color: var(--primary-blue); }
+    
+    /* Grid Layout หลัก */
+    .container { max-width: 900px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    
+    .card { background: white; border-radius: 12px; padding: 24px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); height: fit-content; }
+    
+    /* Tabs เลื่อนได้ */
+    .train-tabs { display: flex; gap: 8px; margin-bottom: 20px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .t-btn { background: none; border: none; padding: 8px 12px; cursor: pointer; font-size: 13px; color: var(--text-muted); font-weight: 500; border-radius: 6px; transition:0.2s; white-space: nowrap; }
+    .t-btn:hover { background: #f1f5f9; color: var(--primary-blue); }
+    .t-btn.active { background: #eff6ff; color: var(--primary-blue); font-weight: 600; }
+    
+    .tab-panel { display: none; animation: fadeIn 0.3s ease; }
+    .tab-panel.active { display: block; }
+    @keyframes fadeIn { from { opacity:0; transform:translateY(5px); } to { opacity:1; transform:translateY(0); } }
+    
+    .form-group { margin-bottom: 15px; }
+    .form-group label { display: block; margin-bottom: 6px; font-weight: 500; font-size: 13px; color: #334155; }
+    .input-box { width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 8px; box-sizing: border-box; font-family: 'Inter', sans-serif; font-size: 14px; }
+    .input-box:focus { outline: none; border-color: var(--primary-blue); ring: 2px solid #bfdbfe; }
+    
+    .checkbox-group { display: flex; align-items: center; gap: 8px; font-size: 13px; margin-top: 5px; }
+    
+    .btn-train { width: 100%; padding: 12px; background: var(--primary-blue); color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: 0.2s; margin-top:10px; display: flex; justify-content: center; align-items: center; gap: 8px; }
+    .btn-train:hover { background: #1e40af; }
+    .btn-train:disabled { background: #94a3b8; cursor: not-allowed; }
+    
+    .btn-cancel { background: #fee2e2; color: #991b1b; margin-top: 10px; width: 100%; padding: 10px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; display: none; }
+    .btn-cancel:hover { background: #fecaca; }
+    
+    .status-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid #334155; padding-bottom: 10px; }
+    .status-indicator { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: #64748b; }
+    .dot.active { background: #10b981; box-shadow: 0 0 8px #10b981; animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+    
+    .console-box { background: #0f172a; color: #10b981; font-family: 'Courier New', monospace; padding: 15px; border-radius: 8px; height: 300px; overflow-y: auto; font-size: 12px; border: 1px solid #1e293b; display: flex; flex-direction: column; gap: 4px; }
+    .log-line { border-bottom: 1px solid #1e293b; padding-bottom: 2px; word-wrap: break-word; }
+    
+    .progress-container { margin-top: 20px; }
+    .progress-bar-bg { width: 100%; height: 8px; background: #334155; border-radius: 4px; overflow: hidden; }
+    .progress-bar-fill { height: 100%; background: #3b82f6; width: 0%; transition: width 0.3s ease; }
+    .progress-text { display: flex; justify-content: space-between; font-size: 12px; color: #cbd5e1; margin-top: 5px; }
+    .info-card { background: #f8fafc; border: 1px dashed #cbd5e1; padding: 15px; border-radius: 8px; font-size: 12px; color: #475569; margin-top: 15px; }
+
+    /* =========================================
+       📱 MOBILE RESPONSIVE (เพิ่มใหม่)
+       ========================================= */
+    @media screen and (max-width: 768px) {
+        body { padding: 10px; }
+        
+        /* 1. ปรับ Layout เป็นแนวตั้ง (เอา Console ลงไปข้างล่าง) */
+        .container {
+            grid-template-columns: 1fr; /* เหลือคอลัมน์เดียว */
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        /* 2. ปรับ Header */
+        .header {
+            flex-direction: column;
+            align-items: stretch;
+            gap: 10px;
+            padding: 15px;
+        }
+        
+        .header h1 { 
+            justify-content: center; 
+            font-size: 18px;
+        }
+
+        /* 3. ปุ่ม Back ให้เต็มจอ กดง่าย */
+        .btn-back {
+            text-align: center;
+            padding: 12px;
+        }
+
+        /* 4. Console ปรับความสูงให้เหมาะกับมือถือ */
+        .console-box {
+            height: 250px; /* ลดความสูงลงนิดนึง */
+        }
+        
+        .card {
+            padding: 15px; /* ลด Padding ในการ์ด */
+        }
+    }
+</style>
 </head>
 <body>
 

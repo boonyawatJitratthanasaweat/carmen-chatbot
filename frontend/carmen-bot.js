@@ -15,7 +15,7 @@
         "ขั้นตอน Create Vendor มีอะไรบ้าง",
         "A/R คืออะไร",
         "Carmen Add-in ใช้ทำอะไร",
-        "นโยบายการเงิน"
+        
     ];
 
     let accessToken = "";
