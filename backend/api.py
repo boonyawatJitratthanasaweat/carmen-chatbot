@@ -361,61 +361,114 @@ def get_file_content(repo, file_path):
 def process_github_training(repo_name, token, namespace, user, incremental=False):
     global training_state
     training_state.update({"is_running": True, "progress": 0, "status": "Starting", "logs": [], "start_time": time.time(), "abort": False})
+    
     try:
         add_log(f"🚀 Connecting GitHub: {repo_name}")
         g = Github(token) if token else Github()
         repo = g.get_repo(repo_name)
         
         docs = []
+        # ... (ส่วนดึงไฟล์คงเดิม) ...
         if incremental:
             files = get_modified_files(repo)
             for f in files: docs.append(get_file_content(repo, f))
         else:
-            # Simple recursive fetch (Simplified for brevity)
             contents = repo.get_contents("")
             while contents:
                 fc = contents.pop(0)
                 if fc.type == "dir": contents.extend(repo.get_contents(fc.path))
-                elif fc.path.endswith((".md", ".txt", ".csv", ".py")):
+                elif fc.path.endswith((".md", ".txt", ".csv", ".py", ".js", ".html")):
                     docs.append(get_file_content(repo, fc.path))
 
-        docs = [d for d in docs if d] # Filter None
+        docs = [d for d in docs if d]
         if not docs: add_log("❌ No docs found"); training_state["is_running"] = False; return
 
-        text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+        # ✅ เพิ่ม Chunk Size ให้ใหญ่ขึ้น (ตามที่เราคุยกันก่อนหน้านี้) เพื่อให้เนื้อหาไม่ขาด
+        text_splitter = RecursiveCharacterTextSplitter(chunk_size=2000, chunk_overlap=400)
         chunks = text_splitter.split_documents(docs)
         
-        for i, chunk in enumerate(chunks):
-            if training_state["abort"]: break
-            chunk.metadata.update({"added_by": user, "timestamp": str(datetime.now())})
-            vectorstore.add_documents([chunk], namespace=namespace)
-            training_state["progress"] = int((i+1)/len(chunks)*100)
+        total_chunks = len(chunks)
+        BATCH_SIZE = 30  # ส่งทีละ 30
+        
+        add_log(f"📦 Prepared {total_chunks} chunks. Starting upload...")
+
+        # 🔄 Loop แบบ Batch (ทีละ 30)
+        for i in range(0, total_chunks, BATCH_SIZE):
+            if training_state["abort"]: 
+                add_log("🛑 Training Aborted by User")
+                break
+                
+            # ตัดแบ่งก้อนที่ i ถึง i+30
+            batch = chunks[i : i + BATCH_SIZE]
+            
+            # ใส่ Metadata ให้ครบทุกก้อนใน Batch
+            for chunk in batch:
+                chunk.metadata.update({"added_by": user, "timestamp": str(datetime.now())})
+            
+            # 🚀 ส่งขึ้น Pinecone ทีเดียวทั้งก้อน (ประหยัด Request)
+            try:
+                vectorstore.add_documents(batch, namespace=namespace)
+                add_log(f"✅ Indexed batch {i+1}-{min(i+BATCH_SIZE, total_chunks)} / {total_chunks}")
+            except Exception as e:
+                add_log(f"⚠️ Error uploading batch: {e}")
+
+            # อัปเดต Progress Bar
+            training_state["progress"] = int(min((i + BATCH_SIZE) / total_chunks * 100, 100))
+            
+            # 💤 พัก 20 วินาที (ถ้ายังไม่ใช่รอบสุดท้าย) เพื่อกัน Rate Limit
+            if i + BATCH_SIZE < total_chunks:
+                add_log("⏳ Cooling down 20s to avoid rate limit...")
+                time.sleep(20)
         
         add_log("🎉 Completed!")
+        
     except Exception as e: add_log(f"Error: {e}")
     finally: training_state["is_running"] = False
 
 def process_url_training(url, namespace, user, recursive=False, depth=2):
     global training_state
     training_state.update({"is_running": True, "progress": 0, "status": "Starting", "logs": [], "start_time": time.time()})
+    
     try:
         add_log(f"🌐 Crawling: {url}")
         if recursive: loader = RecursiveUrlLoader(url=url, max_depth=depth, extractor=lambda x: Soup(x, "html.parser").text)
         else: loader = WebBaseLoader(url)
         docs = loader.load()
         
-        text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+        # ✅ ใช้ Chunk Size ใหญ่
+        text_splitter = RecursiveCharacterTextSplitter(chunk_size=2000, chunk_overlap=400)
         chunks = text_splitter.split_documents(docs)
         
-        for i, chunk in enumerate(chunks):
-            chunk.metadata.update({"added_by": user, "timestamp": str(datetime.now())})
-            vectorstore.add_documents([chunk], namespace=namespace)
-            training_state["progress"] = int((i+1)/len(chunks)*100)
+        total_chunks = len(chunks)
+        BATCH_SIZE = 30 # ส่งทีละ 30
+        
+        add_log(f"📦 Prepared {total_chunks} chunks from URL...")
+
+        # 🔄 Loop แบบ Batch
+        for i in range(0, total_chunks, BATCH_SIZE):
+            if training_state.get("abort", False): break
+                
+            batch = chunks[i : i + BATCH_SIZE]
+            
+            for chunk in batch:
+                chunk.metadata.update({"added_by": user, "timestamp": str(datetime.now())})
+            
+            try:
+                vectorstore.add_documents(batch, namespace=namespace)
+                add_log(f"✅ Indexed batch {i+1}-{min(i+BATCH_SIZE, total_chunks)}")
+            except Exception as e:
+                add_log(f"⚠️ Error: {e}")
+                
+            training_state["progress"] = int(min((i + BATCH_SIZE) / total_chunks * 100, 100))
+            
+            # 💤 พัก 20 วินาที
+            if i + BATCH_SIZE < total_chunks:
+                add_log("⏳ Cooling down 20s...")
+                time.sleep(20)
             
         add_log("🎉 URL Completed!")
     except Exception as e: add_log(f"Error: {e}")
     finally: training_state["is_running"] = False
-
 # --- Training APIs ---
 class TrainingRequest(BaseModel):
     text: str; namespace: str = "global"; source: str = "manual"
@@ -429,9 +482,25 @@ async def train_manual(req: TrainingRequest, current_user: UserModel = Depends(g
 @app.post("/train/upload")
 async def train_upload(file: UploadFile = File(...), namespace: str = "global", current_user: UserModel = Depends(get_current_user)):
     content = (await file.read()).decode("utf-8", errors="ignore")
-    chunks = RecursiveCharacterTextSplitter(chunk_size=1000).split_text(content)
-    vectorstore.add_texts(chunks, metadatas=[{"source": file.filename, "added_by": current_user.username} for _ in chunks], namespace=namespace)
-    return {"status": "success"}
+    
+    # หั่น
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=2000, chunk_overlap=400)
+    chunks = text_splitter.create_documents([content]) # ใช้ create_documents เพื่อให้ได้ Object Document ง่ายต่อการใส่ metadata
+    
+    # ใส่ Metadata
+    for chunk in chunks:
+        chunk.metadata = {"source": file.filename, "added_by": current_user.username}
+
+    # ส่งทีละ 50 (API Upload ไฟล์เดียวมักไม่เยอะเท่า Github ทั้ง Repo ส่งเยอะหน่อยได้)
+    BATCH_SIZE = 50
+    total_chunks = len(chunks)
+    
+    for i in range(0, total_chunks, BATCH_SIZE):
+        batch = chunks[i : i + BATCH_SIZE]
+        # ตรงนี้ไม่ต้อง sleep เพราะ User รอหน้าเว็บอยู่ (และไฟล์เดียวไม่น่าชน Limit เร็วเท่า Repo ใหญ่ๆ)
+        vectorstore.add_documents(batch, namespace=namespace)
+
+    return {"status": "success", "chunks_added": total_chunks}
 
 class GithubRequest(BaseModel):
     repo_name: str; github_token: str; namespace: str = "global"; incremental: bool = False
