@@ -171,9 +171,12 @@
             document.getElementById('main-content').style.display = 'block';
             document.getElementById('userDisplayName').innerText = user;
             
-         
             if (!bot) {
-                bot = new CarmenBot(); 
+                // ✅ ส่ง Token และ User เข้าไปใน Widget โดยตรง
+                bot = new CarmenBot({ 
+                    token: token,
+                    user: user
+                }); 
             }
             
         }
