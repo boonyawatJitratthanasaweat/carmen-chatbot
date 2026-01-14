@@ -6,6 +6,7 @@
     <title>Carmen AI - Welcome</title>
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
+        /* ... (CSS ส่วนเดิมทั้งหมด คงไว้เหมือนเดิมได้เลยครับ) ... */
         :root {
             --primary-blue: #2563eb;
             --dark-blue: #1e3a8a;
@@ -29,7 +30,7 @@
             background: white;
             padding: 40px;
             border-radius: 24px;
-            box-shadow: 0 20px 50px rgba(37, 99, 235, 0.15); /* เงาสีฟ้าอ่อน */
+            box-shadow: 0 20px 50px rgba(37, 99, 235, 0.15);
             width: 100%;
             max-width: 380px;
             text-align: center;
@@ -66,7 +67,7 @@
 
         .error-message { color: #ef4444; margin-top: 15px; font-size: 14px; min-height: 20px; }
 
-        /* Main Content (ซ่อนอยู่) */
+        /* Main Content */
         #main-content { display: none; text-align: center; animation: fadeIn 0.8s ease; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
         
@@ -88,10 +89,10 @@
             </div>
             <div class="form-group">
                 <label>รหัสผ่าน</label>
-                <input type="password" id="password" placeholder="••••••••" onkeypress="handleEnter(event)" value="">
+                <input type="password" id="password" placeholder="••••••••" value="">
             </div>
 
-            <button class="btn-login" onclick="performLogin()" id="btnLogin">เข้าสู่ระบบ</button>
+            <button class="btn-login" id="btnLogin">เข้าสู่ระบบ</button>
             <div class="error-message" id="errorMsg"></div>
         </div>
     </div>
@@ -99,14 +100,26 @@
     <div id="main-content" class="welcome-box">
         <h1>ยินดีต้อนรับ, <span id="userDisplayName" style="color: #2563eb;">User</span></h1>
         <p>คุณสามารถสอบถามข้อมูลต่างๆ ได้ที่มุมขวาล่างค่ะ ↘️</p>
-        <button onclick="logout()" style="margin-top:20px; padding:10px 20px; border:2px solid #2563eb; color:#2563eb; background:none; border-radius:8px; cursor:pointer;">ออกจากระบบ</button>
+        <button id="btnLogout" style="margin-top:20px; padding:10px 20px; border:2px solid #2563eb; color:#2563eb; background:none; border-radius:8px; cursor:pointer;">ออกจากระบบ</button>
     </div>
 
-    <script src="/static/carmen-bot.js?v=5"></script>
+    <script type="module">
+        import { CarmenBot } from 'https://esm.sh/carmen-chatbot-widget@latest';
 
-    <script>
         const API_URL_TOKEN = "/token"; 
 
+        let bot = null;
+
+
+        window.onload = () => {
+            const token = localStorage.getItem("carmen_token");
+            if(token) {
+        
+                showUserInterface(token, "User (Auto)"); 
+            }
+        };
+
+        // ฟังก์ชัน Login
         async function performLogin() {
             const user = document.getElementById('username').value.trim();
             const pass = document.getElementById('password').value.trim();
@@ -118,6 +131,7 @@
             btn.disabled = true; btn.innerText = "กำลังตรวจสอบ..."; err.innerText = "";
 
             try {
+                // 1. เรียก API Login ของเราเองเพื่อเช็คว่าเป็น Admin หรือไม่
                 const formData = new URLSearchParams();
                 formData.append('username', user);
                 formData.append('password', pass);
@@ -132,18 +146,20 @@
 
                 const data = await res.json();
                 
-                // ✅ Logic การแบ่งแยกชนชั้น (Routing)
-                if (data.client_namespace === 'global') { // หรือเช็ค user === 'admin'
-                    // ถ้าเป็น Admin -> ไป Dashboard
+                // 2. Logic แบ่งแยกชนชั้น
+                if (data.client_namespace === 'global') { 
+                    // Admin -> ไป Dashboard
                     localStorage.setItem('admin_token', data.access_token);
-                    localStorage.setItem('admin_user', user);
-                    window.location.href = 'dashboard.html'; // 🚀 วาร์ปไป Dashboard
+                    window.location.href = 'dashboard.html'; 
                 } else {
-                    // ถ้าเป็น User ทั่วไป -> อยู่หน้านี้แหละ แต่เปิดแชท
+            
+                    localStorage.setItem("carmen_token", data.access_token);
+                    
                     showUserInterface(data.access_token, user);
                 }
 
             } catch (e) {
+                console.error(e);
                 err.innerText = "ชื่อผู้ใช้หรือรหัสผ่านผิดพลาด";
             } finally {
                 btn.disabled = false; btn.innerText = "เข้าสู่ระบบ";
@@ -155,17 +171,25 @@
             document.getElementById('main-content').style.display = 'block';
             document.getElementById('userDisplayName').innerText = user;
             
-            // เริ่มต้น Chatbot
-            if(window.carmenStartSession) {
-                window.carmenStartSession(token, user);
+         
+            if (!bot) {
+                bot = new CarmenBot(); 
             }
+            
         }
 
         function logout() {
+            localStorage.removeItem("carmen_token"); 
+            localStorage.removeItem("admin_token");
             location.reload();
         }
 
-        function handleEnter(e) { if(e.key === 'Enter') performLogin(); }
+        // Bind Events (เพราะ Module Script ไม่เห็น Global Scope ของ HTML onclick)
+        document.getElementById('btnLogin').addEventListener('click', performLogin);
+        document.getElementById('btnLogout').addEventListener('click', logout);
+        document.getElementById('password').addEventListener('keypress', (e) => {
+            if(e.key === 'Enter') performLogin();
+        });
     </script>
 </body>
 </html>
