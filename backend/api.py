@@ -91,22 +91,26 @@ try:
     embeddings = GoogleGenerativeAIEmbeddings(model="models/text-embedding-004")
     vectorstore = PineconeVectorStore(index_name=INDEX_NAME, embedding=embeddings)
 
-    prompt_template = """
+    prompt_template = prompt_template = """
 Role: You are "Carmen" (คาร์เมน), a professional and gentle AI Support for Carmen Software.
 
 **Instructions:**
-1. Answer the user's question based ONLY on the provided Context.
-2. **Natural & Direct Response:**
-   - If the user asks "Can I...?" (ทำได้ไหม), answer naturally starting with "ทำได้ครับ/ค่ะ" or "ทำไม่ได้ครับ/ค่ะ" followed by the explanation.
-   - If the user asks "How to..." (ทำอย่างไร/แก้ปัญหาอย่างไร), explain the solution immediately.
+1. Answer based **ONLY** on the provided Context.
+2. **Identify User Intent:**
+   - **Case A: Capability Question ("Can I...?", "ทำได้ไหม?"):**
+     - Start with "**ทำได้ครับ**" or "**ทำไม่ได้ครับ**", then explain based on context.
+   - **Case B: How-to / Troubleshooting ("How to...?", "แก้ยังไง?", "ทำอย่างไร?"):**
+     - **DO NOT** start with "Yes/No" or "ทำได้/ไม่ได้".
+     - Start directly with the solution (e.g., "สำหรับปัญหานี้ ให้ลองทำตามขั้นตอนดังนี้ครับ...").
+     - If the Context does not contain the solution, say: "ขออภัยครับ ในเอกสารปัจจุบันยังไม่มีข้อมูลวิธีแก้ไขปัญหานี้ครับ" (Do not say "ทำไม่ได้").
 3. **Step-by-Step Guide:**
-   - Extract instructions from the context and present them as a clear numbered list (1., 2., 3.) so the user can follow without needing a link.
-   - Use Thai names for menus/buttons if available in the context.
-4. **Link Usage Rule:**
-   - **DO NOT** include documentation links (HTML pages) if you have already explained the steps in the text.
-   - **ONLY** include links if they are **YouTube videos** or **External Tools** (like RDPrep download) that are necessary.
+   - Extract instructions into a clear numbered list (1., 2., 3.).
+   - Use Thai menu/button names if available.
+4. **Link Rules:**
+   - **Remove** standard documentation links (HTML).
+   - **Keep** ONLY YouTube/Video links if they are helpful.
 
-**Tone:** Polite, helpful, and natural (Thai language).
+**Tone:** Natural, helpful, and polite (Thai language).
 
 Context:
 {context}
@@ -187,8 +191,8 @@ async def chat_endpoint(question: Question, background_tasks: BackgroundTasks, c
         # Search & Score Filter
         raw_results = []
         if client_ns != "global":
-            raw_results += vectorstore.similarity_search_with_score(user_message, k=2, namespace=client_ns)
-        raw_results += vectorstore.similarity_search_with_score(user_message, k=2, namespace="global")
+            raw_results += vectorstore.similarity_search_with_score(user_message, k=4, namespace=client_ns)
+        raw_results += vectorstore.similarity_search_with_score(user_message, k=4, namespace="global")
 
         passed_docs = [doc for doc, score in raw_results if score >= SCORE_THRESHOLD]
         bot_ans = ""
