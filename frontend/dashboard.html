@@ -129,7 +129,7 @@
     </div>
 
     <script type="module">
-        import { AdminAPI } from '/static/admin-api.js?v=1'; // Import API Class
+        import { AdminAPI } from '/static/admin-api.js?v=2'; // Version 2
 
         const api = new AdminAPI();
         let allORModels = [];
@@ -138,35 +138,50 @@
         // --- Init ---
         window.onload = () => {
             fetchData();
+            // Refresh ทุก 10 วินาที เฉพาะ Tab ที่เปิดอยู่
             autoRefresh = setInterval(fetchData, 10000);
         };
 
-        // --- Core Functions ---
+        // --- Core Functions (แก้ไขใหม่) ---
         async function fetchData() {
             const bu = document.getElementById('buFilter').value;
             
+            // เช็คว่า Tab ไหนเปิดอยู่ ให้โหลดข้อมูลเฉพาะ Tab นั้น (ประหยัด Resource)
+            const activeTabId = document.querySelector('.tab-content.active').id;
+
             try {
-                // 1. Logs
-                if (document.getElementById('tab-logs').classList.contains('active')) {
+                // 1. Tab Logs
+                if (activeTabId === 'tab-logs') {
                     const logs = await api.getLogs(bu);
                     renderLogs(logs);
                 }
                 
-                // 2. Analytics (ถ้า Backend รองรับการ filter BU ก็ส่งไป)
-                // ตอนนี้สมมติว่าดึงมาทั้งหมดก่อน
-                // const stats = await api.getAnalytics(); 
-                // renderStats(stats);
+                // ✅ 2. Tab Analytics (ปลดล็อคแล้ว)
+                else if (activeTabId === 'tab-analytics') {
+                    const stats = await api.getAnalytics(); 
+                    renderStats(stats);
+                }
 
-                // 3. Knowledge
-                // const vectors = await api.getVectorStats();
-                // renderKnowledge(vectors);
+                // ✅ 3. Tab Knowledge (ปลดล็อคแล้ว)
+                else if (activeTabId === 'tab-knowledge') {
+                    const vectors = await api.getVectorStats();
+                    renderKnowledge(vectors);
+                }
 
-            } catch (e) { console.error(e); }
+                // 4. Tab Models (โหลดจาก switchTab แล้ว แต่ Refresh status ได้)
+                else if (activeTabId === 'tab-models') {
+                    loadModels();
+                }
+
+            } catch (e) { 
+                console.error("Fetch Error:", e); 
+            }
         }
+
+        // --- Render Functions ---
 
         function renderLogs(logs) {
             const tbody = document.getElementById('logsBody');
-            
             if (!logs || logs.length === 0) { 
                 tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:20px; color:#94a3b8;">No logs found</td></tr>'; 
                 return; 
@@ -175,7 +190,6 @@
             tbody.innerHTML = logs.map(log => `
                 <tr>
                     <td>${new Date(log.timestamp).toLocaleTimeString()}</td>
-                    
                     <td>
                         <div style="display:flex; align-items:center; gap:8px;">
                             <span style="background:#e0f2fe; color:#0284c7; padding:2px 8px; border-radius:6px; font-size:11px; font-weight:bold; border:1px solid #bae6fd;">
@@ -186,11 +200,56 @@
                             </span>
                         </div>
                     </td>
-
                     <td>${log.model_name}</td>
                     <td>${log.duration?.toFixed(2)}s</td>
                     <td>${log.total_tokens || 0}</td>
                     <td class="cost">$${(log.cost || 0).toFixed(6)}</td>
+                </tr>
+            `).join('');
+        }
+
+        // ✅ ฟังก์ชันแสดงกราฟ Analytics (เพิ่มใหม่)
+        function renderStats(stats) {
+            const tbody = document.getElementById('analyticsBody');
+            if (!stats || stats.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px;">No data available</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = stats.map(st => `
+                <tr>
+                    <td>
+                        <span style="font-weight:bold; color:#2563eb; font-size:14px;">${st.namespace.toUpperCase()}</span>
+                    </td>
+                    <td>${st.total_requests.toLocaleString()}</td>
+                    <td>${st.total_tokens.toLocaleString()}</td>
+                    <td class="cost" style="font-size:15px;">$${st.total_cost.toFixed(6)}</td>
+                </tr>
+            `).join('');
+        }
+
+        // ✅ ฟังก์ชันแสดง Knowledge Vector (เพิ่มใหม่)
+        function renderKnowledge(data) {
+            const tbody = document.getElementById('knowledgeBody');
+            
+            // กรณีไม่มี Pinecone หรือยังไม่เคยเทรน
+            if (!data || !data.namespaces || data.namespaces.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:20px;">No knowledge base found (Pinecone empty)</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = data.namespaces.map(ns => `
+                <tr>
+                    <td style="font-weight:bold;">${ns.namespace}</td>
+                    <td>${ns.count.toLocaleString()} vectors</td>
+                    <td>
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <div style="flex:1; height:6px; background:#e2e8f0; border-radius:3px; overflow:hidden;">
+                                <div style="width:${ns.percent}%; height:100%; background:#10b981;"></div>
+                            </div>
+                            <span style="font-size:12px; color:#64748b;">${ns.percent.toFixed(1)}%</span>
+                        </div>
+                    </td>
                 </tr>
             `).join('');
         }
@@ -200,16 +259,19 @@
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
             document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
             document.getElementById(`tab-${tabName}`).classList.add('active');
-            event.target.classList.add('active');
             
-            if (tabName === 'models') loadModels();
-            fetchData(); // Reload data for new tab
+            // หาปุ่มที่ถูกกดเพื่อใส่ active class
+            const btn = event.target; 
+            if(btn) btn.classList.add('active');
+            
+            // เรียก fetchData ทันทีที่เปลี่ยน Tab
+            fetchData(); 
         };
 
         document.getElementById('refreshBtn').onclick = fetchData;
         document.getElementById('buFilter').onchange = fetchData;
 
-        // --- Models Logic ---
+        // --- Models Logic (เหมือนเดิม) ---
         async function loadModels() {
             const models = await api.getLocalModels();
             const tbody = document.getElementById('modelsBody');
@@ -220,50 +282,20 @@
                     <td>$${m.input_rate.toFixed(4)}</td>
                     <td>$${m.output_rate.toFixed(4)}</td>
                     <td>
-                        ${!m.is_active ? `<button onclick="activateModel('${m.model_name}', ${m.input_rate}, ${m.output_rate})" style="cursor:pointer; color:#2563eb;">Switch</button>` : ''}
-                        ${!m.is_active ? `<button onclick="deleteModel('${m.model_name}')" style="cursor:pointer; color:red; margin-left:10px;">Delete</button>` : ''}
+                        ${!m.is_active ? `<button onclick="activateModel('${m.model_name}', ${m.input_rate}, ${m.output_rate})" style="cursor:pointer; color:#2563eb; border:1px solid #bfdbfe; background:white; padding:4px 8px; border-radius:4px;">Switch</button>` : '<span style="font-size:12px; color:#16a34a; font-weight:bold;">Current</span>'}
+                        ${!m.is_active ? `<button onclick="deleteModel('${m.model_name}')" style="cursor:pointer; color:#ef4444; border:1px solid #fecaca; background:white; padding:4px 8px; border-radius:4px; margin-left:5px;">Del</button>` : ''}
                     </td>
                 </tr>
             `).join('');
         }
 
-        // Expose functions to window for onclick events
-        window.activateModel = async (id, inp, out) => {
-            if(confirm('Switch to ' + id + '?')) { await api.activateModel(id, inp, out); loadModels(); }
-        };
-        window.deleteModel = async (id) => {
-            if(confirm('Delete ' + id + '?')) { await api.deleteModel(id); loadModels(); }
-        };
-        
-        window.openModelModal = async () => {
-            document.getElementById('orModal').style.display = 'flex';
-            allORModels = await api.getOpenRouterModels();
-            renderORList(allORModels);
-        };
-
-        window.renderORList = (list) => {
-            document.getElementById('orList').innerHTML = list.map(m => `
-                <div class="model-item">
-                    <div><b>${m.name}</b><br><span style="font-size:11px; color:#666;">${m.id}</span></div>
-                    <button onclick="addFromOR('${m.id}', ${m.input_rate}, ${m.output_rate})" style="border:1px solid #2563eb; color:#2563eb; background:white; padding:4px 10px; border-radius:4px; cursor:pointer;">Add</button>
-                </div>
-            `).join('');
-        };
-
-        window.filterModels = () => {
-            const q = document.getElementById('orSearch').value.toLowerCase();
-            renderORList(allORModels.filter(m => m.name.toLowerCase().includes(q) || m.id.toLowerCase().includes(q)));
-        };
+        window.activateModel = async (id, inp, out) => { if(confirm('Switch to ' + id + '?')) { await api.activateModel(id, inp, out); loadModels(); } };
+        window.deleteModel = async (id) => { if(confirm('Delete ' + id + '?')) { await api.deleteModel(id); loadModels(); } };
+        window.openModelModal = async () => { document.getElementById('orModal').style.display = 'flex'; allORModels = await api.getOpenRouterModels(); renderORList(allORModels); };
+        window.renderORList = (list) => { document.getElementById('orList').innerHTML = list.map(m => `<div class="model-item"><div><b>${m.name}</b><br><span style="font-size:11px; color:#666;">${m.id}</span></div><button onclick="addFromOR('${m.id}', ${m.input_rate}, ${m.output_rate})" style="border:1px solid #2563eb; color:#2563eb; background:white; padding:4px 10px; border-radius:4px; cursor:pointer;">Add</button></div>`).join(''); };
+        window.filterModels = () => { const q = document.getElementById('orSearch').value.toLowerCase(); renderORList(allORModels.filter(m => m.name.toLowerCase().includes(q) || m.id.toLowerCase().includes(q))); };
         document.getElementById('orSearch').onkeyup = window.filterModels;
-
-        window.addFromOR = async (id, inp, out) => {
-            if(confirm(`Add ${id}?`)) {
-                await api.addModel(id, inp, out);
-                await api.activateModel(id, inp, out);
-                document.getElementById('orModal').style.display = 'none';
-                loadModels();
-            }
-        };
+        window.addFromOR = async (id, inp, out) => { if(confirm(`Add ${id}?`)) { await api.addModel(id, inp, out); await api.activateModel(id, inp, out); document.getElementById('orModal').style.display = 'none'; loadModels(); } };
 
     </script>
 </body>
