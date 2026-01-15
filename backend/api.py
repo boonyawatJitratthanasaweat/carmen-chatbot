@@ -69,9 +69,11 @@ async def chat_endpoint(req: ChatRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/chat/history")
-async def get_history(bu: str, session_id: str, db: Session = Depends(get_db)):
-    history = db.query(ChatHistory).filter(ChatHistory.session_id == session_id, ChatHistory.bu == bu)\
+async def get_history(bu: str, session_id: str = None, db: Session = Depends(get_db)):
+
+    history = db.query(ChatHistory).filter(ChatHistory.bu == bu)\
         .order_by(desc(ChatHistory.timestamp)).limit(50).all()
+    
     return history[::-1]
 
 # ==========================================
