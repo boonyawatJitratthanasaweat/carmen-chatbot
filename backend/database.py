@@ -42,15 +42,11 @@ class ChatHistory(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     bu = Column(String, index=True) 
-    session_id = Column(String, index=True) 
     sender = Column(String)
     message = Column(Text)
-    
     # ✅ ForeignKey: เชื่อมไปยัง llm_models.model_name
     model_used = Column(String, ForeignKey("llm_models.model_name"), nullable=True)
-    
     timestamp = Column(DateTime, default=datetime.now)
-
     # ✅ Relation Back: เชื่อมกลับไปหา Model Object
     model_rel = relationship("ModelPricing", back_populates="chat_histories")
 
@@ -72,7 +68,6 @@ class TokenLog(Base):
     cost = Column(Float, default=0.0)
     duration = Column(Float, default=0.0)
     user_query = Column(Text, nullable=True) 
-    additional_params = Column(JSON, nullable=True)
     timestamp = Column(DateTime, default=datetime.now)
 
     # ✅ Relation Back: เชื่อมกลับไปหา Model Object
