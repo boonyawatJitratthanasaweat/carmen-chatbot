@@ -3,184 +3,162 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Carmen AI - Welcome</title>
+    <title>Carmen System - Enterprise Portal</title>
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
         :root {
             --primary-blue: #2563eb;
-            --dark-blue: #1e3a8a;
-            --bg-color: #f0f4f8;
+            --bg-color: #f8fafc;
             --text-color: #334155;
+            --card-bg: #ffffff;
         }
 
         body {
             margin: 0; padding: 0;
             font-family: 'Sarabun', sans-serif;
-            background: linear-gradient(135deg, #e0e7ff 0%, #f0f4f8 100%);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
             height: 100vh;
+        }
+
+        .container {
+            text-align: center;
+            background: var(--card-bg);
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+            max-width: 600px;
+            width: 90%;
+            border: 1px solid #e2e8f0;
+        }
+
+        h1 { color: var(--primary-blue); margin-bottom: 10px; font-weight: 600; }
+        p { color: #64748b; line-height: 1.6; margin-bottom: 20px; }
+
+        .bu-badge {
+            display: inline-block;
+            background: #dbeafe;
+            color: #1e40af;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 16px;
+            margin: 10px 0 20px 0;
+            box-shadow: 0 2px 4px rgba(37, 99, 235, 0.1);
+        }
+
+        .link-group {
             display: flex;
             justify-content: center;
-            align-items: center;
-            color: var(--text-color);
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-top: 20px;
         }
 
-        /* 🔐 Login Card Style */
-        .login-card {
-            background: white;
-            padding: 40px;
-            border-radius: 24px;
-            box-shadow: 0 20px 50px rgba(37, 99, 235, 0.15);
-            width: 100%;
-            max-width: 380px;
-            text-align: center;
-            transition: transform 0.3s ease;
+        .test-link {
+            text-decoration: none;
+            color: #475569;
+            background: #f1f5f9;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: 0.2s;
+            border: 1px solid #cbd5e1;
         }
-        
-        .login-card:hover { transform: translateY(-5px); }
 
-        .logo { font-size: 60px; margin-bottom: 10px; display: inline-block; animation: float 3s ease-in-out infinite; }
-        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
-
-        h2 { color: var(--dark-blue); margin: 0 0 10px 0; font-weight: 700; }
-        p { color: #64748b; margin-bottom: 30px; font-size: 14px; }
-
-        .form-group { margin-bottom: 20px; text-align: left; }
-        .form-group label { display: block; margin-bottom: 8px; font-weight: 600; color: var(--dark-blue); font-size: 14px; }
-        .form-group input {
-            width: 100%; padding: 12px;
-            border: 2px solid #e2e8f0; border-radius: 12px;
-            font-size: 16px; outline: none; transition: 0.3s;
-            font-family: 'Sarabun', sans-serif; box-sizing: border-box;
+        .test-link:hover {
+            background: var(--primary-blue);
+            color: white;
+            border-color: var(--primary-blue);
         }
-        .form-group input:focus { border-color: var(--primary-blue); box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1); }
 
-        .btn-login {
-            width: 100%; padding: 14px;
-            background: linear-gradient(to right, var(--primary-blue), var(--dark-blue));
-            color: white; border: none; border-radius: 12px;
-            font-size: 16px; font-weight: 600; cursor: pointer;
-            transition: 0.3s; box-shadow: 0 10px 20px rgba(37, 99, 235, 0.2);
+        .code-box {
+            background: #1e293b;
+            color: #e2e8f0;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: left;
+            font-family: 'Consolas', monospace;
+            margin-top: 30px;
+            font-size: 13px;
+            overflow-x: auto;
+            position: relative;
         }
-        .btn-login:hover { transform: translateY(-2px); box-shadow: 0 15px 30px rgba(37, 99, 235, 0.3); }
-        .btn-login:disabled { background: #cbd5e1; cursor: not-allowed; transform: none; box-shadow: none; }
 
-        .error-message { color: #ef4444; margin-top: 15px; font-size: 14px; min-height: 20px; }
-
-        /* Main Content */
-        #main-content { display: none; text-align: center; animation: fadeIn 0.8s ease; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        
-        .welcome-box h1 { color: var(--dark-blue); font-size: 2.5rem; margin-bottom: 10px; }
-        .welcome-box p { color: #64748b; font-size: 1.1rem; }
+        .label {
+            position: absolute;
+            top: 0;
+            right: 0;
+            background: #334155;
+            color: #94a3b8;
+            padding: 4px 8px;
+            font-size: 10px;
+            border-bottom-left-radius: 8px;
+            border-top-right-radius: 8px;
+        }
     </style>
 </head>
 <body>
 
-    <div id="login-section">
-        <div class="login-card">
-            <div class="logo">💎</div>
-            <h2>Carmen AI</h2>
-            <p>ระบบผู้ช่วยอัจฉริยะสำหรับองค์กร</p>
-            
-            <div class="form-group">
-                <label>ชื่อผู้ใช้งาน</label>
-                <input type="text" id="username" placeholder="Username" value=""> 
-            </div>
-            <div class="form-group">
-                <label>รหัสผ่าน</label>
-                <input type="password" id="password" placeholder="••••••••" value="">
-            </div>
+    <div class="container">
+        <div style="font-size: 50px;">💎</div>
+        <h1>Carmen Software</h1>
+        <p>หน้าจำลองระบบ Enterprise Portal<br>สำหรับทดสอบ Chatbot Widget แบบแยกแผนก (BU)</p>
+        
+        <div>
+            Current Business Unit: <br>
+            <span id="bu-display" class="bu-badge">...</span>
+        </div>
 
-            <button class="btn-login" id="btnLogin">เข้าสู่ระบบ</button>
-            <div class="error-message" id="errorMsg"></div>
+        <div class="link-group">
+            <a href="?bu=global&user=Guest" class="test-link">🌐 Global (Default)</a>
+            <a href="?bu=hotel-seaside&user=Manager" class="test-link">🏨 Hotel Seaside</a>
+            <a href="?bu=account&user=Staff_A" class="test-link">💰 Accounting</a>
+            <a href="?bu=HR&user=HR_Admin" class="test-link">👥 HR Dept</a>
+        </div>
+
+        <div class="code-box">
+            <div class="label">Client Integration Code</div>
+            <span style="color:#c678dd;">import</span> { CarmenBot } <span style="color:#c678dd;">from</span> <span style="color:#98c379;">'/carmen-bot.js'</span>;<br><br>
+            <span style="color:#e5c07b;">new</span> CarmenBot({<br>
+            &nbsp;&nbsp;bu: "<span id="code-bu" style="color:#98c379;">global</span>",<br>
+            &nbsp;&nbsp;user: "<span id="code-user" style="color:#98c379;">Guest</span>",<br>
+            &nbsp;&nbsp;title: "<span id="code-title" style="color:#98c379;">Carmen AI</span>"<br>
+            });
         </div>
     </div>
 
-    <div id="main-content" class="welcome-box">
-        <h1>ยินดีต้อนรับ, <span id="userDisplayName" style="color: #2563eb;">User</span></h1>
-        <p>คุณสามารถสอบถามข้อมูลต่างๆ ได้ที่มุมขวาล่างค่ะ ↘️</p>
-        <button id="btnLogout" style="margin-top:20px; padding:10px 20px; border:2px solid #2563eb; color:#2563eb; background:none; border-radius:8px; cursor:pointer;">ออกจากระบบ</button>
-    </div>
-
     <script type="module">
-        // Import Widget
-        import { CarmenBot } from 'https://esm.sh/carmen-chatbot-widget@latest';
+        // Import จากไฟล์ที่ Backend Serve ให้ (The Old Way)
+        import { CarmenBot } from '/carmen-bot.js';
 
-        const API_URL_TOKEN = "/token"; 
-        let bot = null;
+        // 1. ดึงค่าจาก URL Parameter (เพื่อจำลองว่าแต่ละหน้าเว็บส่งค่าต่างกัน)
+        const urlParams = new URLSearchParams(window.location.search);
+        
+        // กำหนดค่า Default ถ้าไม่มีใน URL
+        const currentBU = urlParams.get('bu') || "global"; 
+        const currentUser = urlParams.get('user') || "Guest User";
+        const themeTitle = currentBU === 'global' ? "Carmen AI" : `Support (${currentBU})`;
 
-        // ❌ เอาส่วน window.onload ที่เช็ค Token ออกแล้ว
-        // ทำให้ทุกครั้งที่ Refresh จะต้อง Login ใหม่เสมอ
+        // 2. อัปเดต UI หน้าเว็บให้ตรงกับค่าที่ใช้
+        document.getElementById('bu-display').innerText = currentBU;
+        document.getElementById('code-bu').innerText = currentBU;
+        document.getElementById('code-user').innerText = currentUser;
+        document.getElementById('code-title').innerText = themeTitle;
 
-        // 1. ฟังก์ชัน Login
-        async function performLogin() {
-            const user = document.getElementById('username').value.trim();
-            const pass = document.getElementById('password').value.trim();
-            const btn = document.getElementById('btnLogin');
-            const err = document.getElementById('errorMsg');
-
-            if(!user || !pass) { err.innerText = "กรุณากรอกข้อมูลให้ครบ"; return; }
-
-            btn.disabled = true; btn.innerText = "กำลังตรวจสอบ..."; err.innerText = "";
-
-            try {
-                const formData = new URLSearchParams();
-                formData.append('username', user);
-                formData.append('password', pass);
-
-                const res = await fetch(API_URL_TOKEN, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-                    body: formData
-                });
-
-                if(!res.ok) throw new Error("ข้อมูลไม่ถูกต้อง");
-
-                const data = await res.json();
-                
-                if (data.client_namespace === 'global') { 
-                    // Admin
-                    localStorage.setItem('admin_token', data.access_token);
-                    window.location.href = 'dashboard.html'; 
-                } else {
-                    // User: ส่ง Token เข้าไปใช้ แต่ไม่จำเป็นต้อง Save ลง LocalStorage แบบถาวรก็ได้
-                    // ถ้า Widget ต้องการ
-                    showUserInterface(data.access_token, user);
-                }
-
-            } catch (e) {
-                console.error(e);
-                err.innerText = "ชื่อผู้ใช้หรือรหัสผ่านผิดพลาด";
-            } finally {
-                btn.disabled = false; btn.innerText = "เข้าสู่ระบบ";
-            }
-        }
-
-        // 2. แสดงหน้าหลักและเริ่มบอท
-        function showUserInterface(token, user) {
-            document.getElementById('login-section').style.display = 'none';
-            document.getElementById('main-content').style.display = 'block';
-            document.getElementById('userDisplayName').innerText = user;
-            
-            // เริ่มต้น Widget
-            if (!bot) {
-                bot = new CarmenBot({
-                    token: token,
-                    user: user
-                });
-            }
-        }
-
-        // 3. Logout (แค่ Refresh หน้าเว็บ)
-        function logout() {
-            location.reload();
-        }
-
-        document.getElementById('btnLogin').addEventListener('click', performLogin);
-        document.getElementById('btnLogout').addEventListener('click', logout);
-        document.getElementById('password').addEventListener('keypress', (e) => {
-            if(e.key === 'Enter') performLogin();
+        // 3. เริ่มต้น Widget ทันที (ไม่ต้อง Login)
+        // Widget จะเด้งขึ้นมาที่มุมขวาล่าง
+        new CarmenBot({
+            bu: currentBU,        // ส่ง BU ไปเพื่อแยกฐานข้อมูล vector / logs
+            user: currentUser,    // ชื่อ User ที่จะแสดงใน Chat
+            title: themeTitle,    // ตั้งชื่อหัวข้อ Chat ตาม BU
+            apiUrl: ""            // ใช้ Relative Path (Auto Connect Backend)
         });
+
     </script>
 </body>
 </html>

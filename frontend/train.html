@@ -5,108 +5,70 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Carmen AI - Advanced Training</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-   <style>
-    /* ... (CSS เดิมของคุณ) ... */
-    :root { --bg-body: #f8fafc; --bg-card: #ffffff; --text-main: #0f172a; --text-muted: #64748b; --border-color: #e2e8f0; --primary-blue: #2563eb; --success-green: #10b981; --error-red: #ef4444; }
-    
-    /* ✅ เพิ่ม: Box Sizing และกันจอเลื่อน */
-    * { box-sizing: border-box; }
+    <style>
+        :root { --bg-body: #f8fafc; --bg-card: #ffffff; --text-main: #0f172a; --text-muted: #64748b; --border-color: #e2e8f0; --primary-blue: #2563eb; --success-green: #10b981; --error-red: #ef4444; }
+        * { box-sizing: border-box; }
 
-    body { background-color: var(--bg-body); color: var(--text-main); font-family: 'Inter', sans-serif; margin: 0; padding: 20px; font-size: 14px; overflow-x: hidden; }
-    
-    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; background: white; padding: 16px 24px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
-    .header h1 { margin: 0; color: var(--primary-blue); font-size: 20px; display:flex; align-items:center; gap:10px; }
-    
-    .btn-back { background: white; border: 1px solid var(--border-color); padding: 8px 16px; border-radius: 6px; cursor: pointer; color: var(--text-muted); font-weight:500; transition:0.2s; white-space: nowrap; text-decoration: none; display: inline-block; }
-    .btn-back:hover { border-color: var(--primary-blue); color: var(--primary-blue); }
-    
-    /* Grid Layout หลัก */
-    .container { max-width: 900px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-    
-    .card { background: white; border-radius: 12px; padding: 24px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); height: fit-content; }
-    
-    /* Tabs เลื่อนได้ */
-    .train-tabs { display: flex; gap: 8px; margin-bottom: 20px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
-    .t-btn { background: none; border: none; padding: 8px 12px; cursor: pointer; font-size: 13px; color: var(--text-muted); font-weight: 500; border-radius: 6px; transition:0.2s; white-space: nowrap; }
-    .t-btn:hover { background: #f1f5f9; color: var(--primary-blue); }
-    .t-btn.active { background: #eff6ff; color: var(--primary-blue); font-weight: 600; }
-    
-    .tab-panel { display: none; animation: fadeIn 0.3s ease; }
-    .tab-panel.active { display: block; }
-    @keyframes fadeIn { from { opacity:0; transform:translateY(5px); } to { opacity:1; transform:translateY(0); } }
-    
-    .form-group { margin-bottom: 15px; }
-    .form-group label { display: block; margin-bottom: 6px; font-weight: 500; font-size: 13px; color: #334155; }
-    .input-box { width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 8px; box-sizing: border-box; font-family: 'Inter', sans-serif; font-size: 14px; }
-    .input-box:focus { outline: none; border-color: var(--primary-blue); ring: 2px solid #bfdbfe; }
-    
-    .checkbox-group { display: flex; align-items: center; gap: 8px; font-size: 13px; margin-top: 5px; }
-    
-    .btn-train { width: 100%; padding: 12px; background: var(--primary-blue); color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: 0.2s; margin-top:10px; display: flex; justify-content: center; align-items: center; gap: 8px; }
-    .btn-train:hover { background: #1e40af; }
-    .btn-train:disabled { background: #94a3b8; cursor: not-allowed; }
-    
-    .btn-cancel { background: #fee2e2; color: #991b1b; margin-top: 10px; width: 100%; padding: 10px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; display: none; }
-    .btn-cancel:hover { background: #fecaca; }
-    
-    .status-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid #334155; padding-bottom: 10px; }
-    .status-indicator { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; }
-    .dot { width: 8px; height: 8px; border-radius: 50%; background: #64748b; }
-    .dot.active { background: #10b981; box-shadow: 0 0 8px #10b981; animation: pulse 1.5s infinite; }
-    @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
-    
-    .console-box { background: #0f172a; color: #10b981; font-family: 'Courier New', monospace; padding: 15px; border-radius: 8px; height: 300px; overflow-y: auto; font-size: 12px; border: 1px solid #1e293b; display: flex; flex-direction: column; gap: 4px; }
-    .log-line { border-bottom: 1px solid #1e293b; padding-bottom: 2px; word-wrap: break-word; }
-    
-    .progress-container { margin-top: 20px; }
-    .progress-bar-bg { width: 100%; height: 8px; background: #334155; border-radius: 4px; overflow: hidden; }
-    .progress-bar-fill { height: 100%; background: #3b82f6; width: 0%; transition: width 0.3s ease; }
-    .progress-text { display: flex; justify-content: space-between; font-size: 12px; color: #cbd5e1; margin-top: 5px; }
-    .info-card { background: #f8fafc; border: 1px dashed #cbd5e1; padding: 15px; border-radius: 8px; font-size: 12px; color: #475569; margin-top: 15px; }
-
-    /* =========================================
-       📱 MOBILE RESPONSIVE (เพิ่มใหม่)
-       ========================================= */
-    @media screen and (max-width: 768px) {
-        body { padding: 10px; }
+        body { background-color: var(--bg-body); color: var(--text-main); font-family: 'Inter', sans-serif; margin: 0; padding: 20px; font-size: 14px; overflow-x: hidden; }
         
-        /* 1. ปรับ Layout เป็นแนวตั้ง (เอา Console ลงไปข้างล่าง) */
-        .container {
-            grid-template-columns: 1fr; /* เหลือคอลัมน์เดียว */
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-
-        /* 2. ปรับ Header */
-        .header {
-            flex-direction: column;
-            align-items: stretch;
-            gap: 10px;
-            padding: 15px;
-        }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; background: white; padding: 16px 24px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+        .header h1 { margin: 0; color: var(--primary-blue); font-size: 20px; display:flex; align-items:center; gap:10px; }
         
-        .header h1 { 
-            justify-content: center; 
-            font-size: 18px;
-        }
-
-        /* 3. ปุ่ม Back ให้เต็มจอ กดง่าย */
-        .btn-back {
-            text-align: center;
-            padding: 12px;
-        }
-
-        /* 4. Console ปรับความสูงให้เหมาะกับมือถือ */
-        .console-box {
-            height: 250px; /* ลดความสูงลงนิดนึง */
-        }
+        .btn-back { background: white; border: 1px solid var(--border-color); padding: 8px 16px; border-radius: 6px; cursor: pointer; color: var(--text-muted); font-weight:500; transition:0.2s; white-space: nowrap; text-decoration: none; display: inline-block; }
+        .btn-back:hover { border-color: var(--primary-blue); color: var(--primary-blue); }
         
-        .card {
-            padding: 15px; /* ลด Padding ในการ์ด */
+        .container { max-width: 900px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        
+        .card { background: white; border-radius: 12px; padding: 24px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); height: fit-content; }
+        
+        .train-tabs { display: flex; gap: 8px; margin-bottom: 20px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        .t-btn { background: none; border: none; padding: 8px 12px; cursor: pointer; font-size: 13px; color: var(--text-muted); font-weight: 500; border-radius: 6px; transition:0.2s; white-space: nowrap; }
+        .t-btn:hover { background: #f1f5f9; color: var(--primary-blue); }
+        .t-btn.active { background: #eff6ff; color: var(--primary-blue); font-weight: 600; }
+        
+        .tab-panel { display: none; animation: fadeIn 0.3s ease; }
+        .tab-panel.active { display: block; }
+        @keyframes fadeIn { from { opacity:0; transform:translateY(5px); } to { opacity:1; transform:translateY(0); } }
+        
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 6px; font-weight: 500; font-size: 13px; color: #334155; }
+        .input-box { width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 8px; box-sizing: border-box; font-family: 'Inter', sans-serif; font-size: 14px; }
+        .input-box:focus { outline: none; border-color: var(--primary-blue); ring: 2px solid #bfdbfe; }
+        
+        .checkbox-group { display: flex; align-items: center; gap: 8px; font-size: 13px; margin-top: 5px; }
+        
+        .btn-train { width: 100%; padding: 12px; background: var(--primary-blue); color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: 0.2s; margin-top:10px; display: flex; justify-content: center; align-items: center; gap: 8px; }
+        .btn-train:hover { background: #1e40af; }
+        .btn-train:disabled { background: #94a3b8; cursor: not-allowed; }
+        
+        .btn-cancel { background: #fee2e2; color: #991b1b; margin-top: 10px; width: 100%; padding: 10px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; display: none; }
+        .btn-cancel:hover { background: #fecaca; }
+        
+        .status-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid #334155; padding-bottom: 10px; }
+        .status-indicator { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; }
+        .dot { width: 8px; height: 8px; border-radius: 50%; background: #64748b; }
+        .dot.active { background: #10b981; box-shadow: 0 0 8px #10b981; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+        
+        .console-box { background: #0f172a; color: #10b981; font-family: 'Courier New', monospace; padding: 15px; border-radius: 8px; height: 300px; overflow-y: auto; font-size: 12px; border: 1px solid #1e293b; display: flex; flex-direction: column; gap: 4px; }
+        .log-line { border-bottom: 1px solid #1e293b; padding-bottom: 2px; word-wrap: break-word; }
+        
+        .progress-container { margin-top: 20px; }
+        .progress-bar-bg { width: 100%; height: 8px; background: #334155; border-radius: 4px; overflow: hidden; }
+        .progress-bar-fill { height: 100%; background: #3b82f6; width: 0%; transition: width 0.3s ease; }
+        .progress-text { display: flex; justify-content: space-between; font-size: 12px; color: #cbd5e1; margin-top: 5px; }
+        .info-card { background: #f8fafc; border: 1px dashed #cbd5e1; padding: 15px; border-radius: 8px; font-size: 12px; color: #475569; margin-top: 15px; }
+
+        @media screen and (max-width: 768px) {
+            body { padding: 10px; }
+            .container { grid-template-columns: 1fr; display: flex; flex-direction: column; gap: 15px; }
+            .header { flex-direction: column; align-items: stretch; gap: 10px; padding: 15px; }
+            .header h1 { justify-content: center; font-size: 18px; }
+            .btn-back { text-align: center; padding: 12px; }
+            .console-box { height: 250px; }
+            .card { padding: 15px; }
         }
-    }
-</style>
+    </style>
 </head>
 <body>
 
@@ -120,15 +82,14 @@
             <h2 style="margin-top:0;">Input Source</h2>
             <div class="train-tabs">
                 <button class="t-btn active" onclick="switchTab('file')">📄 PDF/File</button>
-                <button class="t-btn" onclick="switchTab('url')">🌐 URL</button>
+                <button class="t-btn" onclick="switchTab('url')">🌐 URL</button> 
                 <button class="t-btn" onclick="switchTab('repo')">🐱 GitHub</button>
-                <button class="t-btn" onclick="switchTab('drive')">📂 Drive</button>
                 <button class="t-btn" onclick="switchTab('manual')">✍️ Text</button>
             </div>
 
             <div id="panel-file" class="tab-panel active">
                 <div class="form-group">
-                    <label>Target Namespace</label>
+                    <label>Target Business Unit (BU)</label>
                     <select id="ns-file" class="input-box namespace-select"></select>
                 </div>
                 <div class="form-group"><label>File (PDF, CSV, TXT)</label><input type="file" id="file-input" class="input-box"></div>
@@ -137,7 +98,7 @@
 
             <div id="panel-url" class="tab-panel">
                 <div class="form-group">
-                    <label>Target Namespace</label>
+                    <label>Target Business Unit (BU)</label>
                     <select id="ns-url" class="input-box namespace-select"></select>
                 </div>
                 <div class="form-group"><label>Website URL</label><input type="text" id="url-input" class="input-box" placeholder="https://example.com"></div>
@@ -147,34 +108,23 @@
                         <label class="checkbox-group"><input type="checkbox" id="url-recursive"> Recursive Crawl</label>
                     </div>
                 </div>
-                <div class="info-card">💡 Recursive will follow links inside the website up to the specified depth.</div>
                 <button class="btn-train" onclick="startUrl()">🕷️ Start Crawling</button>
             </div>
 
             <div id="panel-repo" class="tab-panel">
                 <div class="form-group">
-                    <label>Target Namespace</label>
+                    <label>Target Business Unit (BU)</label>
                     <select id="ns-repo" class="input-box namespace-select"></select>
                 </div>
                 <div class="form-group"><label>Repository (user/repo)</label><input type="text" id="repo-name" class="input-box" placeholder="carmen-org/backend-api"></div>
-                <div class="form-group"><label>Access Token (Optional for Public)</label><input type="password" id="repo-token" class="input-box" placeholder="ghp_xxxxxxxxxxxx"></div>
-                <div class="form-group"><label class="checkbox-group"><input type="checkbox" id="repo-incremental"> Incremental Update (Last 30 days)</label></div>
+                <div class="form-group"><label>Access Token (Optional)</label><input type="password" id="repo-token" class="input-box" placeholder="ghp_xxxxxxxxxxxx"></div>
+                <div class="form-group"><label class="checkbox-group"><input type="checkbox" id="repo-incremental"> Incremental Update</label></div>
                 <button class="btn-train" onclick="startGithub()">🐱 Clone & Learn</button>
-            </div>
-
-            <div id="panel-drive" class="tab-panel">
-                <div class="form-group">
-                    <label>Target Namespace</label>
-                    <select id="ns-drive" class="input-box namespace-select"></select>
-                </div>
-                <div class="form-group"><label>Folder ID</label><input type="text" id="drive-id" class="input-box" placeholder="1A2B3C..."></div>
-                <div class="form-group"><label>Service Account Key (.json)</label><input type="file" id="drive-key" class="input-box" accept=".json"></div>
-                <button class="btn-train" onclick="startDrive()">📂 Scan Drive</button>
             </div>
 
             <div id="panel-manual" class="tab-panel">
                 <div class="form-group">
-                    <label>Target Namespace</label>
+                    <label>Target Business Unit (BU)</label>
                     <select id="ns-text" class="input-box namespace-select"></select>
                 </div>
                 <div class="form-group"><label>Text Content</label><textarea id="text-input" class="input-box" rows="8" placeholder="Paste knowledge here..."></textarea></div>
@@ -189,7 +139,7 @@
                     <div id="status-dot" class="dot"></div>
                     <span id="status-text">System Idle</span>
                 </div>
-                <span id="timer" style="font-size:12px; color:#94a3b8; font-family:monospace;">00:00:00</span>
+                <span id="timer" style="font-size:12px; color:#94a3b8; font-family:monospace;">--</span>
             </div>
 
             <div id="console" class="console-box">
@@ -202,12 +152,12 @@
                     <span id="progress-percent">0%</span>
                     <span id="progress-details">0/0 Chunks</span>
                 </div>
-                <div class="progress-text">
-                    <span>ETA: <span id="eta">--</span>s</span>
+                <div class="progress-text" style="justify-content: flex-end;">
+                     <span>ETA: <span id="eta">--</span></span>
                 </div>
             </div>
 
-            <button class="btn-cancel" id="btn-cancel" onclick="cancelJob()">⛔ Emergency Stop</button>
+            <button class="btn-cancel" id="btn-cancel" onclick="cancelJob()">⛔ Stop Operation</button>
         </div>
     </div>
 
@@ -216,42 +166,24 @@
         let monitorInterval;
         let isRunning = false;
 
-        // Auth Check & Load Namespaces
+        const AVAILABLE_BUS = [
+            { value: "global", label: "🌐 Global Knowledge" },
+            { value: "hotel-seaside", label: "🏨 Hotel Seaside" },
+            { value: "account", label: "💰 Accounting" },
+            { value: "HR", label: "👥 HR Department" }
+        ];
+
         window.onload = function() {
-            if (!localStorage.getItem("admin_token")) {
-                alert("⛔ Admin Access Required!");
-                window.location.href = "index.html";
-            } else {
-                loadNamespaces(); // ✅ โหลด Namespace อัตโนมัติ
-            }
+            initNamespaces();
         };
 
-        // ✅ ฟังก์ชันโหลด Namespace จาก API
-        async function loadNamespaces() {
-            const token = localStorage.getItem("admin_token");
-            try {
-                const res = await fetch(`${API_BASE}/admin/users-namespaces`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                
-                if (res.ok) {
-                    const options = await res.json();
-                    
-                    // กระจายไปทุก Dropdown (ที่มี class 'namespace-select')
-                    const selects = document.querySelectorAll('.namespace-select');
-                    selects.forEach(select => {
-                        select.innerHTML = options.map(opt => 
-                            `<option value="${opt.value}">${opt.label}</option>`
-                        ).join('');
-                    });
-                }
-            } catch (e) {
-                console.error("Failed to load namespaces:", e);
-                // Fallback เผื่อ API พัง
-                document.querySelectorAll('.namespace-select').forEach(s => {
-                    s.innerHTML = '<option value="global">Global (Fallback)</option>';
-                });
-            }
+        function initNamespaces() {
+            const selects = document.querySelectorAll('.namespace-select');
+            selects.forEach(select => {
+                select.innerHTML = AVAILABLE_BUS.map(opt => 
+                    `<option value="${opt.value}">${opt.label}</option>`
+                ).join('');
+            });
         }
 
         function switchTab(tab) {
@@ -261,7 +193,7 @@
             event.target.classList.add('active');
         }
 
-        // --- Core Functions ---
+        // --- Action Functions (Connected to REAL Backend) ---
 
         async function startFile() {
             const file = document.getElementById('file-input').files[0];
@@ -272,6 +204,16 @@
             fd.append("namespace", document.getElementById('ns-file').value);
 
             await sendRequest(`${API_BASE}/train/upload`, fd, true);
+        }
+
+        async function startText() {
+            const payload = {
+                text: document.getElementById('text-input').value,
+                namespace: document.getElementById('ns-text').value,
+                source: "manual-input"
+            };
+            if(!payload.text) return alert("Enter text");
+            await sendRequest(`${API_BASE}/train`, JSON.stringify(payload));
         }
 
         async function startUrl() {
@@ -296,38 +238,15 @@
             await sendRequest(`${API_BASE}/train/github`, JSON.stringify(payload));
         }
 
-        async function startDrive() {
-            const file = document.getElementById('drive-key').files[0];
-            if(!file) return alert("Upload Service Account JSON key");
-
-            const fd = new FormData();
-            fd.append("folder_id", document.getElementById('drive-id').value);
-            fd.append("namespace", document.getElementById('ns-drive').value);
-            fd.append("file", file);
-
-            await sendRequest(`${API_BASE}/train/drive`, fd, true);
-        }
-
-        async function startText() {
-            const payload = {
-                text: document.getElementById('text-input').value,
-                namespace: document.getElementById('ns-text').value
-            };
-            if(!payload.text) return alert("Enter text");
-            await sendRequest(`${API_BASE}/train`, JSON.stringify(payload));
-        }
-
         async function cancelJob() {
-            if(!confirm("Are you sure you want to stop?")) return;
-            const token = localStorage.getItem("admin_token");
-            await fetch(`${API_BASE}/train/cancel`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}` }});
+            if(!confirm("Stop current operation?")) return;
+            await fetch(`${API_BASE}/train/cancel`, { method: 'POST' });
         }
 
         // --- Helper & Monitor ---
 
         async function sendRequest(url, body, isFile=false) {
-            const token = localStorage.getItem("admin_token");
-            const headers = { 'Authorization': `Bearer ${token}` };
+            const headers = {};
             if (!isFile) headers['Content-Type'] = 'application/json';
 
             try {
@@ -335,10 +254,10 @@
                 const data = await res.json();
                 
                 if (res.ok) {
-                    alert(`✅ Job Started: ${data.message}`);
+                    // Start monitoring immediately
                     startMonitoring();
                 } else {
-                    alert(`❌ Error: ${data.detail}`);
+                    alert(`❌ Error: ${data.detail || 'Unknown error'}`);
                 }
             } catch (e) { alert(`Network Error: ${e.message}`); }
         }
@@ -350,16 +269,19 @@
             
             monitorInterval = setInterval(async () => {
                 try {
+                    // Poll Real Status from Backend
                     const res = await fetch(`${API_BASE}/train/status`);
                     const state = await res.json();
+                    
                     updateUI(state);
 
-                    if (!state.is_running && state.progress === 100) {
+                    // Stop if finished
+                    if (!state.is_running && state.progress >= 100) {
                         stopMonitoring(true);
-                    } else if (!state.is_running && state.status === "Failed") {
+                    } else if (!state.is_running && state.status.includes("Failed")) {
                         stopMonitoring(false);
                     }
-                } catch (e) { console.error(e); }
+                } catch (e) { console.error("Monitor Error:", e); }
             }, 1000);
         }
 
@@ -368,7 +290,7 @@
             isRunning = false;
             document.getElementById('btn-cancel').style.display = 'none';
             document.getElementById('status-dot').className = "dot";
-            if(success) alert("🎉 Job Completed Successfully!");
+            if(success) alert("Job Completed!");
         }
 
         function updateUI(state) {
@@ -376,11 +298,24 @@
             document.getElementById('status-dot').className = state.is_running ? "dot active" : "dot";
             document.getElementById('progress-fill').style.width = `${state.progress}%`;
             document.getElementById('progress-percent').innerText = `${state.progress}%`;
-            document.getElementById('progress-details').innerText = `${state.processed_chunks}/${state.total_chunks} Chunks`;
-            document.getElementById('eta').innerText = state.estimated_remaining;
+            
+            // Handle details (chunks / eta)
+            const details = `${state.processed_chunks || 0}/${state.total_chunks || 0} Chunks`;
+            document.getElementById('progress-details').innerText = details;
+            
+            if(state.estimated_remaining) {
+                document.getElementById('eta').innerText = state.estimated_remaining;
+            }
+
             const consoleBox = document.getElementById('console');
-            consoleBox.innerHTML = state.logs.map(l => `<div class="log-line">${l}</div>`).join('');
-            consoleBox.scrollTop = consoleBox.scrollHeight;
+            // Clear console first if starting new job (optional, but cleaner)
+            if (state.progress === 0 && state.logs.length <= 1) consoleBox.innerHTML = '';
+            
+            // Render Logs
+            if(state.logs && state.logs.length > 0) {
+                consoleBox.innerHTML = state.logs.map(l => `<div class="log-line">${l}</div>`).join('');
+                consoleBox.scrollTop = consoleBox.scrollHeight;
+            }
         }
     </script>
 </body>

@@ -1,361 +1,353 @@
-(function() {
-    // ===============================================
-    // ⚙️ ตั้งค่า Server
-    // ===============================================
-    // const BASE_URL = "https://carmen-chatbot-api.onrender.com"; // ☁️ สำหรับ Render
-    const BASE_URL = ""; 
+export class CarmenBot {
+    constructor(config = {}) {
+        // 1. API URL Configuration
+        const defaultUrl = "https://carmen-chatbot-api.onrender.com"; 
+        const urlToUse = config.apiUrl || defaultUrl;
+        this.apiBase = urlToUse.replace(/\/$/, "");
 
-    const API_URL_CHAT = `${BASE_URL}/chat`; 
-    const API_URL_HISTORY = `${BASE_URL}/chat/history`;
-    // ===============================================
+        // 2. User & Context Configuration (New Params)
+        this.bu = config.bu || "global";          // Default to 'global' if not provided
+        this.username = config.user || "Guest";   // Default username
+        this.theme = config.theme || null;        // Optional theme
+        this.title = config.title || null;        // Optional title
+        this.prompt_extend = config.prompt_extend || null; // Optional prompt extension
 
-    // 💡 รายการคำถามแนะนำ
-    const SUGGESTED_QUESTIONS = [
-        "กดปุ่ม refresh ใน workbook ไม่ได้ ทำยังไง",
+        // Session Management (Generate or Load)
+        this.sessionId = localStorage.getItem(`carmen_sess_${this.bu}_${this.username}`);
+        if (!this.sessionId) {
+            this.sessionId = `sess_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+            localStorage.setItem(`carmen_sess_${this.bu}_${this.username}`, this.sessionId);
+        }
+
+        // Suggested Questions
+        this.suggestedQuestions = [
+            "กดปุ่ม refresh ใน workbook ไม่ได้ ทำยังไง",
             "บันทึกใบกำกับภาษีซื้อ ใน excel แล้ว import ได้หรือไม่",
             "program carmen สามารถ upload file เข้า program RDPrep ของสรรพากรได้ หรือไม่",
             "ฉันสามารถสร้าง ใบเสร็จรับเงิน โดยไม่เลือก Tax Invoice ได้หรือไม่",
             "ฉันสามารถบันทึก JV โดยที่ debit และ credit ไม่เท่ากันได้หรือไม่"
-        
-    ];
+        ];
 
-    let accessToken = "";
-    let currentUser = "";
-    
-    // สร้าง Widget Container
-    let container = document.getElementById('carmen-chat-widget');
-    if (!container) {
-        container = document.createElement('div');
+        this.init();
+    }
+
+    init() {
+        this.injectStyles();
+        this.createDOM();
+        this.attachEvents();
+        this.setupGlobalFunctions();
+
+        // No Login check needed anymore. Always show launcher.
+        this.showLauncher();
+        
+        // Update User Display Name in UI
+        const userDisplay = document.getElementById('carmenUserDisplay');
+        if (userDisplay) {
+            userDisplay.innerText = `${this.bu !== 'global' ? `[${this.bu}] ` : ''}${this.username}`;
+        }
+
+        this.loadHistory(); // Now loads based on BU + SessionID
+    }
+
+    // ... (injectStyles method remains the same - omitted for brevity unless requested) ...
+    injectStyles() {
+        if (document.getElementById('carmen-style')) return;
+        
+        const fontLink = document.createElement('link');
+        fontLink.href = 'https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600&display=swap';
+        fontLink.rel = 'stylesheet';
+        document.head.appendChild(fontLink);
+
+        const styles = `
+            #carmen-chat-widget { position: fixed; bottom: 20px; right: 20px; z-index: 99990; font-family: 'Sarabun', sans-serif; line-height: 1.5; }
+            #carmen-chat-widget * { box-sizing: border-box; color: #334155; }
+
+            /* Launcher & Icons */
+            .chat-btn { width: 60px; height: 60px; background: #2563eb; border-radius: 50%; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4); cursor: pointer; display: flex; justify-content: center; align-items: center; transition: all 0.3s; display: none; }
+            .chat-btn:hover { transform: scale(1.1); background: #1e40af; }
+            .chat-btn svg { width: 28px; height: 28px; fill: white !important; }
+            .chat-btn svg path { fill: white !important; }
+
+            .chat-box { position: absolute; bottom: 80px; right: 0; width: 380px; height: 550px; max-height: 80vh; background: #ffffff; border-radius: 16px; box-shadow: 0 5px 40px rgba(0,0,0,0.16); display: none; flex-direction: column; overflow: hidden; border: 1px solid #e5e7eb; animation: carmenSlideUp 0.3s ease; }
+            .chat-box.open { display: flex; }
+            @keyframes carmenSlideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+            /* Header */
+            .chat-header { background: #2563eb; color: white !important; padding: 16px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1e40af; }
+            .chat-header h3 { margin: 0; font-size: 16px; font-weight: 600; color: white !important; }
+            .chat-header span { font-size: 12px; opacity: 0.9; color: white !important; }
+            .header-tools { display: flex; gap: 12px; }
+            .icon-btn { cursor: pointer; opacity: 0.8; transition: 0.2s; display: flex; align-items: center; }
+            .icon-btn:hover { opacity: 1; transform: scale(1.1); }
+            .icon-btn svg { width: 18px; height: 18px; fill: white !important; }
+            .icon-btn svg path { fill: white !important; }
+
+            .chat-body { flex: 1; padding: 16px; overflow-y: auto; background: #f8fafc; display: flex; flex-direction: column; gap: 12px; scroll-behavior: smooth; }
+            .chat-body::-webkit-scrollbar { width: 6px; }
+            .chat-body::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 3px; }
+
+            /* Messages */
+            .msg { max-width: 80%; padding: 12px 16px; font-size: 14px; border-radius: 12px; word-wrap: break-word; position: relative !important; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+            .msg.user { background: #2563eb; color: white !important; align-self: flex-end; border-radius: 12px 12px 2px 12px; }
+            .msg.bot { background: white; color: #334155; align-self: flex-start; border-radius: 12px 12px 12px 2px; border: 1px solid #e2e8f0; padding-bottom: 32px !important; }
+
+            .suggestions-container { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; animation: fadeIn 0.5s ease; align-self: flex-end; justify-content: flex-end; }
+            .suggestion-chip { background: white; border: 1px solid #cbd5e1; border-radius: 20px; padding: 6px 12px; font-size: 12px; color: #475569; cursor: pointer; transition: 0.2s; }
+            .suggestion-chip:hover { background: #2563eb; color: white; border-color: #2563eb; }
+
+            /* Tools (Copy/Feedback) */
+            .copy-btn { position: absolute; bottom: 6px; right: 8px; width: 24px; height: 24px; background: transparent; border: none; cursor: pointer; opacity: 0.6; transition: 0.2s; display: flex !important; align-items: center; justify-content: center; z-index: 10; }
+            .copy-btn:hover { opacity: 1; background: #f1f5f9; border-radius: 4px; }
+            .copy-btn svg { width: 14px; height: 14px; fill: #64748b !important; }
+            .copy-btn svg path { fill: #64748b !important; }
+            
+            .feedback-container { position: absolute; bottom: 6px; right: 40px; display: flex; gap: 8px; z-index: 10; }
+            .feedback-btn { font-size: 12px; cursor: pointer; opacity: 0.5; transition: 0.2s; }
+            .feedback-btn:hover { opacity: 1; transform: scale(1.2); }
+
+            .typing-indicator { font-size: 12px; color: #94a3b8; margin-left: 16px; margin-bottom: 5px; display: none; }
+            .msg.bot.typing::after { content: '▋'; animation: blink 1s infinite; }
+            @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+            .chat-footer { padding: 12px; background: white; border-top: 1px solid #e5e7eb; display: flex; gap: 8px; align-items: center; }
+            .chat-input { 
+                flex: 1; padding: 10px 14px; border-radius: 24px; 
+                border: 1px solid #cbd5e1; outline: none; background: #f8fafc; 
+                font-family: 'Sarabun', sans-serif; font-size: 14px;
+                color: #334155 !important;
+            }
+            .chat-input::placeholder { color: #94a3b8 !important; opacity: 1; }
+            .chat-input:focus { border-color: #2563eb; background: white; }
+            
+            .send-btn { width: 36px; height: 36px; background: #2563eb; color: white; border: none; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s; padding: 0; }
+            .send-btn:hover { background: #1e40af; }
+            .send-btn svg { width: 18px !important; height: 18px !important; fill: white !important; display: block; }
+            .send-btn svg path { fill: white !important; stroke: none !important; }
+        `;
+        const styleSheet = document.createElement("style");
+        styleSheet.id = 'carmen-style';
+        styleSheet.innerText = styles;
+        document.head.appendChild(styleSheet);
+    }
+
+    createDOM() {
+        if (document.getElementById('carmen-chat-widget')) return;
+
+        const container = document.createElement('div');
         container.id = 'carmen-chat-widget';
-        container.style.display = 'none'; 
+        container.innerHTML = `
+            <div class="chat-btn" id="carmen-launcher">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="white"><path fill="white" d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
+            </div>
+            <div class="chat-box" id="carmenChatWindow">
+                <div class="chat-header">
+                   <div style="display:flex; align-items:center; gap:10px;">
+                     <div style="font-size:24px;">👩‍💼</div>
+                     <div>
+                       <h3>${this.title || "Carmen AI"}</h3>
+                       <span id="carmenUserDisplay">Guest Mode</span>
+                     </div>
+                   </div>
+                   <div class="header-tools">
+                     <div class="icon-btn" id="carmen-clear-btn" title="ล้างแชท"><svg viewBox="0 0 24 24" width="24" height="24" fill="white"><path fill="white" d="M15 16h4v2h-4zm0-8h7v2h-7zm0 4h6v2h-6zM3 18c0 1.1.9 2 2 2h6c1.1 0 2-.9 2-2V8H3v10zM14 5h-3l-1-1H6L5 5H2v2h12z"/></svg></div>
+                     <div class="icon-btn" id="carmen-close-btn"><svg viewBox="0 0 24 24" width="24" height="24" fill="white"><path fill="white" d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></div>
+                   </div>
+                </div>
+                <div class="chat-body" id="carmenChatBody"></div>
+                <div class="typing-indicator" id="carmenTypingIndicator">Carmen กำลังพิมพ์...</div>
+                <div class="chat-footer">
+                  <input type="text" id="carmenUserInput" class="chat-input" placeholder="พิมพ์ข้อความ...">
+                  <button class="send-btn" id="carmen-send-btn">
+                    <svg viewBox="0 0 24 24" width="24" height="24" fill="white" style="fill:white;">
+                        <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" fill="white" style="fill:white;"/>
+                    </svg>
+                  </button>
+                </div>
+            </div>
+        `;
         document.body.appendChild(container);
     }
 
-    // 🎨 CSS Style (เขียนใหม่ แก้ Bug ทับกัน)
-    const styles = `
-      @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600&display=swap');
-      
-      #carmen-chat-widget { 
-          position: fixed; bottom: 20px; right: 20px; z-index: 99990; 
-          font-family: 'Sarabun', sans-serif; 
-      }
-      
-      /* ปุ่มเปิดแชท (กลมๆ มุมขวาล่าง) */
-      .chat-btn { 
-          width: 60px; height: 60px; 
-          background: #2563eb; /* สีน้ำเงิน */
-          border-radius: 50%; 
-          box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4); 
-          cursor: pointer; 
-          display: flex; justify-content: center; align-items: center; 
-          transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
-      }
-      .chat-btn:hover { transform: scale(1.1); background: #1e40af; }
-      .chat-btn svg { width: 28px; height: 28px; fill: white; }
+    setupGlobalFunctions() {
+        // Updated Feedback function to work without Token Auth (if API allows) or just log locally for now
+        // Assuming API might still need some identification for feedback
+        window.carmenRate = async (msgId, score, btnElement) => {
+            const parent = btnElement.parentElement;
+            parent.innerHTML = score === 1 
+                ? '<span style="font-size:11px; color:#16a34a;">ขอบคุณค่ะ ❤️</span>' 
+                : '<span style="font-size:11px; color:#991b1b;">ขอบคุณค่ะ 🙏</span>';
+            
+            try {
+                // If the backend feedback endpoint is also open (no auth), this works.
+                // Otherwise, you might need to adjust backend or skip this.
+                await fetch(`${this.apiBase}/chat/feedback/${msgId}`, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json'
+                        // Auth header removed
+                    },
+                    body: JSON.stringify({ score: score })
+                });
+            } catch(e) { console.error(e); }
+        };
+    }
 
-      /* หน้าต่างแชทหลัก */
-      .chat-box { 
-          position: absolute; bottom: 80px; right: 0; 
-          width: 380px; height: 550px; max-height: 80vh; 
-          background: #ffffff; 
-          border-radius: 16px; 
-          box-shadow: 0 5px 40px rgba(0,0,0,0.16); 
-          display: none; flex-direction: column; overflow: hidden; 
-          border: 1px solid #e5e7eb;
-          animation: slideUp 0.3s ease;
-      }
-      .chat-box.open { display: flex; }
-      @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    attachEvents() {
+        const launcher = document.getElementById('carmen-launcher');
+        const win = document.getElementById('carmenChatWindow');
+        const closeBtn = document.getElementById('carmen-close-btn');
+        const clearBtn = document.getElementById('carmen-clear-btn');
+        const sendBtn = document.getElementById('carmen-send-btn');
+        const input = document.getElementById('carmenUserInput');
 
-      /* ส่วนหัว (Header) */
-      .chat-header { 
-          background: #2563eb; 
-          color: white; 
-          padding: 16px; 
-          display: flex; justify-content: space-between; align-items: center; 
-          border-bottom: 1px solid #1e40af;
-      }
-      .chat-header h3 { margin: 0; font-size: 16px; font-weight: 600; }
-      .chat-header span { font-size: 12px; opacity: 0.9; }
-      .header-tools { display: flex; gap: 12px; }
-      .icon-btn { cursor: pointer; opacity: 0.8; transition: 0.2s; }
-      .icon-btn:hover { opacity: 1; transform: scale(1.1); }
-      .icon-btn svg { width: 18px; height: 18px; fill: white; }
+        launcher.onclick = () => win.classList.toggle('open');
+        closeBtn.onclick = () => win.classList.remove('open');
+        
+        clearBtn.onclick = () => {
+            // Clear UI
+            document.getElementById('carmenChatBody').innerHTML = '';
+            // Generate New Session ID
+            this.sessionId = `sess_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+            localStorage.setItem(`carmen_sess_${this.bu}_${this.username}`, this.sessionId);
+            
+            this.addMessage(`ล้างแชทเรียบร้อยค่ะ ✨ (New Session Started)`, 'bot', true);
+            setTimeout(() => this.addSuggestions(), 1000);
+        };
 
-      /* พื้นที่แชท (Body) - จุดสำคัญที่แก้ Bug */
-      .chat-body { 
-          flex: 1; 
-          padding: 16px; 
-          overflow-y: auto; 
-          background: #f8fafc; /* พื้นหลังสีเทาอ่อนมาก */
-          display: flex; 
-          flex-direction: column; /* เรียงแนวตั้ง */
-          gap: 12px; /* ระยะห่างระหว่างข้อความ */
-      }
-      
-      /* กล่องข้อความ (Common) */
-      .msg { 
-          max-width: 80%; 
-          padding: 12px 16px; 
-          font-size: 14px; 
-          line-height: 1.5; 
-          border-radius: 12px; 
-          word-wrap: break-word; 
-          position: relative; 
-          box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-      }
+        sendBtn.onclick = () => this.sendMessage();
+        input.onkeypress = (e) => { if(e.key === 'Enter') this.sendMessage(); };
+    }
 
-      /* ข้อความ User (ขวา/สีน้ำเงิน) */
-      .msg.user { 
-          background: #2563eb; 
-          color: white; 
-          align-self: flex-end; /* ชิดขวา */
-          border-radius: 12px 12px 2px 12px; 
-      }
-      
-      /* ข้อความ Bot (ซ้าย/สีขาว) */
-      .msg.bot { 
-          background: white; 
-          color: #334155; 
-          align-self: flex-start; /* ชิดซ้าย */
-          border-radius: 12px 12px 12px 2px; 
-          border: 1px solid #e2e8f0; 
-          padding-bottom: 32px; /* เผื่อที่ให้ปุ่ม Copy/Feedback */
-      }
+    // Removed login() method completely as requested
 
-      /* Suggestion Chips (ปุ่มคำถามแนะนำ) */
-      .suggestions-container { 
-          display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; 
-          animation: fadeIn 0.5s ease; align-self: flex-end; justify-content: flex-end;
-      }
-      .suggestion-chip {
-          background: white; border: 1px solid #cbd5e1; border-radius: 20px;
-          padding: 6px 12px; font-size: 12px; color: #475569; cursor: pointer;
-          transition: 0.2s;
-      }
-      .suggestion-chip:hover { background: #2563eb; color: white; border-color: #2563eb; }
+    showLauncher() {
+        const btn = document.getElementById('carmen-launcher');
+        if(btn) btn.style.display = 'flex';
+        // Auto-open is optional, removed to be less intrusive for public widget
+        // setTimeout(() => { ... }, 800); 
+    }
 
-      /* ปุ่ม Copy & Feedback */
-      .copy-btn {
-          position: absolute; bottom: 6px; right: 8px;
-          width: 24px; height: 24px;
-          background: transparent; border: none; cursor: pointer;
-          opacity: 0.6; transition: 0.2s; display: flex; align-items: center; justify-content: center;
-      }
-      .copy-btn:hover { opacity: 1; background: #f1f5f9; border-radius: 4px; }
-      .copy-btn svg { width: 14px; height: 14px; fill: #64748b; }
-      
-      .feedback-container {
-          position: absolute; bottom: 6px; right: 40px; /* อยู่ซ้ายปุ่ม Copy */
-          display: flex; gap: 8px;
-      }
-      .feedback-btn { font-size: 12px; cursor: pointer; opacity: 0.5; transition: 0.2s; }
-      .feedback-btn:hover { opacity: 1; transform: scale(1.2); }
-
-      /* Animation ตอนพิมพ์ */
-      .typing-indicator { font-size: 12px; color: #94a3b8; margin-left: 16px; margin-bottom: 5px; display: none; }
-      .msg.bot.typing::after { content: '▋'; animation: blink 1s infinite; }
-      @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
-
-      /* ส่วน Footer (ช่องพิมพ์) */
-      .chat-footer { 
-          padding: 12px; background: white; border-top: 1px solid #e5e7eb; 
-          display: flex; gap: 8px; align-items: center; 
-      }
-      .chat-input { 
-          flex: 1; padding: 10px 14px; 
-          border-radius: 24px; border: 1px solid #cbd5e1; outline: none; 
-          background: #f8fafc; font-family: 'Sarabun', sans-serif; font-size: 14px;
-      }
-      .chat-input:focus { border-color: #2563eb; background: white; }
-      
-      .send-btn { 
-          width: 36px; height: 36px; 
-          background: #2563eb; color: white; border: none; border-radius: 50%; 
-          cursor: pointer; display: flex; align-items: center; justify-content: center; 
-          transition: 0.2s; 
-      }
-      .send-btn:hover { background: #1e40af; }
-      .send-btn svg { width: 16px; height: 16px; fill: white; }
-    `;
-    const styleSheet = document.createElement("style");
-    styleSheet.innerText = styles;
-    document.head.appendChild(styleSheet);
-
-    // HTML Structure
-    container.innerHTML = `
-      <div class="chat-btn" onclick="window.carmenToggleChat()">
-        <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
-      </div>
-      <div class="chat-box" id="carmenChatWindow">
-        <div class="chat-header">
-           <div style="display:flex; align-items:center; gap:10px;">
-             <div style="font-size:24px;">👩‍💼</div>
-             <div>
-               <h3>Carmen AI</h3>
-               <span id="carmenUserDisplay">Guest Mode</span>
-             </div>
-           </div>
-           <div class="header-tools">
-             <div class="icon-btn" onclick="window.carmenClearChat()" title="ล้างแชท"><svg viewBox="0 0 24 24"><path d="M15 16h4v2h-4zm0-8h7v2h-7zm0 4h6v2h-6zM3 18c0 1.1.9 2 2 2h6c1.1 0 2-.9 2-2V8H3v10zM14 5h-3l-1-1H6L5 5H2v2h12z"/></svg></div>
-             <div class="icon-btn" onclick="window.carmenToggleChat()"><svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></div>
-           </div>
-        </div>
-        <div class="chat-body" id="carmenChatBody"></div>
-        <div class="typing-indicator" id="carmenTypingIndicator">Carmen กำลังพิมพ์...</div>
-        <div class="chat-footer">
-          <input type="text" id="carmenUserInput" class="chat-input" placeholder="พิมพ์ข้อความ..." onkeypress="window.carmenCheckEnter(event)">
-          <button class="send-btn" onclick="window.carmenSendMessage()">
-            <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
-          </button>
-        </div>
-      </div>
-    `;
-
-    // ==========================================
-    // 🧠 Javascript Logic
-    // ==========================================
-
-    window.carmenStartSession = async function(token, username) {
-        accessToken = token;
-        currentUser = username;
-        document.getElementById('carmen-chat-widget').style.display = 'block';
-        document.getElementById('carmenUserDisplay').innerText = `User: ${username}`;
-        document.getElementById('carmenChatWindow').classList.add('open');
-
+    async loadHistory() {
         const body = document.getElementById('carmenChatBody');
-        body.innerHTML = ''; 
-
+        body.innerHTML = '';
+        
         try {
-            const res = await fetch(API_URL_HISTORY, {
-                headers: { 'Authorization': `Bearer ${accessToken}` }
+            // Using Query Params instead of Auth Header
+            const params = new URLSearchParams({
+                bu: this.bu,
+                session_id: this.sessionId
             });
+
+            const res = await fetch(`${this.apiBase}/chat/history?${params.toString()}`, {
+                method: 'GET'
+            });
+
             if (res.ok) {
                 const history = await res.json();
                 if (history.length > 0) {
-                    history.forEach(msg => {
-                        addMessage(msg.message, msg.sender, false);
-                    });
-                    // ขีดคั่นประวัติ
+                    history.forEach(msg => this.addMessage(msg.message, msg.sender, false));
                     const divider = document.createElement('div');
                     divider.style.cssText = 'text-align:center; font-size:11px; color:#94a3b8; margin:10px 0;';
                     divider.innerText = '— ประวัติการสนทนาล่าสุด —';
                     body.appendChild(divider);
                 } else {
-                    addMessage(`สวัสดีค่ะคุณ ${username} 👋<br>มีอะไรให้ Carmen ช่วยไหมคะ?`, 'bot', true);
+                    this.addMessage(`สวัสดีค่ะ 👋<br>มีอะไรให้ Carmen ช่วยไหมคะ?`, 'bot', true);
                 }
+            } else {
+                throw new Error("Failed to load history");
             }
         } catch (e) {
-            addMessage(`สวัสดีค่ะคุณ ${username} 👋<br>มีอะไรให้ Carmen ช่วยไหมคะ?`, 'bot', true);
+            console.warn("History Load Error:", e);
+            this.addMessage(`สวัสดีค่ะ 👋<br>มีอะไรให้ Carmen ช่วยไหมคะ?`, 'bot', true);
         }
+        setTimeout(() => this.addSuggestions(), 800);
+    }
 
-        setTimeout(() => addSuggestions(), 800); 
-    };
-
-    window.carmenLogoutAction = function() {
-        accessToken = "";
-        currentUser = "";
-        document.getElementById('carmenChatBody').innerHTML = '';
-        document.getElementById('carmenChatWindow').classList.remove('open');
-        document.getElementById('carmen-chat-widget').style.display = 'none';
-        if(window.onCarmenLogout) window.onCarmenLogout();
-    };
-
-    window.carmenToggleChat = function() {
-        document.getElementById('carmenChatWindow').classList.toggle('open');
-    };
-
-    window.carmenClearChat = function() {
-        document.getElementById('carmenChatBody').innerHTML = '';
-        addMessage(`ล้างแชทเรียบร้อยค่ะ ✨`, 'bot', true);
-        setTimeout(() => addSuggestions(), 1000);
-    };
-
-    window.carmenCheckEnter = function(e) { if(e.key === 'Enter') window.carmenSendMessage(); };
-
-    window.carmenSendMessage = async function() {
+    async sendMessage() {
         const input = document.getElementById('carmenUserInput');
         const text = input.value.trim();
         if(!text) return;
         
-        addMessage(text, 'user', false);
+        this.addMessage(text, 'user', false);
         input.value = '';
         
-        // ซ่อน Suggestion เดิม
         const suggestions = document.querySelectorAll('.suggestions-container');
         suggestions.forEach(el => el.style.display = 'none');
 
         document.getElementById('carmenTypingIndicator').style.display = 'block';
-        scrollToBottom();
+        this.scrollToBottom();
 
         try {
-            const response = await fetch(API_URL_CHAT, {
+            // Prepare Payload
+            const payload = {
+                text: text,
+                bu: this.bu,
+                username: this.username,
+                session_id: this.sessionId
+            };
+
+            // Add optional params if they exist
+            if (this.theme) payload.theme = this.theme;
+            if (this.title) payload.title = this.title;
+            if (this.prompt_extend) payload.prompt_extend = this.prompt_extend;
+
+            const response = await fetch(`${this.apiBase}/chat`, {
                 method: 'POST',
                 headers: { 
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${accessToken}`
+                    'Content-Type': 'application/json'
+                    // No Authorization header needed
                 },
-                body: JSON.stringify({ text: text })
+                body: JSON.stringify(payload)
             });
-
-            if(response.status === 401) {
-                alert("Session หมดอายุ กรุณา Login ใหม่");
-                window.carmenLogoutAction();
-                return;
-            }
 
             const data = await response.json();
             document.getElementById('carmenTypingIndicator').style.display = 'none';
             
             if(data.answer) {
-                addMessage(data.answer, 'bot', true, data.message_id);
-            } else {
-                addMessage("ขออภัยค่ะ ไม่ได้รับคำตอบ", 'bot', true);
+                this.addMessage(data.answer, 'bot', true, data.message_id);
             }
         } catch (error) {
+            console.error(error);
             document.getElementById('carmenTypingIndicator').style.display = 'none';
-            addMessage("⚠️ Error: เชื่อมต่อไม่ได้", 'bot', true);
+            this.addMessage("⚠️ Error: เชื่อมต่อไม่ได้", 'bot', true);
         }
-    };
-
-    function getYoutubeId(url) {
-        const match = url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/);
-        return match ? match[1] : null;
     }
 
-    function addSuggestions() {
+    addSuggestions() {
         const body = document.getElementById('carmenChatBody');
         const div = document.createElement('div');
         div.className = 'suggestions-container';
 
-        SUGGESTED_QUESTIONS.forEach(q => {
+        this.suggestedQuestions.forEach(q => {
             const chip = document.createElement('div');
             chip.className = 'suggestion-chip';
             chip.innerText = q;
-            chip.onclick = function() {
+            chip.onclick = () => {
                 document.getElementById('carmenUserInput').value = q;
-                window.carmenSendMessage();
+                this.sendMessage();
             };
             div.appendChild(chip);
         });
-
         body.appendChild(div);
-        scrollToBottom();
+        this.scrollToBottom();
     }
 
-    // 🪄 Create Message Element
-    function addMessage(text, sender, animate = false, msgId = null) {
+    getYoutubeId(url) {
+        const match = url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/);
+        return match ? match[1] : null;
+    }
+
+   addMessage(text, sender, animate = false, msgId = null) {
         const body = document.getElementById('carmenChatBody');
         const div = document.createElement('div');
         div.className = `msg ${sender}`;
         
         let formattedText = text.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>').replace(/\n/g, '<br>');
 
-        // YouTube Logic
         let videoContent = "";
         const urlRegex = /(https?:\/\/(?:www\.)?(?:youtube\.com|youtu\.be)[^\s<)"']+)/g;
         formattedText = formattedText.replace(urlRegex, (url) => {
-            const videoId = getYoutubeId(url);
+            const videoId = this.getYoutubeId(url);
             if (videoId) {
                 videoContent += `<div style="position:relative; width:100%; padding-bottom:56.25%; height:0; border-radius:8px; overflow:hidden; margin-top:8px;">
                                     <iframe src="https://www.youtube.com/embed/${videoId}?rel=0" style="position:absolute; top:0; left:0; width:100%; height:100%; border:0;" allowfullscreen></iframe>
@@ -365,16 +357,25 @@
             return `<a href="${url}" target="_blank" style="color:#2563eb;">${url}</a>`;
         });
 
-        // Tools HTML
+        
         let toolsHTML = '';
         if (sender === 'bot') {
-            // Copy Button
             toolsHTML += `
-                <button class="copy-btn" title="คัดลอก">
-                    <svg viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+                <button class="copy-btn" title="คัดลอก" style="
+                    display: flex !important;
+                    background-color: transparent !important; 
+                    border: none !important;
+                    opacity: 0.6 !important; 
+                    width: 24px !important; 
+                    height: 24px !important;
+                ">
+                    <svg viewBox="0 0 24 24" width="16" height="16" style="display:block; min-width:16px;">
+                        <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z" 
+                              fill="#64748b" style="fill:#64748b !important;" />
+                    </svg>
                 </button>
             `;
-            // Feedback Buttons
+            
             if (msgId) {
                 toolsHTML += `
                     <div class="feedback-container">
@@ -387,73 +388,72 @@
 
         body.appendChild(div);
 
-        // Copy Logic
         const btn = div.querySelector('.copy-btn');
         if (btn) {
-            btn.onclick = function() {
-                const rawText = text.replace(/\*\*/g, '').replace(/<br>/g, '\n'); 
+            btn.onclick = () => {
+                const rawText = text.replace(/\*\*(.*?)\*\*/g, '$1').replace(/<br>/g, '\n'); 
                 navigator.clipboard.writeText(rawText).then(() => {
-                    btn.innerHTML = `<svg viewBox="0 0 24 24" style="fill:#16a34a"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>`;
+                  
+                    btn.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" fill="#16a34a"/></svg>`;
+                    btn.style.opacity = '1'; 
+                    
                     setTimeout(() => {
-                        btn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>`;
+                        
+                        btn.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" style="display:block; min-width:16px;"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z" fill="#64748b" style="fill:#64748b !important;"/></svg>`;
+                        btn.style.opacity = '0.6'; 
                     }, 2000);
                 });
             };
         }
 
-        // Display Content
+       
         if (sender === 'bot' && animate) {
             div.classList.add('typing');
-            let i = 0;
-            const speed = 10; // พิมพ์เร็วขึ้นนิดนึง
-            function typeWriter() {
+            let i = 0; const speed = 10;
+            const fullContent = formattedText + videoContent + toolsHTML;
+            div.innerHTML = ""; 
+            const typeWriter = () => {
                 if (i < formattedText.length) {
                     if (formattedText.charAt(i) === '<') {
                         let tag = '';
                         while (formattedText.charAt(i) !== '>' && i < formattedText.length) { tag += formattedText.charAt(i); i++; }
-                        tag += '>'; i++;
-                        div.innerHTML += tag;
-                    } else {
-                        div.innerHTML += formattedText.charAt(i);
-                        i++;
-                    }
-                    scrollToBottom();
-                    setTimeout(typeWriter, speed);
+                        tag += '>'; i++; div.innerHTML += tag;
+                    } else { div.innerHTML += formattedText.charAt(i); i++; }
+                    this.scrollToBottom(); setTimeout(typeWriter, speed);
                 } else {
                     div.classList.remove('typing');
-                    div.innerHTML = formattedText + videoContent + toolsHTML; // แปะ Tools ตอนจบ
-                    scrollToBottom();
+                    div.innerHTML = fullContent; 
+                    const newBtn = div.querySelector('.copy-btn');
+                    if(newBtn) {
+                         newBtn.onclick = () => {
+                            const rawText = text.replace(/\*\*(.*?)\*\*/g, '$1').replace(/<br>/g, '\n'); 
+                            navigator.clipboard.writeText(rawText).then(() => {
+                                newBtn.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" fill="#16a34a"/></svg>`;
+                                newBtn.style.opacity = '1';
+                                setTimeout(() => {
+                                    newBtn.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" style="display:block; min-width:16px;"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z" fill="#64748b" style="fill:#64748b !important;"/></svg>`;
+                                    newBtn.style.opacity = '0.6';
+                                }, 2000);
+                            });
+                         }
+                         const fbBtns = div.querySelectorAll('.feedback-btn');
+                         if(fbBtns.length > 0 && msgId) {
+                             fbBtns[0].onclick = () => window.carmenRate(msgId, 1, fbBtns[0]);
+                             fbBtns[1].onclick = () => window.carmenRate(msgId, -1, fbBtns[1]);
+                         }
+                    }
+                    this.scrollToBottom();
                 }
-            }
-            div.innerHTML = ""; 
+            };
             typeWriter();
         } else {
             div.innerHTML = formattedText + videoContent + toolsHTML;
-            scrollToBottom();
+            this.scrollToBottom();
         }
     }
 
-    function scrollToBottom() {
+    scrollToBottom() {
         const body = document.getElementById('carmenChatBody');
-        body.scrollTop = body.scrollHeight;
+        if(body) body.scrollTop = body.scrollHeight;
     }
-
-    window.carmenRate = async function(msgId, score, btnElement) {
-        const parent = btnElement.parentElement;
-        parent.innerHTML = score === 1 
-            ? '<span style="font-size:11px; color:#16a34a;">ขอบคุณค่ะ ❤️</span>' 
-            : '<span style="font-size:11px; color:#991b1b;">ขอบคุณค่ะ 🙏</span>';
-        
-        try {
-            await fetch(`${BASE_URL}/chat/feedback/${msgId}`, {
-                method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${accessToken}`
-                },
-                body: JSON.stringify({ score: score })
-            });
-        } catch(e) { console.error(e); }
-    };
-
-})();
+}

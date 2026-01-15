@@ -1,675 +1,255 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Carmen Admin Dashboard</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --bg-body: #f1f5f9;
-            --bg-card: #ffffff;
-            --text-main: #1e293b;
-            --text-muted: #64748b;
-            --border-color: #e2e8f0;
-            --primary-blue: #2563eb;
-        }
+        :root { --bg-body: #f1f5f9; --bg-card: #ffffff; --text-main: #1e293b; --primary-blue: #2563eb; --border-color: #e2e8f0; }
+        * { box-sizing: border-box; }
+        body { background-color: var(--bg-body); color: var(--text-main); font-family: 'Inter', sans-serif; margin: 0; padding: 20px; font-size: 14px; }
+        
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; background: white; padding: 16px 24px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); flex-wrap: wrap; gap: 15px; }
+        .header h1 { margin: 0; color: var(--primary-blue); font-size: 20px; }
+        
+        .controls { display: flex; gap: 10px; align-items: center; }
+        select { padding: 8px; border-radius: 6px; border: 1px solid #ccc; font-family: 'Inter'; }
+        
+        .btn-green { background: #16a34a; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 5px; }
+        .btn-refresh { background: var(--primary-blue); color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; }
+        
+        .tabs { display: flex; gap: 10px; margin-bottom: 15px; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px; }
+        .tab-btn { padding: 8px 16px; border: none; background: transparent; cursor: pointer; font-weight: 600; color: #64748b; border-radius: 6px; }
+        .tab-btn.active { background: #dbeafe; color: var(--primary-blue); }
+        
+        .tab-content { display: none; }
+        .tab-content.active { display: block; animation: fadeIn 0.3s; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* ✅ เพิ่ม: Box Sizing เพื่อการคำนวณขนาดที่แม่นยำ */
-        * {
-            box-sizing: border-box;
-        }
-
-        body {
-            background-color: var(--bg-body);
-            color: var(--text-main);
-            font-family: 'Inter', sans-serif;
-            margin: 0;
-            padding: 20px;
-            font-size: 14px;
-            /* ✅ ป้องกันการขยับซ้ายขวาของ Body */
-            overflow-x: hidden;
-        }
-
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 24px;
-            background: white;
-            padding: 16px 24px;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-            flex-wrap: wrap;
-            /* ✅ อนุญาตให้ตกบรรทัด */
-            gap: 15px;
-            /* ✅ เพิ่มระยะห่างเวลาตกบรรทัด */
-        }
-
-        .header h1 {
-            margin: 0;
-            color: var(--primary-blue);
-            font-size: 20px;
-            white-space: nowrap;
-            /* ห้ามชื่อตัดคำ */
-        }
-
-        /* ปุ่มต่างๆ */
-        .btn-group {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-        }
-
-        .btn-green {
-            background: #16a34a;
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: 500;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            transition: 0.2s;
-            white-space: nowrap;
-        }
-
-        .btn-green:hover {
-            background: #15803d;
-        }
-
-        .btn-refresh {
-            background: var(--primary-blue);
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: 500;
-            transition: 0.2s;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            white-space: nowrap;
-        }
-
-        .btn-refresh:hover {
-            background: #1e40af;
-        }
-
-        .btn-logout {
-            background: #fee2e2;
-            color: #991b1b;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: 500;
-            transition: 0.2s;
-            white-space: nowrap;
-        }
-
-        .btn-logout:hover {
-            background: #fecaca;
-        }
-
-        .tabs {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 15px;
-            /* ✅ ถ้าแท็บเยอะ ให้เลื่อนแนวนอนได้บนมือถือ */
-            overflow-x: auto;
-            padding-bottom: 5px;
-            -webkit-overflow-scrolling: touch;
-        }
-
-        .tab-btn {
-            padding: 10px 20px;
-            border: none;
-            background: #e2e8f0;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 600;
-            color: #64748b;
-            transition: 0.2s;
-            white-space: nowrap;
-            /* ห้ามชื่อแท็บแตก */
-        }
-
-        .tab-btn.active {
-            background: var(--primary-blue);
-            color: white;
-            box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2);
-        }
-
-        .tab-content {
-            display: none;
-            width: 100%;
-        }
-
-        .tab-content.active {
-            display: block;
-            animation: fadeIn 0.3s ease;
-        }
-
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(5px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .table-container {
-            background: var(--bg-card);
-            border-radius: 12px;
-            /* ✅ สำคัญมาก: ทำให้ตารางเลื่อนแนวนอนได้ถ้าจอมือถือเล็ก */
-            overflow-x: auto;
-            border: 1px solid var(--border-color);
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-            margin-bottom: 20px;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            text-align: left;
-            min-width: 600px;
-            /* ✅ กำหนดความกว้างขั้นต่ำ เพื่อให้ตารางไม่บี้ */
-        }
-
-        th {
-            background: #f8fafc;
-            color: #475569;
-            font-weight: 600;
-            padding: 14px 20px;
-            border-bottom: 2px solid var(--border-color);
-            white-space: nowrap;
-        }
-
-        td {
-            padding: 16px 20px;
-            border-bottom: 1px solid var(--border-color);
-            color: #334155;
-        }
-
-        tr:hover {
-            background-color: #f8fafc;
-        }
-
-        .cost {
-            font-family: monospace;
-            font-weight: 600;
-            color: var(--primary-blue);
-        }
-
-        .badge {
-            padding: 4px 10px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-            background: #dbeafe;
-            color: #1e40af;
-            white-space: nowrap;
-        }
-
+        .table-container { background: white; border-radius: 12px; overflow-x: auto; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+        table { width: 100%; border-collapse: collapse; text-align: left; min-width: 800px; }
+        th { background: #f8fafc; padding: 12px 20px; font-weight: 600; color: #475569; border-bottom: 2px solid #e2e8f0; }
+        td { padding: 14px 20px; border-bottom: 1px solid #e2e8f0; }
+        .cost { font-family: monospace; color: var(--primary-blue); font-weight: 600; }
+        
         /* Modal */
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.7);
-            z-index: 1000;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-            /* ✅ กันชิดขอบจอเกินไป */
-        }
-
-        .modal-content {
-            background: white;
-            padding: 20px;
-            border-radius: 12px;
-            width: 100%;
-            /* ✅ ปรับให้ยืดหยุ่น */
-            max-width: 600px;
-            /* ✅ ไม่ให้เกิน 600px บนจอใหญ่ */
-            max-height: 85vh;
-            /* ✅ ไม่ให้สูงเกินจอ */
-            overflow-y: auto;
-            /* ✅ ให้เลื่อนแนวตั้งได้ */
-        }
-
-        .model-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px;
-            border-bottom: 1px solid #eee;
-        }
-
-        .model-item:hover {
-            background: #f8fafc;
-        }
-
-        .tag {
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-size: 11px;
-            font-weight: bold;
-        }
-
-        .tag-free {
-            background: #dcfce7;
-            color: #166534;
-        }
-
-        /* =========================================
-       📱 MOBILE RESPONSIVE MEDIA QUERIES
-       ========================================= */
-        @media screen and (max-width: 768px) {
-            body {
-                padding: 10px;
-                /* ลดขอบ Body บนมือถือ */
-            }
-
-            .header {
-                flex-direction: column;
-                /* เรียงแนวตั้ง */
-                align-items: stretch;
-                /* ยืดเต็มความกว้าง */
-                padding: 15px;
-            }
-
-            .header h1 {
-                text-align: center;
-                margin-bottom: 10px;
-            }
-
-            /* จัดปุ่มใน Header ให้เต็มจอ */
-            .header div {
-                display: flex;
-                flex-direction: column;
-                gap: 10px;
-                width: 100%;
-            }
-
-            .btn-green,
-            .btn-refresh,
-            .btn-logout {
-                width: 100%;
-                justify-content: center;
-                padding: 12px;
-                /* ปุ่มใหญ่ขึ้น กดง่าย */
-                font-size: 16px;
-            }
-
-            /* Modal บนมือถือ */
-            .modal-content {
-                width: 95%;
-                margin: 0 auto;
-                max-height: 80vh;
-            }
-
-            /* ปรับ Font ในตารางไม่ให้เล็กเกินไป */
-            td,
-            th {
-                padding: 12px 15px;
-            }
-        }
+        .modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); justify-content:center; align-items:center; z-index: 999; }
+        .modal-content { background: white; padding: 20px; border-radius: 12px; width: 90%; max-width: 600px; max-height: 80vh; overflow-y: auto; }
+        .model-item { display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid #eee; }
+        .model-item:hover { background: #f8fafc; }
     </style>
 </head>
-
 <body>
 
-    <div id="login-overlay"
-        style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:9999; display:flex; justify-content:center; align-items:center;">
-        <div style="background:white; padding:40px; border-radius:12px; text-align:center; width:300px;">
-            <h2>🔒 Admin Only</h2>
-            <input type="password" id="password" placeholder="Password (admin)"
-                style="width:100%; padding:10px; margin-bottom:10px;">
-            <button onclick="doLogin()"
-                style="width:100%; padding:10px; background:#2563eb; color:white; border:none; border-radius:6px; cursor:pointer;">Login</button>
-            <p id="loginError" style="color:red; font-size:12px; display:none; margin-top:10px;"></p>
+    <div class="header">
+        <h1>📊 Carmen Admin Dashboard</h1>
+        
+        <div class="controls">
+            <select id="buFilter">
+                <option value="all">🌐 All Business Units</option>
+                <option value="global">🏢 Global</option>
+                <option value="hotel-seaside">🏨 Hotel Seaside</option>
+                <option value="account">💰 Accounting</option>
+                <option value="HR">👥 HR</option>
+            </select>
+
+            <a href="train.html" class="btn-green"><span>+</span> Add Knowledge</a>
+            <button class="btn-refresh" id="refreshBtn"><span>↻</span> Refresh</button>
         </div>
     </div>
 
-    <div id="dashboard-content" style="display:none;">
-        <div class="header">
-            <h1>📊 Carmen Dashboard</h1>
-            <div style="display:flex; gap:10px;">
-                <button onclick="window.location.href='train.html'" class="btn-green">
-                    <span>+</span> Add Knowledge
-                </button>
+    <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('logs')">📋 Logs</button>
+        <button class="tab-btn" onclick="switchTab('analytics')">📊 Analytics</button>
+        <button class="tab-btn" onclick="switchTab('knowledge')">🗂️ Knowledge</button>
+        <button class="tab-btn" onclick="switchTab('models')">⚙️ Models</button>
+    </div>
 
-                <button class="btn-refresh" onclick="fetchData()">
-                    <span>↻</span> Refresh
-                </button>
+    <div id="tab-logs" class="tab-content active">
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>BU</th>
+                        <th>Model</th>
+                        <th>Duration</th>
+                        <th>Tokens (In/Out)</th>
+                        <th>Cost</th>
+                    </tr>
+                </thead>
+                <tbody id="logsBody"></tbody>
+            </table>
+        </div>
+    </div>
 
-                <button onclick="doLogout()" class="btn-logout">Logout</button>
-            </div>
+    <div id="tab-analytics" class="tab-content">
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr><th>Namespace (BU)</th><th>Requests</th><th>Total Tokens</th><th>Cost</th></tr>
+                </thead>
+                <tbody id="analyticsBody"></tbody>
+            </table>
         </div>
+    </div>
 
-        <div class="tabs">
-            <button id="tab-btn-logs" class="tab-btn active" onclick="switchTab('logs')">📋 Logs</button>
-            <button id="tab-btn-analytics" class="tab-btn" onclick="switchTab('analytics')">📊 Analytics</button>
-            <button id="tab-btn-knowledge" class="tab-btn" onclick="switchTab('knowledge')">🗂️ Knowledge</button>
-            <button id="tab-btn-models" class="tab-btn" onclick="switchTab('models')">⚙️ Models</button>
+    <div id="tab-knowledge" class="tab-content">
+        <div class="table-container">
+            <table>
+                <thead><tr><th>Namespace</th><th>Vector Count</th><th>Ratio</th></tr></thead>
+                <tbody id="knowledgeBody"></tbody>
+            </table>
         </div>
+    </div>
 
-        <div id="tab-logs" class="tab-content active">
-            <div class="table-container">
-                <div style="overflow-x: auto;">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Date</th>
-                                <th>User</th>
-                                <th>Model</th>
-                                <th>Duration</th>
-                                <th>Tokens</th>
-                                <th>Cost</th>
-                            </tr>
-                        </thead>
-                        <tbody id="logsBody"></tbody>
-                    </table>
-                </div>
-            </div>
+    <div id="tab-models" class="tab-content">
+        <div style="margin-bottom:15px; display:flex; justify-content:space-between;">
+            <h3>Active Models</h3>
+            <button onclick="openModelModal()" style="background:#2563eb; color:white; border:none; padding:6px 12px; border-radius:6px; cursor:pointer;">Browse OpenRouter</button>
         </div>
-        <div id="tab-analytics" class="tab-content">
-            <div class="table-container">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Namespace (Client)</th>
-                            <th>Requests</th>
-                            <th>Total Tokens</th>
-                            <th>Total Cost</th>
-                        </tr>
-                    </thead>
-                    <tbody id="analyticsBody"></tbody>
-                </table>
-            </div>
-        </div>
-        <div id="tab-knowledge" class="tab-content">
-            <div class="table-container">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Namespace</th>
-                            <th>Count</th>
-                            <th>Progress</th>
-                        </tr>
-                    </thead>
-                    <tbody id="knowledgeBody"></tbody>
-                </table>
-            </div>
-        </div>
-        <div id="tab-models" class="tab-content">
-            <div style="margin-bottom:15px; display:flex; justify-content:space-between;">
-                <h3>Saved Models</h3>
-                <button onclick="openModelModal()"
-                    style="background:#2563eb; color:white; border:none; padding:8px 16px; border-radius:6px; cursor:pointer;">🌐
-                    Browse OpenRouter</button>
-            </div>
-            <div class="table-container">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Status</th>
-                            <th>Model ID</th>
-                            <th>Input Price ($/1M)</th>
-                            <th>Output Price ($/1M)</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody id="modelsBody"></tbody>
-                </table>
-            </div>
-        </div>
-
-        <div style="text-align:right; margin-top:10px; color:#94a3b8; font-size:12px;">
-            Auto-refreshing every 10 seconds...
+        <div class="table-container">
+            <table>
+                <thead><tr><th>Status</th><th>Model Name</th><th>Input Cost ($)</th><th>Output Cost ($)</th><th>Action</th></tr></thead>
+                <tbody id="modelsBody"></tbody>
+            </table>
         </div>
     </div>
 
     <div id="orModal" class="modal">
         <div class="modal-content">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-                <h2 style="margin:0;">OpenRouter Models</h2>
-                <button onclick="closeModelModal()"
-                    style="border:none; background:none; font-size:20px; cursor:pointer;">×</button>
+            <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                <h2>OpenRouter Models</h2>
+                <button onclick="document.getElementById('orModal').style.display='none'" style="border:none; background:none; font-size:20px; cursor:pointer;">×</button>
             </div>
-            <input type="text" id="orSearch" placeholder="🔍 Search models (e.g. llama, gpt, gemma)"
-                style="width:100%; padding:10px; margin-bottom:10px; box-sizing:border-box; border:1px solid #ccc; border-radius:6px;"
-                onkeyup="filterModels()">
-            <div id="orList" style="border:1px solid #eee; border-radius:6px; max-height:400px; overflow-y:auto;">
-                <div style="padding:20px; text-align:center;">Loading...</div>
-            </div>
+            <input type="text" id="orSearch" placeholder="Search..." style="width:100%; padding:8px; border:1px solid #ccc; border-radius:6px; margin-bottom:10px;">
+            <div id="orList">Loading...</div>
         </div>
     </div>
 
-    <script>
-        const API_BASE = ""; // ✅ ถูกต้องสำหรับ Render
-        let allORModels = [];
-        let autoRefreshInterval;
+    <script type="module">
+        import { AdminAPI } from '/static/admin-api.js?v=1'; // Import API Class
 
-        window.onload = function () {
-            if (!localStorage.getItem("admin_token")) {
-                // ถ้ายังไม่ Login ให้แสดง Overlay (ไม่ต้อง redirect ไป index เพราะนี่คือ dashboard)
-                document.getElementById("login-overlay").style.display = "flex";
-            } else {
-                showDashboard();
-            }
+        const api = new AdminAPI();
+        let allORModels = [];
+        let autoRefresh;
+
+        // --- Init ---
+        window.onload = () => {
+            fetchData();
+            autoRefresh = setInterval(fetchData, 10000);
         };
 
-        function showDashboard() {
-            document.getElementById("login-overlay").style.display = "none";
-            document.getElementById("dashboard-content").style.display = "block";
-            fetchData();
-            if (autoRefreshInterval) clearInterval(autoRefreshInterval);
-            autoRefreshInterval = setInterval(fetchData, 10000);
-        }
-
-        async function doLogin() {
-            const pass = document.getElementById('password').value;
-            const err = document.getElementById('loginError');
-
-            // Login ในนาม admin
-            const formData = new URLSearchParams();
-            formData.append('username', 'admin');
-            formData.append('password', pass);
-
-            try {
-                const res = await fetch(`${API_BASE}/token`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: formData
-                });
-
-                if (res.ok) {
-                    const data = await res.json();
-                    if (data.client_namespace !== 'global') {
-                        err.innerText = "Access Denied: Admin only.";
-                        err.style.display = 'block';
-                        return;
-                    }
-                    localStorage.setItem("admin_token", data.access_token);
-                    showDashboard();
-                } else {
-                    err.innerText = "Password incorrect";
-                    err.style.display = 'block';
-                }
-            } catch (e) {
-                err.innerText = "Connection Error";
-                err.style.display = 'block';
-            }
-        }
-
-        function doLogout() {
-            localStorage.removeItem("admin_token");
-            location.reload();
-        }
-
-        function switchTab(t) {
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-
-            document.getElementById(`tab-${t}`).classList.add('active');
-            // หาปุ่มและใส่ class active
-            const btn = document.querySelector(`.tab-btn[onclick="switchTab('${t}')"]`) || document.getElementById(`tab-btn-${t}`);
-            if (btn) btn.classList.add('active');
-
-            if (t === 'models') fetchLocalModels();
-        }
-
+        // --- Core Functions ---
         async function fetchData() {
-            const token = localStorage.getItem("admin_token");
-            if (!token) return;
+            const bu = document.getElementById('buFilter').value;
+            
             try {
-                const [resL, resS, resK] = await Promise.all([
-                    fetch(`${API_BASE}/admin/logs`, { headers: { 'Authorization': `Bearer ${token}` } }),
-                    fetch(`${API_BASE}/admin/analytics`, { headers: { 'Authorization': `Bearer ${token}` } }),
-                    fetch(`${API_BASE}/admin/vectors`, { headers: { 'Authorization': `Bearer ${token}` } })
-                ]);
+                // 1. Logs
+                if (document.getElementById('tab-logs').classList.contains('active')) {
+                    const logs = await api.getLogs(bu);
+                    renderLogs(logs);
+                }
+                
+                // 2. Analytics (ถ้า Backend รองรับการ filter BU ก็ส่งไป)
+                // ตอนนี้สมมติว่าดึงมาทั้งหมดก่อน
+                // const stats = await api.getAnalytics(); 
+                // renderStats(stats);
 
-                if (resL.status === 401) { doLogout(); return; }
+                // 3. Knowledge
+                // const vectors = await api.getVectorStats();
+                // renderKnowledge(vectors);
 
-                if (resL.ok) renderLogs(await resL.json());
-                if (resS.ok) renderStats(await resS.json());
-                if (resK.ok) renderKnowledge(await resK.json());
-
-                // ถ้าเปิด Tab Models อยู่ ให้ refresh ด้วย
-                if (document.getElementById('tab-models').classList.contains('active')) fetchLocalModels();
-            } catch (e) { console.error("Fetch data error", e); }
+            } catch (e) { console.error(e); }
         }
 
         function renderLogs(logs) {
             const tbody = document.getElementById('logsBody');
-            if (logs.length === 0) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">No logs yet</td></tr>'; return; }
-            tbody.innerHTML = logs.map(log => `<tr><td>${new Date(log.timestamp).toLocaleTimeString()}</td><td>${log.username}</td><td>${log.model_name}</td><td>${log.duration?.toFixed(2)}s</td><td>${log.total_tokens}</td><td class="cost">$${(log.cost || 0).toFixed(6)}</td></tr>`).join('');
-        }
-
-        function renderStats(stats) {
-            const tbody = document.getElementById('analyticsBody');
-            tbody.innerHTML = stats.map(st => `
+            if (!logs || logs.length === 0) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:20px;">No logs found</td></tr>'; return; }
+            
+            tbody.innerHTML = logs.map(log => `
                 <tr>
-                    <td style="font-weight:bold; color:#2563eb;">${st.namespace}</td>
-                    <td>${st.total_requests}</td>
-                    <td>${st.total_tokens.toLocaleString()}</td>
-                    <td class="cost">$${st.total_cost.toFixed(6)}</td>
+                    <td>${new Date(log.timestamp).toLocaleTimeString()}</td>
+                    <td><span style="background:#e0f2fe; color:#0369a1; padding:2px 8px; border-radius:10px; font-size:12px; font-weight:bold;">${log.bu}</span></td>
+                    <td>${log.model_name}</td>
+                    <td>${log.duration?.toFixed(2)}s</td>
+                    <td>${log.input_tokens} / ${log.output_tokens}</td>
+                    <td class="cost">$${(log.cost || 0).toFixed(6)}</td>
                 </tr>
             `).join('');
         }
 
-        function renderKnowledge(data) {
-            document.getElementById('knowledgeBody').innerHTML = (data.namespaces || []).map(ns => `<tr><td>${ns.namespace}</td><td>${ns.count}</td><td>${ns.percent.toFixed(1)}%</td></tr>`).join('');
+        // --- UI Events ---
+        window.switchTab = (tabName) => {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            document.getElementById(`tab-${tabName}`).classList.add('active');
+            event.target.classList.add('active');
+            
+            if (tabName === 'models') loadModels();
+            fetchData(); // Reload data for new tab
+        };
+
+        document.getElementById('refreshBtn').onclick = fetchData;
+        document.getElementById('buFilter').onchange = fetchData;
+
+        // --- Models Logic ---
+        async function loadModels() {
+            const models = await api.getLocalModels();
+            const tbody = document.getElementById('modelsBody');
+            tbody.innerHTML = models.map(m => `
+                <tr style="${m.is_active ? 'background:#f0fdf4;' : ''}">
+                    <td>${m.is_active ? '✅ Active' : '⚪ Inactive'}</td>
+                    <td style="font-weight:bold;">${m.model_name}</td>
+                    <td>$${m.input_rate.toFixed(4)}</td>
+                    <td>$${m.output_rate.toFixed(4)}</td>
+                    <td>
+                        ${!m.is_active ? `<button onclick="activateModel('${m.model_name}', ${m.input_rate}, ${m.output_rate})" style="cursor:pointer; color:#2563eb;">Switch</button>` : ''}
+                        ${!m.is_active ? `<button onclick="deleteModel('${m.model_name}')" style="cursor:pointer; color:red; margin-left:10px;">Delete</button>` : ''}
+                    </td>
+                </tr>
+            `).join('');
         }
 
-        // ===========================================
-        // ⚙️ Models Logic
-        // ===========================================
-
-        async function fetchLocalModels() {
-            const token = localStorage.getItem("admin_token");
-            try {
-                const res = await fetch(`${API_BASE}/admin/models/local`, { headers: { 'Authorization': `Bearer ${token}` } });
-                if (res.ok) {
-                    const models = await res.json();
-                    const tbody = document.getElementById('modelsBody');
-
-                    if (models.length === 0) {
-                        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:20px; color:#666;">No models saved. Click "Browse OpenRouter" to add one.</td></tr>`;
-                        return;
-                    }
-
-                    tbody.innerHTML = models.map(m => `
-                        <tr style="${m.is_active ? 'background:#eff6ff;' : ''}">
-                            <td>${m.is_active ? '<span class="tag tag-free">● ACTIVE</span>' : '<span style="color:#aaa;">● Inactive</span>'}</td>
-                            <td style="font-weight:bold;">${m.model_name}</td>
-                            <td>$${(m.input_rate * 1000000).toFixed(2)}</td>
-                            <td>$${(m.output_rate * 1000000).toFixed(2)}</td>
-                            <td>
-                                ${!m.is_active ? `
-                                    <div style="display:flex; gap:5px;">
-                                        <button onclick="activateModel('${m.model_name}', ${m.input_rate}, ${m.output_rate})" style="cursor:pointer; background:#2563eb; color:white; border:none; padding:6px 12px; border-radius:4px;">Switch</button>
-                                        <button onclick="deleteModel('${m.model_name}')" style="cursor:pointer; background:#fee2e2; color:#991b1b; border:1px solid #fecaca; padding:6px 12px; border-radius:4px;">🗑️</button>
-                                    </div>
-                                ` : '<span style="color:#2563eb; font-weight:bold; font-size:12px;">Currently Used</span>'}
-                            </td>
-                        </tr>
-                    `).join('');
-                }
-            } catch (e) { console.error(e); }
-        }
-
-        async function deleteModel(id) {
-            if (!confirm(`Are you sure you want to DELETE model: ${id}?`)) return;
-            const token = localStorage.getItem("admin_token");
-            const body = JSON.stringify({ model_id: id, input_rate: 0, output_rate: 0 });
-            const res = await fetch(`${API_BASE}/admin/models/delete`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: body
-            });
-            if (res.ok) fetchLocalModels();
-            else alert("Error: " + (await res.json()).detail);
-        }
-
-        async function activateModel(id, inp, out) {
-            if (!confirm(`Switch to ${id}?`)) return;
-            const token = localStorage.getItem("admin_token");
-            await fetch(`${API_BASE}/admin/models/activate`, {
-                method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify({ model_id: id, input_rate: inp, output_rate: out })
-            });
-            fetchLocalModels();
-        }
-
-        async function openModelModal() {
+        // Expose functions to window for onclick events
+        window.activateModel = async (id, inp, out) => {
+            if(confirm('Switch to ' + id + '?')) { await api.activateModel(id, inp, out); loadModels(); }
+        };
+        window.deleteModel = async (id) => {
+            if(confirm('Delete ' + id + '?')) { await api.deleteModel(id); loadModels(); }
+        };
+        
+        window.openModelModal = async () => {
             document.getElementById('orModal').style.display = 'flex';
-            const token = localStorage.getItem("admin_token");
-            const res = await fetch(`${API_BASE}/admin/openrouter/models`, { headers: { 'Authorization': `Bearer ${token}` } });
-            if (res.ok) {
-                allORModels = await res.json();
-                renderORList(allORModels);
-            }
-        }
+            allORModels = await api.getOpenRouterModels();
+            renderORList(allORModels);
+        };
 
-        function closeModelModal() { document.getElementById('orModal').style.display = 'none'; }
+        window.renderORList = (list) => {
+            document.getElementById('orList').innerHTML = list.map(m => `
+                <div class="model-item">
+                    <div><b>${m.name}</b><br><span style="font-size:11px; color:#666;">${m.id}</span></div>
+                    <button onclick="addFromOR('${m.id}', ${m.input_rate}, ${m.output_rate})" style="border:1px solid #2563eb; color:#2563eb; background:white; padding:4px 10px; border-radius:4px; cursor:pointer;">Add</button>
+                </div>
+            `).join('');
+        };
 
-        function renderORList(models) {
-            document.getElementById('orList').innerHTML = models.map(m => {
-                const inpCost = (m.input_rate * 1000000).toFixed(2);
-                const outCost = (m.output_rate * 1000000).toFixed(2);
-                return `<div class="model-item"><div><div style="font-weight:bold;">${m.name}</div><div style="font-size:11px; color:#666;">ID: ${m.id} | In: $${inpCost} / Out: $${outCost}</div></div><button onclick="addAndActivate('${m.id}', ${m.input_rate}, ${m.output_rate})" style="border:1px solid #2563eb; color:#2563eb; background:white; padding:4px 10px; border-radius:4px; cursor:pointer;">Select</button></div>`;
-            }).join('');
-        }
-
-        function filterModels() {
+        window.filterModels = () => {
             const q = document.getElementById('orSearch').value.toLowerCase();
             renderORList(allORModels.filter(m => m.name.toLowerCase().includes(q) || m.id.toLowerCase().includes(q)));
-        }
+        };
+        document.getElementById('orSearch').onkeyup = window.filterModels;
 
-        async function addAndActivate(id, inp, out) {
-            if (!confirm(`Add and Activate ${id}?`)) return;
-            const token = localStorage.getItem("admin_token");
-            const body = JSON.stringify({ model_id: id, input_rate: inp, output_rate: out });
-            await fetch(`${API_BASE}/admin/models/add`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body });
-            await fetch(`${API_BASE}/admin/models/activate`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body });
-            closeModelModal(); fetchLocalModels();
-        }
+        window.addFromOR = async (id, inp, out) => {
+            if(confirm(`Add ${id}?`)) {
+                await api.addModel(id, inp, out);
+                await api.activateModel(id, inp, out);
+                document.getElementById('orModal').style.display = 'none';
+                loadModels();
+            }
+        };
+
     </script>
 </body>
-
 </html>
