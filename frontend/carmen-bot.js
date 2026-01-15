@@ -282,8 +282,7 @@ export class CarmenBot {
 
             const data = await response.json();
             document.getElementById('carmenTypingIndicator').style.display = 'none';
-            
-            if(data.answer) this.addMessage(data.answer, 'bot', true, data.message_id);
+            if(data.answer) this.addMessage(data.answer, 'bot', true, data.message_id, data.sources);
         } catch (error) {
             console.error(error);
             document.getElementById('carmenTypingIndicator').style.display = 'none';
@@ -319,11 +318,33 @@ export class CarmenBot {
         return match ? match[1] : null;
     }
 
-   addMessage(text, sender, animate = false, msgId = null) {
+   addMessage(text, sender, animate = false, msgId = null, sources = null) {
         const body = document.getElementById('carmenChatBody');
         const div = document.createElement('div');
         div.className = `msg ${sender}`;
-        
+
+        let sourcesHTML = '';
+        if (sender === 'bot' && sources && sources.length > 0) {
+            sourcesHTML = `
+                <details style="margin-top: 8px; border-top: 1px solid #e2e8f0; padding-top: 8px;">
+                    <summary style="cursor: pointer; font-size: 11px; color: #64748b; outline: none;">
+                        📚 อ้างอิงจาก ${sources.length} เอกสาร
+                    </summary>
+                    <div style="margin-top: 5px; display: flex; flex-direction: column; gap: 5px;">
+                        ${sources.map(s => `
+                            <div style="background: #f1f5f9; padding: 6px; border-radius: 4px; font-size: 10px; color: #475569;">
+                                <strong>📄 ${s.source} (Page ${s.page})</strong>
+                                <div style="margin-top:2px; opacity:0.8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                    "${s.content.substring(0, 50)}..."
+                                </div>
+                                <div style="font-size:9px; color:#94a3b8;">Score: ${s.score}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </details>
+            `;
+        }
+
         let formattedText = text.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>').replace(/\n/g, '<br>');
 
         let videoContent = "";
@@ -380,7 +401,7 @@ export class CarmenBot {
         if (sender === 'bot' && animate) {
             div.classList.add('typing');
             let i = 0; const speed = 10;
-            const fullContent = formattedText + videoContent + toolsHTML;
+            const fullContent = formattedText + videoContent + sourcesHTML + toolsHTML;
             div.innerHTML = ""; 
             const typeWriter = () => {
                 if (i < formattedText.length) {
@@ -419,7 +440,7 @@ export class CarmenBot {
             };
             typeWriter();
         } else {
-            div.innerHTML = formattedText + videoContent + toolsHTML;
+            div.innerHTML = formattedText + videoContent + sourcesHTML + toolsHTML;
             this.scrollToBottom();
         }
     }

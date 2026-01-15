@@ -79,7 +79,6 @@ async def process_chat_message(
     db: Session,
     message: str,
     bu: str,
-    # รับ Parameter ไว้เพื่อไม่ให้ API Error แต่จะไม่บันทึกลง DB ตาม Schema ใหม่
     session_id: str = None, 
     username: str = None,
     model_name: str = None,
@@ -93,18 +92,15 @@ async def process_chat_message(
     start_time = time.time()
     
     # ---------------------------------------------------------
-    # 1. Manage Model & Foreign Key Integrity (สำคัญมาก!)
+    # 1. Manage Model & Foreign Key Integrity
     # ---------------------------------------------------------
-    # ถ้าไม่ส่ง model_name มา ให้ใช้ตัวที่ Active หรือ Default
     if not model_name:
         active_model = db.query(ModelPricing).filter(ModelPricing.is_active == True).first()
         model_name = active_model.model_name if active_model else "xiaomi/mimo-v2-flash:free"
     
-    # 🔥 Check: Model นี้มีใน Database หรือยัง? (เพราะมี ForeignKey ผูกอยู่)
     pricing = db.query(ModelPricing).filter(ModelPricing.model_name == model_name).first()
     
     if not pricing:
-        # ถ้าไม่มี ให้สร้างใหม่ทันที (Auto-register) เพื่อให้บันทึก Log ได้ไม่ Error
         pricing = ModelPricing(
             model_name=model_name,
             input_rate=0.0,
@@ -112,7 +108,7 @@ async def process_chat_message(
             is_active=True
         )
         db.add(pricing)
-        db.commit()      # Commit เพื่อให้ ID/Name พร้อมใช้
+        db.commit()
         db.refresh(pricing)
 
     input_rate = pricing.input_rate
@@ -125,21 +121,33 @@ async def process_chat_message(
         bu=bu,
         sender="user",
         message=message,
-        model_used=model_name # ✅ ForeignKey: ต้องตรงกับ llm_models
-        # ❌ ตัด session_id ออกตาม Schema
+        model_used=model_name 
     )
     db.add(user_history)
     db.commit()
 
     # ---------------------------------------------------------
-    # 3. RAG Search & LLM Generation
+    # 3. RAG Search & Source Extraction (แก้ตรงนี้)
     # ---------------------------------------------------------
     raw_results = []
     if bu and bu != "global":
         raw_results += vectorstore.similarity_search_with_score(message, k=4, namespace=bu)
     raw_results += vectorstore.similarity_search_with_score(message, k=4, namespace="global")
     
-    passed_docs = [doc for doc, score in raw_results if score >= 0.50]
+    passed_docs = []
+    source_debug = [] # ✅ ลิสต์สำหรับเก็บข้อมูล Source ที่จะส่งไปหน้าเว็บ
+    
+    # วนลูปเช็ค Score และเก็บข้อมูล
+    for doc, score in raw_results:
+        if score >= 0.50:
+            passed_docs.append(doc)
+            # เก็บ Metadata เพื่อส่งกลับ
+            source_debug.append({
+                "source": doc.metadata.get("source", "Unknown"),
+                "page": doc.metadata.get("page", 1),
+                "score": round(float(score), 4),
+                "content": doc.page_content
+            })
     
     bot_ans = ""
     usage = {}
@@ -185,14 +193,13 @@ async def process_chat_message(
 
     new_log = TokenLog(
         bu=bu,
-        model_name=model_name, # ✅ ForeignKey
+        model_name=model_name, 
         input_tokens=input_tk,
         output_tokens=output_tk,
         total_tokens=total_tk,
         cost=total_cost,
         duration=duration,
         user_query=message,
-        # ❌ ตัด additional_params ออกตาม Schema
     )
     db.add(new_log)
 
@@ -203,14 +210,15 @@ async def process_chat_message(
         bu=bu,
         sender="bot",
         message=bot_ans,
-        model_used=model_name # ✅ ForeignKey
+        model_used=model_name 
     )
     db.add(bot_history)
-    
-    db.commit() # Final Commit
+    db.commit()
 
+    # ✅ ส่ง sources กลับไปด้วย
     return {
         "answer": bot_ans,
         "bu": bu,
-        "model": model_name
+        "model": model_name,
+        "sources": source_debug 
     }
