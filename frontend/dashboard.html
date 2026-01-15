@@ -166,15 +166,30 @@
 
         function renderLogs(logs) {
             const tbody = document.getElementById('logsBody');
-            if (!logs || logs.length === 0) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:20px;">No logs found</td></tr>'; return; }
+            
+            if (!logs || logs.length === 0) { 
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:20px; color:#94a3b8;">No logs found</td></tr>'; 
+                return; 
+            }
             
             tbody.innerHTML = logs.map(log => `
                 <tr>
                     <td>${new Date(log.timestamp).toLocaleTimeString()}</td>
-                    <td><span style="background:#e0f2fe; color:#0369a1; padding:2px 8px; border-radius:10px; font-size:12px; font-weight:bold;">${log.bu}</span></td>
+                    
+                    <td>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <span style="background:#e0f2fe; color:#0284c7; padding:2px 8px; border-radius:6px; font-size:11px; font-weight:bold; border:1px solid #bae6fd;">
+                                ${log.bu || 'GLOBAL'}
+                            </span>
+                            <span style="font-weight:500;">
+                                ${log.username || 'Guest'}
+                            </span>
+                        </div>
+                    </td>
+
                     <td>${log.model_name}</td>
                     <td>${log.duration?.toFixed(2)}s</td>
-                    <td>${log.input_tokens} / ${log.output_tokens}</td>
+                    <td>${log.total_tokens || 0}</td>
                     <td class="cost">$${(log.cost || 0).toFixed(6)}</td>
                 </tr>
             `).join('');
