@@ -5,18 +5,19 @@ export class CarmenBot {
         const urlToUse = config.apiUrl || defaultUrl;
         this.apiBase = urlToUse.replace(/\/$/, "");
 
-        // 2. User & Context Configuration (New Params)
-        this.bu = config.bu || "global";          // Default to 'global' if not provided
-        this.username = config.user || "Guest";   // Default username
-        this.theme = config.theme || null;        // Optional theme
-        this.title = config.title || null;        // Optional title
-        this.prompt_extend = config.prompt_extend || null; // Optional prompt extension
+        // 2. User & Context Configuration
+        this.bu = config.bu || "global";          
+        this.username = config.user || "Guest";   
+        this.theme = config.theme || null;        
+        this.title = config.title || null;        
+        this.prompt_extend = config.prompt_extend || null; 
 
-        // Session Management (Generate or Load)
-        this.sessionId = localStorage.getItem(`carmen_sess_${this.bu}_${this.username}`);
+        // Session Management
+        this.sessionKey = `carmen_sess_${this.bu}_${this.username}`;
+        this.sessionId = localStorage.getItem(this.sessionKey);
         if (!this.sessionId) {
             this.sessionId = `sess_${Date.now()}_${Math.random().toString(36).substring(7)}`;
-            localStorage.setItem(`carmen_sess_${this.bu}_${this.username}`, this.sessionId);
+            localStorage.setItem(this.sessionKey, this.sessionId);
         }
 
         // Suggested Questions
@@ -36,20 +37,17 @@ export class CarmenBot {
         this.createDOM();
         this.attachEvents();
         this.setupGlobalFunctions();
-
-        // No Login check needed anymore. Always show launcher.
         this.showLauncher();
         
-        // Update User Display Name in UI
+        // Update User Display Name
         const userDisplay = document.getElementById('carmenUserDisplay');
         if (userDisplay) {
             userDisplay.innerText = `${this.bu !== 'global' ? `[${this.bu}] ` : ''}${this.username}`;
         }
 
-        this.loadHistory(); // Now loads based on BU + SessionID
+        this.loadHistory();
     }
 
-    // ... (injectStyles method remains the same - omitted for brevity unless requested) ...
     injectStyles() {
         if (document.getElementById('carmen-style')) return;
         
@@ -91,11 +89,15 @@ export class CarmenBot {
             .msg.user { background: #2563eb; color: white !important; align-self: flex-end; border-radius: 12px 12px 2px 12px; }
             .msg.bot { background: white; color: #334155; align-self: flex-start; border-radius: 12px 12px 12px 2px; border: 1px solid #e2e8f0; padding-bottom: 32px !important; }
 
-            .suggestions-container { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; animation: fadeIn 0.5s ease; align-self: flex-end; justify-content: flex-end; }
+            /* Suggestions */
+            .suggestions-container { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; animation: fadeIn 0.5s ease forwards; align-self: flex-end; justify-content: flex-end; width: 100%; }
             .suggestion-chip { background: white; border: 1px solid #cbd5e1; border-radius: 20px; padding: 6px 12px; font-size: 12px; color: #475569; cursor: pointer; transition: 0.2s; }
             .suggestion-chip:hover { background: #2563eb; color: white; border-color: #2563eb; }
+            
+            /* ✅ เพิ่ม Keyframes สำหรับ fadeIn ที่เคยหายไป */
+            @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-            /* Tools (Copy/Feedback) */
+            /* Tools */
             .copy-btn { position: absolute; bottom: 6px; right: 8px; width: 24px; height: 24px; background: transparent; border: none; cursor: pointer; opacity: 0.6; transition: 0.2s; display: flex !important; align-items: center; justify-content: center; z-index: 10; }
             .copy-btn:hover { opacity: 1; background: #f1f5f9; border-radius: 4px; }
             .copy-btn svg { width: 14px; height: 14px; fill: #64748b !important; }
@@ -144,8 +146,7 @@ export class CarmenBot {
                    <div style="display:flex; align-items:center; gap:10px;">
                      <div style="font-size:24px;">👩‍💼</div>
                      <div>
-                       <h3>${this.title || "Carmen AI"}</h3>
-                       <span id="carmenUserDisplay">Guest Mode</span>
+                       <h3>"Carmen AI"</h3>
                      </div>
                    </div>
                    <div class="header-tools">
@@ -169,8 +170,6 @@ export class CarmenBot {
     }
 
     setupGlobalFunctions() {
-        // Updated Feedback function to work without Token Auth (if API allows) or just log locally for now
-        // Assuming API might still need some identification for feedback
         window.carmenRate = async (msgId, score, btnElement) => {
             const parent = btnElement.parentElement;
             parent.innerHTML = score === 1 
@@ -178,14 +177,9 @@ export class CarmenBot {
                 : '<span style="font-size:11px; color:#991b1b;">ขอบคุณค่ะ 🙏</span>';
             
             try {
-                // If the backend feedback endpoint is also open (no auth), this works.
-                // Otherwise, you might need to adjust backend or skip this.
                 await fetch(`${this.apiBase}/chat/feedback/${msgId}`, {
                     method: 'POST',
-                    headers: { 
-                        'Content-Type': 'application/json'
-                        // Auth header removed
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ score: score })
                 });
             } catch(e) { console.error(e); }
@@ -200,17 +194,20 @@ export class CarmenBot {
         const sendBtn = document.getElementById('carmen-send-btn');
         const input = document.getElementById('carmenUserInput');
 
-        launcher.onclick = () => win.classList.toggle('open');
+        launcher.onclick = () => {
+            win.classList.toggle('open');
+            if (win.classList.contains('open')) {
+                setTimeout(() => this.scrollToBottom(), 0);
+            }
+        };
+
         closeBtn.onclick = () => win.classList.remove('open');
         
         clearBtn.onclick = () => {
-            // Clear UI
             document.getElementById('carmenChatBody').innerHTML = '';
-            // Generate New Session ID
             this.sessionId = `sess_${Date.now()}_${Math.random().toString(36).substring(7)}`;
             localStorage.setItem(`carmen_sess_${this.bu}_${this.username}`, this.sessionId);
-            
-            this.addMessage(`ล้างแชทเรียบร้อยค่ะ ✨ (New Session Started)`, 'bot', true);
+            this.addMessage(`ล้างแชทเรียบร้อยค่ะ ✨`, 'bot', true);
             setTimeout(() => this.addSuggestions(), 1000);
         };
 
@@ -218,13 +215,9 @@ export class CarmenBot {
         input.onkeypress = (e) => { if(e.key === 'Enter') this.sendMessage(); };
     }
 
-    // Removed login() method completely as requested
-
     showLauncher() {
         const btn = document.getElementById('carmen-launcher');
         if(btn) btn.style.display = 'flex';
-        // Auto-open is optional, removed to be less intrusive for public widget
-        // setTimeout(() => { ... }, 800); 
     }
 
     async loadHistory() {
@@ -232,15 +225,8 @@ export class CarmenBot {
         body.innerHTML = '';
         
         try {
-            // Using Query Params instead of Auth Header
-            const params = new URLSearchParams({
-                bu: this.bu,
-                session_id: this.sessionId
-            });
-
-            const res = await fetch(`${this.apiBase}/chat/history?${params.toString()}`, {
-                method: 'GET'
-            });
+            const params = new URLSearchParams({ bu: this.bu, session_id: this.sessionId });
+            const res = await fetch(`${this.apiBase}/chat/history?${params.toString()}`, { method: 'GET' });
 
             if (res.ok) {
                 const history = await res.json();
@@ -250,12 +236,11 @@ export class CarmenBot {
                     divider.style.cssText = 'text-align:center; font-size:11px; color:#94a3b8; margin:10px 0;';
                     divider.innerText = '— ประวัติการสนทนาล่าสุด —';
                     body.appendChild(divider);
+                    setTimeout(() => this.scrollToBottom(), 100); 
                 } else {
                     this.addMessage(`สวัสดีค่ะ 👋<br>มีอะไรให้ Carmen ช่วยไหมคะ?`, 'bot', true);
                 }
-            } else {
-                throw new Error("Failed to load history");
-            }
+            } else { throw new Error("Failed to load history"); }
         } catch (e) {
             console.warn("History Load Error:", e);
             this.addMessage(`สวัสดีค่ะ 👋<br>มีอะไรให้ Carmen ช่วยไหมคะ?`, 'bot', true);
@@ -271,41 +256,34 @@ export class CarmenBot {
         this.addMessage(text, 'user', false);
         input.value = '';
         
+        // ลบ Suggestions ออกเมื่อเริ่มคุย
         const suggestions = document.querySelectorAll('.suggestions-container');
-        suggestions.forEach(el => el.style.display = 'none');
+        suggestions.forEach(el => el.remove());
 
         document.getElementById('carmenTypingIndicator').style.display = 'block';
         this.scrollToBottom();
 
         try {
-            // Prepare Payload
             const payload = {
                 text: text,
                 bu: this.bu,
                 username: this.username,
                 session_id: this.sessionId
             };
-
-            // Add optional params if they exist
             if (this.theme) payload.theme = this.theme;
             if (this.title) payload.title = this.title;
             if (this.prompt_extend) payload.prompt_extend = this.prompt_extend;
 
             const response = await fetch(`${this.apiBase}/chat`, {
                 method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json'
-                    // No Authorization header needed
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
 
             const data = await response.json();
             document.getElementById('carmenTypingIndicator').style.display = 'none';
             
-            if(data.answer) {
-                this.addMessage(data.answer, 'bot', true, data.message_id);
-            }
+            if(data.answer) this.addMessage(data.answer, 'bot', true, data.message_id);
         } catch (error) {
             console.error(error);
             document.getElementById('carmenTypingIndicator').style.display = 'none';
@@ -314,6 +292,10 @@ export class CarmenBot {
     }
 
     addSuggestions() {
+        // ✅ 1. ลบของเก่าออกก่อนเสมอกันซ้ำ
+        const existing = document.querySelectorAll('.suggestions-container');
+        existing.forEach(el => el.remove());
+
         const body = document.getElementById('carmenChatBody');
         const div = document.createElement('div');
         div.className = 'suggestions-container';
@@ -357,25 +339,17 @@ export class CarmenBot {
             return `<a href="${url}" target="_blank" style="color:#2563eb;">${url}</a>`;
         });
 
-        
         let toolsHTML = '';
         if (sender === 'bot') {
             toolsHTML += `
                 <button class="copy-btn" title="คัดลอก" style="
-                    display: flex !important;
-                    background-color: transparent !important; 
-                    border: none !important;
-                    opacity: 0.6 !important; 
-                    width: 24px !important; 
-                    height: 24px !important;
+                    display: flex !important; background-color: transparent !important; border: none !important; opacity: 0.6 !important; width: 24px !important; height: 24px !important;
                 ">
                     <svg viewBox="0 0 24 24" width="16" height="16" style="display:block; min-width:16px;">
-                        <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z" 
-                              fill="#64748b" style="fill:#64748b !important;" />
+                        <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z" fill="#64748b" style="fill:#64748b !important;" />
                     </svg>
                 </button>
             `;
-            
             if (msgId) {
                 toolsHTML += `
                     <div class="feedback-container">
@@ -393,12 +367,9 @@ export class CarmenBot {
             btn.onclick = () => {
                 const rawText = text.replace(/\*\*(.*?)\*\*/g, '$1').replace(/<br>/g, '\n'); 
                 navigator.clipboard.writeText(rawText).then(() => {
-                  
                     btn.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" fill="#16a34a"/></svg>`;
                     btn.style.opacity = '1'; 
-                    
                     setTimeout(() => {
-                        
                         btn.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" style="display:block; min-width:16px;"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z" fill="#64748b" style="fill:#64748b !important;"/></svg>`;
                         btn.style.opacity = '0.6'; 
                     }, 2000);
@@ -406,7 +377,6 @@ export class CarmenBot {
             };
         }
 
-       
         if (sender === 'bot' && animate) {
             div.classList.add('typing');
             let i = 0; const speed = 10;
@@ -423,18 +393,20 @@ export class CarmenBot {
                 } else {
                     div.classList.remove('typing');
                     div.innerHTML = fullContent; 
+                    
+                    // Re-attach events for copy/feedback after animation
                     const newBtn = div.querySelector('.copy-btn');
                     if(newBtn) {
                          newBtn.onclick = () => {
-                            const rawText = text.replace(/\*\*(.*?)\*\*/g, '$1').replace(/<br>/g, '\n'); 
-                            navigator.clipboard.writeText(rawText).then(() => {
-                                newBtn.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" fill="#16a34a"/></svg>`;
-                                newBtn.style.opacity = '1';
-                                setTimeout(() => {
-                                    newBtn.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" style="display:block; min-width:16px;"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z" fill="#64748b" style="fill:#64748b !important;"/></svg>`;
-                                    newBtn.style.opacity = '0.6';
-                                }, 2000);
-                            });
+                           const rawText = text.replace(/\*\*(.*?)\*\*/g, '$1').replace(/<br>/g, '\n'); 
+                           navigator.clipboard.writeText(rawText).then(() => {
+                               newBtn.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" fill="#16a34a"/></svg>`;
+                               newBtn.style.opacity = '1';
+                               setTimeout(() => {
+                                   newBtn.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" style="display:block; min-width:16px;"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z" fill="#64748b" style="fill:#64748b !important;"/></svg>`;
+                                   newBtn.style.opacity = '0.6';
+                               }, 2000);
+                           });
                          }
                          const fbBtns = div.querySelectorAll('.feedback-btn');
                          if(fbBtns.length > 0 && msgId) {
