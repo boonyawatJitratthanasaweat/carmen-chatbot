@@ -358,6 +358,7 @@
     <script type="module">
         import { AdminAPI } from '/static/admin-api.js?v=2';
 
+
         const api = new AdminAPI();
         let allORModels = [];
         let autoRefresh;
@@ -408,7 +409,7 @@
         function renderLogs(logs) {
             const tbody = document.getElementById('logsBody');
 
-            // 2. บันทึกข้อมูลลงตัวแปร Global
+            // ✅ 1. บันทึกข้อมูลทั้งหมดลงตัวแปร Global
             currentLogsData = logs || [];
 
             if (!logs || logs.length === 0) {
@@ -416,12 +417,12 @@
                 return;
             }
 
-            // 3. ใส่ index (ตัว i) เข้าไปใน map
             tbody.innerHTML = logs.map((log, i) => {
                 let sourceBtn = '<span style="color:#cbd5e1;">-</span>';
 
                 if (log.sources && log.sources.length > 0) {
-                    // 4. แก้ตรง onclick: ส่งแค่ตัวเลข i (index) ไปแทน JSON ยาวๆ
+                    // ✅ 2. แก้ตรง onclick: ส่งแค่ตัวเลข i (ลำดับ) ไปแทน JSON ยาวๆ
+                    // ไม่ต้องมีการ escape string หรือ json stringify ตรงนี้แล้ว ปลอดภัย 100%
                     sourceBtn = `
                 <button onclick="showSources(${i})" 
                         style="background:#f1f5f9; border:1px solid #cbd5e1; color:#475569; cursor:pointer; padding:4px 8px; border-radius:4px; font-size:11px; transition:0.2s;">
@@ -544,6 +545,7 @@
         }
 
         // รับ index แทน json string
+        // ✅ รับ index (ตัวเลข) แทน json string
         function showSources(index) {
             try {
                 // ดึงข้อมูลจากตัวแปร Global ด้วย Index
@@ -561,10 +563,9 @@
                     msg += `${i + 1}. 📄 ${s.source} (Page ${s.page})\n`;
                     msg += `   🎯 Score: ${s.score}\n`;
 
-                    // Logic ตัดคำและจัดการ Newline
+                    // Logic ตัดคำและจัดการ Newline (เพื่อความสวยงามใน Alert)
                     let contentSnippet = s.content ? s.content.substring(0, 150) : "No content";
-                    // ลบพวก Enter/Newline ออกเพื่อความสวยงามใน Alert
-                    contentSnippet = contentSnippet.replace(/(\r\n|\n|\r)/gm, " ");
+                    contentSnippet = contentSnippet.replace(/(\r\n|\n|\r)/gm, " "); // ลบ Enter ออก
 
                     msg += `   📝 "${contentSnippet}..."\n\n`;
                 });
@@ -621,7 +622,7 @@
         document.getElementById('orSearch').onkeyup = window.filterModels;
         window.addFromOR = async (id, inp, out) => { if (confirm(`Add ${id}?`)) { await api.addModel(id, inp, out); await api.activateModel(id, inp, out); document.getElementById('orModal').style.display = 'none'; loadModels(); } };
 
-       
+
         // ...
 
     </script>
