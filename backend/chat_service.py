@@ -135,7 +135,7 @@ async def process_chat_message(
     raw_results += vectorstore.similarity_search_with_score(message, k=4, namespace="global")
     
     passed_docs = []
-    source_debug = [] # ✅ ลิสต์สำหรับเก็บข้อมูล Source ที่จะส่งไปหน้าเว็บ
+    source_debug = [] 
     
     # วนลูปเช็ค Score และเก็บข้อมูล
     for doc, score in raw_results:
