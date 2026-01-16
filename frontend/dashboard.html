@@ -1,50 +1,206 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Carmen Admin Dashboard</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
-        :root { --bg-body: #f1f5f9; --bg-card: #ffffff; --text-main: #1e293b; --primary-blue: #2563eb; --border-color: #e2e8f0; }
-        * { box-sizing: border-box; }
-        body { background-color: var(--bg-body); color: var(--text-main); font-family: 'Inter', sans-serif; margin: 0; padding: 20px; font-size: 14px; }
-        
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; background: white; padding: 16px 24px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); flex-wrap: wrap; gap: 15px; }
-        .header h1 { margin: 0; color: var(--primary-blue); font-size: 20px; }
-        
-        .controls { display: flex; gap: 10px; align-items: center; }
-        select { padding: 8px; border-radius: 6px; border: 1px solid #ccc; font-family: 'Inter'; }
-        
-        .btn-green { background: #16a34a; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 5px; }
-        .btn-refresh { background: var(--primary-blue); color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; }
-        
-        .tabs { display: flex; gap: 10px; margin-bottom: 15px; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px; }
-        .tab-btn { padding: 8px 16px; border: none; background: transparent; cursor: pointer; font-weight: 600; color: #64748b; border-radius: 6px; }
-        .tab-btn.active { background: #dbeafe; color: var(--primary-blue); }
-        
-        .tab-content { display: none; }
-        .tab-content.active { display: block; animation: fadeIn 0.3s; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        :root {
+            --bg-body: #f1f5f9;
+            --bg-card: #ffffff;
+            --text-main: #1e293b;
+            --primary-blue: #2563eb;
+            --border-color: #e2e8f0;
+        }
 
-        .table-container { background: white; border-radius: 12px; overflow-x: auto; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
-        table { width: 100%; border-collapse: collapse; text-align: left; min-width: 800px; }
-        th { background: #f8fafc; padding: 12px 20px; font-weight: 600; color: #475569; border-bottom: 2px solid #e2e8f0; }
-        td { padding: 14px 20px; border-bottom: 1px solid #e2e8f0; }
-        .cost { font-family: monospace; color: var(--primary-blue); font-weight: 600; }
-        
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 20px;
+            font-size: 14px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            background: white;
+            padding: 16px 24px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .header h1 {
+            margin: 0;
+            color: var(--primary-blue);
+            font-size: 20px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        select {
+            padding: 8px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+            font-family: 'Inter';
+        }
+
+        .btn-green {
+            background: #16a34a;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .btn-refresh {
+            background: var(--primary-blue);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #e2e8f0;
+            padding-bottom: 10px;
+        }
+
+        .tab-btn {
+            padding: 8px 16px;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            font-weight: 600;
+            color: #64748b;
+            border-radius: 6px;
+        }
+
+        .tab-btn.active {
+            background: #dbeafe;
+            color: var(--primary-blue);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.3s;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(5px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .table-container {
+            background: white;
+            border-radius: 12px;
+            overflow-x: auto;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            min-width: 800px;
+        }
+
+        th {
+            background: #f8fafc;
+            padding: 12px 20px;
+            font-weight: 600;
+            color: #475569;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        td {
+            padding: 14px 20px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .cost {
+            font-family: monospace;
+            color: var(--primary-blue);
+            font-weight: 600;
+        }
+
         /* Modal */
-        .modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); justify-content:center; align-items:center; z-index: 999; }
-        .modal-content { background: white; padding: 20px; border-radius: 12px; width: 90%; max-width: 600px; max-height: 80vh; overflow-y: auto; }
-        .model-item { display: flex; justify-content: space-between; padding: 10px; border-bottom: 1px solid #eee; }
-        .model-item:hover { background: #f8fafc; }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 999;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .model-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .model-item:hover {
+            background: #f8fafc;
+        }
     </style>
 </head>
+
 <body>
 
     <div class="header">
         <h1>📊 Carmen Admin Dashboard</h1>
-        
+
         <div class="controls">
             <select id="buFilter">
                 <option value="all">🌐 All Business Units</option>
@@ -77,6 +233,7 @@
                         <th>Duration</th>
                         <th>Tokens (In/Out)</th>
                         <th>Cost</th>
+                        <th>Sources</th>
                     </tr>
                 </thead>
                 <tbody id="logsBody"></tbody>
@@ -88,30 +245,100 @@
         <div class="table-container">
             <table>
                 <thead>
-                    <tr><th>Namespace (BU)</th><th>Requests</th><th>Total Tokens</th><th>Cost</th></tr>
+                    <tr>
+                        <th>Namespace (BU)</th>
+                        <th>Requests</th>
+                        <th>Total Tokens</th>
+                        <th>Cost</th>
+                    </tr>
                 </thead>
                 <tbody id="analyticsBody"></tbody>
             </table>
         </div>
     </div>
 
-    <div id="tab-knowledge" class="tab-content">
-        <div class="table-container">
-            <table>
-                <thead><tr><th>Namespace</th><th>Vector Count</th><th>Ratio</th></tr></thead>
-                <tbody id="knowledgeBody"></tbody>
-            </table>
+    <div id="tab-knowledge" class="tab-content" style="display:none;">
+
+        <div style="margin-bottom: 30px;">
+            <h3 style="margin-bottom: 15px; color: #334155;">📊 Vector Database Statistics</h3>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Namespace</th>
+                            <th>Vector Count</th>
+                            <th>Ratio</th>
+                        </tr>
+                    </thead>
+                    <tbody id="knowledgeBody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 30px 0;">
+
+        <div>
+            <h3 style="margin-bottom: 15px; color: #334155;">🔎 Search Knowledge Base</h3>
+
+            <div
+                style="display: flex; gap: 10px; margin-bottom: 20px; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                <input type="text" id="kSearchQuery" placeholder="พิมพ์คำค้นหา เช่น 'วิธีลางาน', 'การเบิกงบ'..."
+                    style="flex: 1; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; outline: none;">
+
+                <select id="kSearchBU"
+                    style="padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; width: 150px; cursor: pointer;">
+                    <option value="global">🌐 Global</option>
+                    <option value="HR">👥 HR</option>
+                    <option value="Sales">💰 Sales</option>
+                    <option value="IT">💻 IT</option>
+                </select>
+
+                <button onclick="searchKnowledge()"
+                    style="padding: 10px 25px; background: #2563eb; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; transition: 0.2s;">
+                    🔍 Search
+                </button>
+            </div>
+
+            <div class="table-container">
+                <table style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="background: #f1f5f9; text-align: left;">
+                            <th style="width: 100px; padding: 12px;">Score</th>
+                            <th style="width: 250px; padding: 12px;">Source File</th>
+                            <th style="padding: 12px;">Content Snippet</th>
+                        </tr>
+                    </thead>
+                    <tbody id="kResultsBody">
+                        <tr>
+                            <td colspan="3" style="text-align:center; padding: 30px; color:#94a3b8;">
+                                พิมพ์คำค้นหาแล้วกดปุ่ม Search เพื่อตรวจสอบข้อมูลใน Database
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 
     <div id="tab-models" class="tab-content">
         <div style="margin-bottom:15px; display:flex; justify-content:space-between;">
             <h3>Active Models</h3>
-            <button onclick="openModelModal()" style="background:#2563eb; color:white; border:none; padding:6px 12px; border-radius:6px; cursor:pointer;">Browse OpenRouter</button>
+            <button onclick="openModelModal()"
+                style="background:#2563eb; color:white; border:none; padding:6px 12px; border-radius:6px; cursor:pointer;">Browse
+                OpenRouter</button>
         </div>
         <div class="table-container">
             <table>
-                <thead><tr><th>Status</th><th>Model Name</th><th>Input Cost ($)</th><th>Output Cost ($)</th><th>Action</th></tr></thead>
+                <thead>
+                    <tr>
+                        <th>Status</th>
+                        <th>Model Name</th>
+                        <th>Input Cost ($)</th>
+                        <th>Output Cost ($)</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
                 <tbody id="modelsBody"></tbody>
             </table>
         </div>
@@ -121,9 +348,11 @@
         <div class="modal-content">
             <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
                 <h2>OpenRouter Models</h2>
-                <button onclick="document.getElementById('orModal').style.display='none'" style="border:none; background:none; font-size:20px; cursor:pointer;">×</button>
+                <button onclick="document.getElementById('orModal').style.display='none'"
+                    style="border:none; background:none; font-size:20px; cursor:pointer;">×</button>
             </div>
-            <input type="text" id="orSearch" placeholder="Search..." style="width:100%; padding:8px; border:1px solid #ccc; border-radius:6px; margin-bottom:10px;">
+            <input type="text" id="orSearch" placeholder="Search..."
+                style="width:100%; padding:8px; border:1px solid #ccc; border-radius:6px; margin-bottom:10px;">
             <div id="orList">Loading...</div>
         </div>
     </div>
@@ -145,7 +374,7 @@
         // --- Core Functions (แก้ไขใหม่) ---
         async function fetchData() {
             const bu = document.getElementById('buFilter').value;
-            
+
             // เช็คว่า Tab ไหนเปิดอยู่ ให้โหลดข้อมูลเฉพาะ Tab นั้น (ประหยัด Resource)
             const activeTabId = document.querySelector('.tab-content.active').id;
 
@@ -155,10 +384,10 @@
                     const logs = await api.getLogs(bu);
                     renderLogs(logs);
                 }
-                
+
                 // ✅ 2. Tab Analytics (ปลดล็อคแล้ว)
                 else if (activeTabId === 'tab-analytics') {
-                    const stats = await api.getAnalytics(); 
+                    const stats = await api.getAnalytics();
                     renderStats(stats);
                 }
 
@@ -173,8 +402,8 @@
                     loadModels();
                 }
 
-            } catch (e) { 
-                console.error("Fetch Error:", e); 
+            } catch (e) {
+                console.error("Fetch Error:", e);
             }
         }
 
@@ -182,28 +411,75 @@
 
         function renderLogs(logs) {
             const tbody = document.getElementById('logsBody');
-            if (!logs || logs.length === 0) { 
-                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:20px; color:#94a3b8;">No logs found</td></tr>'; 
-                return; 
+
+            // ปรับ colspan เป็น 8 ให้ครบทุกช่อง
+            if (!logs || logs.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:20px; color:#94a3b8;">No logs found</td></tr>';
+                return;
             }
-            
-            tbody.innerHTML = logs.map(log => `
+
+            tbody.innerHTML = logs.map(log => {
+                // --- Logic สร้างปุ่มดู Sources ---
+                let sourceBtn = '<span style="color:#cbd5e1;">-</span>';
+
+                if (log.sources && log.sources.length > 0) {
+                    // ต้องแปลง JSON เป็น String และ Escape เครื่องหมาย " เพื่อให้ใส่ใน HTML onclick ได้ไม่พัง
+                    const sourceData = JSON.stringify(log.sources).replace(/"/g, '&quot;');
+
+                    sourceBtn = `
+                        <button onclick="showSources('${sourceData}')" 
+                                style="background:#f1f5f9; border:1px solid #cbd5e1; color:#475569; cursor:pointer; padding:4px 8px; border-radius:4px; font-size:11px; transition:0.2s;">
+                            📄 View (${log.sources.length})
+                        </button>`;
+                }
+
+                return `
                 <tr>
                     <td>${new Date(log.timestamp).toLocaleTimeString()}</td>
+                    
                     <td>
-                        <div style="display:flex; align-items:center; gap:8px;">
+                        <div style="display:flex; align-items:center;">
                             <span style="background:#e0f2fe; color:#0284c7; padding:2px 8px; border-radius:6px; font-size:11px; font-weight:bold; border:1px solid #bae6fd;">
                                 ${log.bu || 'GLOBAL'}
                             </span>
-                            
                         </div>
                     </td>
+
+                    <td style="max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size:13px;" title="${log.user_query}">
+                        ${log.user_query || '-'}
+                    </td>
+
                     <td>${log.model_name}</td>
                     <td>${log.duration?.toFixed(2)}s</td>
                     <td>${log.total_tokens || 0}</td>
                     <td class="cost">$${(log.cost || 0).toFixed(6)}</td>
+
+                    <td style="text-align:center;">
+                        ${sourceBtn}
+                    </td>
                 </tr>
-            `).join('');
+            `}).join('');
+        }
+
+        // ฟังก์ชันสำหรับกดปุ่ม View แล้วโชว์รายละเอียด
+        function showSources(sourceString) {
+            try {
+                const sources = JSON.parse(sourceString);
+                let msg = "📚 Reference Sources:\n-------------------\n";
+
+                sources.forEach((s, i) => {
+                    msg += `${i + 1}. 📄 ${s.source} (Page ${s.page})\n`;
+                    msg += `   🎯 Score: ${s.score}\n`;
+                    // ตัดเนื้อหามาโชว์นิดหน่อย
+                    let contentSnippet = s.content ? s.content.substring(0, 100).replace(/\n/g, ' ') + "..." : "No content preview";
+                    msg += `   📝 "${contentSnippet}"\n\n`;
+                });
+
+                alert(msg); // ใช้ alert ง่ายๆ หรือจะทำ Modal สวยๆ ก็ได้ครับ
+            } catch (e) {
+                console.error("Error parsing sources:", e);
+                alert("Cannot display sources.");
+            }
         }
 
         // ✅ ฟังก์ชันแสดงกราฟ Analytics (เพิ่มใหม่)
@@ -229,7 +505,7 @@
         // ✅ ฟังก์ชันแสดง Knowledge Vector (เพิ่มใหม่)
         function renderKnowledge(data) {
             const tbody = document.getElementById('knowledgeBody');
-            
+
             // กรณีไม่มี Pinecone หรือยังไม่เคยเทรน
             if (!data || !data.namespaces || data.namespaces.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:20px;">No knowledge base found (Pinecone empty)</td></tr>';
@@ -257,13 +533,13 @@
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
             document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
             document.getElementById(`tab-${tabName}`).classList.add('active');
-            
+
             // หาปุ่มที่ถูกกดเพื่อใส่ active class
-            const btn = event.target; 
-            if(btn) btn.classList.add('active');
-            
+            const btn = event.target;
+            if (btn) btn.classList.add('active');
+
             // เรียก fetchData ทันทีที่เปลี่ยน Tab
-            fetchData(); 
+            fetchData();
         };
 
         document.getElementById('refreshBtn').onclick = fetchData;
@@ -287,14 +563,87 @@
             `).join('');
         }
 
-        window.activateModel = async (id, inp, out) => { if(confirm('Switch to ' + id + '?')) { await api.activateModel(id, inp, out); loadModels(); } };
-        window.deleteModel = async (id) => { if(confirm('Delete ' + id + '?')) { await api.deleteModel(id); loadModels(); } };
+        // ✅ ฟังก์ชันค้นหา Knowledge Base
+        async function searchKnowledge() {
+            const query = document.getElementById('kSearchQuery').value.trim();
+            const bu = document.getElementById('kSearchBU').value;
+            const tbody = document.getElementById('kResultsBody');
+
+            if (!query) {
+                alert("กรุณาพิมพ์คำค้นหาก่อนครับ");
+                return;
+            }
+
+            // แสดงสถานะ Loading
+            tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:20px; color:#64748b;">⏳ กำลังค้นหาข้อมูล...</td></tr>';
+
+            try {
+                // ยิง API ไปที่ Backend (ต้องมี Route /knowledge/search ที่ Backend แล้วนะ)
+                const res = await fetch(`/knowledge/search?q=${encodeURIComponent(query)}&bu=${bu}&limit=10`);
+
+                if (!res.ok) throw new Error("API Error");
+
+                const results = await res.json();
+
+                // กรณีไม่เจอข้อมูล
+                if (!results || results.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:20px; color:#ef4444;">❌ ไม่พบข้อมูลที่ตรงกัน</td></tr>';
+                    return;
+                }
+
+                // กรณีมี Error จาก Backend
+                if (results.error) {
+                    tbody.innerHTML = `<tr><td colspan="3" style="text-align:center; padding:20px; color:red;">Error: ${results.error}</td></tr>`;
+                    return;
+                }
+
+                // Render ผลลัพธ์
+                tbody.innerHTML = results.map(item => `
+            <tr style="border-bottom: 1px solid #f1f5f9; hover:background-color: #f8fafc;">
+                <td style="padding: 12px; vertical-align: top;">
+                    <span style="background:${getScoreColor(item.score)}; color:white; padding:4px 8px; border-radius:6px; font-size:12px; font-weight:bold;">
+                        ${(item.score * 100).toFixed(1)}%
+                    </span>
+                </td>
+                <td style="padding: 12px; vertical-align: top;">
+                    <div style="font-weight:600; color:#334155; font-size:13px;">📄 ${item.source}</div>
+                    <div style="font-size:11px; color:#64748b; margin-top:4px;">Page ${item.page}</div>
+                </td>
+                <td style="padding: 12px; vertical-align: top; font-size:13px; color:#475569; line-height: 1.6;">
+                    "${item.content.substring(0, 200)}..." 
+                </td>
+            </tr>
+        `).join('');
+
+            } catch (err) {
+                console.error(err);
+                tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:20px; color:red;">⚠️ เกิดข้อผิดพลาดในการเชื่อมต่อ</td></tr>';
+            }
+        }
+
+        // 🎨 ฟังก์ชันเลือกสีตามคะแนนความมั่นใจ
+        function getScoreColor(score) {
+            if (score >= 0.8) return '#16a34a'; // เขียว (แม่นมาก)
+            if (score >= 0.7) return '#ca8a04'; // เหลือง (พอใช้)
+            return '#dc2626'; // แดง (น้อย)
+        }
+
+        // ✨ เพิ่มลูกเล่น: กด Enter ในช่องค้นหาแล้ว Search เลย
+        document.getElementById('kSearchQuery').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                searchKnowledge();
+            }
+        });
+
+        window.activateModel = async (id, inp, out) => { if (confirm('Switch to ' + id + '?')) { await api.activateModel(id, inp, out); loadModels(); } };
+        window.deleteModel = async (id) => { if (confirm('Delete ' + id + '?')) { await api.deleteModel(id); loadModels(); } };
         window.openModelModal = async () => { document.getElementById('orModal').style.display = 'flex'; allORModels = await api.getOpenRouterModels(); renderORList(allORModels); };
         window.renderORList = (list) => { document.getElementById('orList').innerHTML = list.map(m => `<div class="model-item"><div><b>${m.name}</b><br><span style="font-size:11px; color:#666;">${m.id}</span></div><button onclick="addFromOR('${m.id}', ${m.input_rate}, ${m.output_rate})" style="border:1px solid #2563eb; color:#2563eb; background:white; padding:4px 10px; border-radius:4px; cursor:pointer;">Add</button></div>`).join(''); };
         window.filterModels = () => { const q = document.getElementById('orSearch').value.toLowerCase(); renderORList(allORModels.filter(m => m.name.toLowerCase().includes(q) || m.id.toLowerCase().includes(q))); };
         document.getElementById('orSearch').onkeyup = window.filterModels;
-        window.addFromOR = async (id, inp, out) => { if(confirm(`Add ${id}?`)) { await api.addModel(id, inp, out); await api.activateModel(id, inp, out); document.getElementById('orModal').style.display = 'none'; loadModels(); } };
+        window.addFromOR = async (id, inp, out) => { if (confirm(`Add ${id}?`)) { await api.addModel(id, inp, out); await api.activateModel(id, inp, out); document.getElementById('orModal').style.display = 'none'; loadModels(); } };
 
     </script>
 </body>
+
 </html>

@@ -69,6 +69,7 @@ class TokenLog(Base):
     duration = Column(Float, default=0.0)
     user_query = Column(Text, nullable=True) 
     timestamp = Column(DateTime, default=datetime.now)
+    sources = Column(JSON, nullable=True)
 
     # ✅ Relation Back: เชื่อมกลับไปหา Model Object
     model_rel = relationship("ModelPricing", back_populates="token_logs")

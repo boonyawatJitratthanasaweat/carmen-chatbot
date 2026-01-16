@@ -200,6 +200,7 @@ async def process_chat_message(
         cost=total_cost,
         duration=duration,
         user_query=message,
+        sources=source_debug
     )
     db.add(new_log)
 

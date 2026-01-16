@@ -112,6 +112,36 @@ async def get_users_namespaces():
         {"label": "👥 HR Department", "value": "HR"}
     ]
 
+@app.get("/knowledge/search")
+async def search_knowledge(
+    q: str,             # คำค้นหา
+    bu: str = "global", # ค้นใน Namespace ไหน (default=global)
+    limit: int = 10     # จำนวนผลลัพธ์
+):
+    if not vectorstore:
+        return {"error": "Vector Store not initialized"}
+
+    try:
+        # ค้นหาด้วย LangChain Pinecone
+        # มันจะ Embed คำค้นหา -> ยิงไป Pinecone -> ได้ผลลัพธ์กลับมา
+        results = vectorstore.similarity_search_with_score(q, k=limit, namespace=bu)
+        
+        # แปลงข้อมูลให้เป็น JSON ที่อ่านง่าย
+        data = []
+        for doc, score in results:
+            data.append({
+                "content": doc.page_content,
+                "source": doc.metadata.get("source", "Unknown"),
+                "page": doc.metadata.get("page", 1),
+                "score": round(float(score), 4) # คะแนนความเหมือน (ยิ่งเยอะยิ่งใช่)
+            })
+            
+        return data
+
+    except Exception as e:
+        print(f"Search Error: {e}")
+        return {"error": str(e)}
+
 # --- Model Management ---
 class ModelUpdate(BaseModel):
     model_id: str; input_rate: float; output_rate: float
