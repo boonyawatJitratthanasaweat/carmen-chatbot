@@ -30,6 +30,8 @@ from langchain_core.documents import Document
 env_path = Path(__file__).parent / '.env'
 load_dotenv(dotenv_path=env_path)
 
+
+
 # ✅ Auto-Create Tables
 Base.metadata.create_all(bind=engine)
 
@@ -368,7 +370,10 @@ async def cancel_training():
 # ==========================================
 # 🛠️ System Routes
 # ==========================================
-app.mount("/images", StaticFiles(directory="images"), name="images")
+images_path = os.path.join(os.path.dirname(__file__), "images")
+if not os.path.exists(images_path):
+    os.makedirs(images_path)
+app.mount("/images", StaticFiles(directory=images_path), name="images")
 app.mount("/static", StaticFiles(directory="frontend"), name="static")
 
 @app.get("/")
