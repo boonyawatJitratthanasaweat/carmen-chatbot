@@ -215,11 +215,14 @@ async def process_chat_message(
     )
     db.add(bot_history)
     db.commit()
+    db.refresh(bot_history)
 
     # ✅ ส่ง sources กลับไปด้วย
     return {
         "answer": bot_ans,
         "bu": bu,
         "model": model_name,
-        "sources": source_debug 
+        "sources": source_debug,
+        "message_id": bot_history.id 
+
     }
