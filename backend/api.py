@@ -368,6 +368,7 @@ async def cancel_training():
 # ==========================================
 # 🛠️ System Routes
 # ==========================================
+app.mount("/images", StaticFiles(directory="images"), name="images")
 app.mount("/static", StaticFiles(directory="frontend"), name="static")
 
 @app.get("/")
