@@ -112,6 +112,35 @@ async def get_users_namespaces():
         {"label": "👥 HR Department", "value": "HR"}
     ]
 
+# ✅ API ดูสถิติ Vector Database
+@app.get("/knowledge/stats")
+async def get_knowledge_stats():
+    if not vectorstore:
+        return {"error": "Vector Store Not Initialized"}
+    
+    try:
+        # ดึง Stats จาก Pinecone Index ตรงๆ
+        index_stats = vectorstore.get_pinecone_index().describe_index_stats()
+        
+        # แปลงข้อมูลให้อ่านง่าย
+        namespaces = index_stats.get("namespaces", {})
+        total_vectors = index_stats.get("total_vector_count", 0)
+        
+        stats = []
+        for ns, data in namespaces.items():
+            count = data.get("vector_count", 0)
+            ratio = (count / total_vectors * 100) if total_vectors > 0 else 0
+            stats.append({
+                "namespace": ns,
+                "count": count,
+                "ratio": ratio
+            })
+            
+        return stats
+    except Exception as e:
+        print(f"Stats Error: {e}")
+        return []
+
 @app.get("/knowledge/search")
 async def search_knowledge(
     q: str,             # คำค้นหา

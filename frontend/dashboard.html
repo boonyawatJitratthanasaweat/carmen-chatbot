@@ -115,15 +115,8 @@
         }
 
         @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(5px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         .table-container {
@@ -229,6 +222,7 @@
                     <tr>
                         <th>Time</th>
                         <th>BU</th>
+                        <th>User Query</th>
                         <th>Model</th>
                         <th>Duration</th>
                         <th>Tokens (In/Out)</th>
@@ -257,8 +251,7 @@
         </div>
     </div>
 
-    <div id="tab-knowledge" class="tab-content" style="display:none;">
-
+    <div id="tab-knowledge" class="tab-content">
         <div style="margin-bottom: 30px;">
             <h3 style="margin-bottom: 15px; color: #334155;">📊 Vector Database Statistics</h3>
             <div class="table-container">
@@ -270,8 +263,7 @@
                             <th>Ratio</th>
                         </tr>
                     </thead>
-                    <tbody id="knowledgeBody">
-                    </tbody>
+                    <tbody id="knowledgeBody"></tbody>
                 </table>
             </div>
         </div>
@@ -280,22 +272,18 @@
 
         <div>
             <h3 style="margin-bottom: 15px; color: #334155;">🔎 Search Knowledge Base</h3>
-
-            <div
-                style="display: flex; gap: 10px; margin-bottom: 20px; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0;">
+            <div style="display: flex; gap: 10px; margin-bottom: 20px; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0;">
                 <input type="text" id="kSearchQuery" placeholder="พิมพ์คำค้นหา เช่น 'วิธีลางาน', 'การเบิกงบ'..."
                     style="flex: 1; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; outline: none;">
 
-                <select id="kSearchBU"
-                    style="padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; width: 150px; cursor: pointer;">
+                <select id="kSearchBU" style="padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; width: 150px; cursor: pointer;">
                     <option value="global">🌐 Global</option>
                     <option value="HR">👥 HR</option>
                     <option value="Sales">💰 Sales</option>
                     <option value="IT">💻 IT</option>
                 </select>
 
-                <button onclick="searchKnowledge()"
-                    style="padding: 10px 25px; background: #2563eb; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; transition: 0.2s;">
+                <button onclick="searchKnowledge()" style="padding: 10px 25px; background: #2563eb; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; transition: 0.2s;">
                     🔍 Search
                 </button>
             </div>
@@ -358,7 +346,7 @@
     </div>
 
     <script type="module">
-        import { AdminAPI } from '/static/admin-api.js?v=2'; // Version 2
+        import { AdminAPI } from '/static/admin-api.js?v=2';
 
         const api = new AdminAPI();
         let allORModels = [];
@@ -367,41 +355,36 @@
         // --- Init ---
         window.onload = () => {
             fetchData();
-            // Refresh ทุก 10 วินาที เฉพาะ Tab ที่เปิดอยู่
-            autoRefresh = setInterval(fetchData, 10000);
+            autoRefresh = setInterval(fetchData, 10000); // Auto refresh
         };
 
-        // --- Core Functions (แก้ไขใหม่) ---
+        // --- Core Functions ---
         async function fetchData() {
             const bu = document.getElementById('buFilter').value;
-
-            // เช็คว่า Tab ไหนเปิดอยู่ ให้โหลดข้อมูลเฉพาะ Tab นั้น (ประหยัด Resource)
             const activeTabId = document.querySelector('.tab-content.active').id;
 
             try {
-                // 1. Tab Logs
+                // 1. Logs
                 if (activeTabId === 'tab-logs') {
                     const logs = await api.getLogs(bu);
                     renderLogs(logs);
                 }
-
-                // ✅ 2. Tab Analytics (ปลดล็อคแล้ว)
+                // 2. Analytics
                 else if (activeTabId === 'tab-analytics') {
                     const stats = await api.getAnalytics();
                     renderStats(stats);
                 }
-
-                // ✅ 3. Tab Knowledge (ปลดล็อคแล้ว)
+                // 3. Knowledge
                 else if (activeTabId === 'tab-knowledge') {
-                    const vectors = await api.getVectorStats();
+                    // ✅ ใช้ fetch ตรงๆ เพื่อความชัวร์ (เผื่อ admin-api.js ไม่ได้อัปเดต)
+                    const res = await fetch('/knowledge/stats');
+                    const vectors = await res.json();
                     renderKnowledge(vectors);
                 }
-
-                // 4. Tab Models (โหลดจาก switchTab แล้ว แต่ Refresh status ได้)
+                // 4. Models
                 else if (activeTabId === 'tab-models') {
                     loadModels();
                 }
-
             } catch (e) {
                 console.error("Fetch Error:", e);
             }
@@ -411,21 +394,15 @@
 
         function renderLogs(logs) {
             const tbody = document.getElementById('logsBody');
-
-            // ปรับ colspan เป็น 8 ให้ครบทุกช่อง
             if (!logs || logs.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:20px; color:#94a3b8;">No logs found</td></tr>';
                 return;
             }
 
             tbody.innerHTML = logs.map(log => {
-                // --- Logic สร้างปุ่มดู Sources ---
                 let sourceBtn = '<span style="color:#cbd5e1;">-</span>';
-
                 if (log.sources && log.sources.length > 0) {
-                    // ต้องแปลง JSON เป็น String และ Escape เครื่องหมาย " เพื่อให้ใส่ใน HTML onclick ได้ไม่พัง
                     const sourceData = JSON.stringify(log.sources).replace(/"/g, '&quot;');
-
                     sourceBtn = `
                         <button onclick="showSources('${sourceData}')" 
                                 style="background:#f1f5f9; border:1px solid #cbd5e1; color:#475569; cursor:pointer; padding:4px 8px; border-radius:4px; font-size:11px; transition:0.2s;">
@@ -436,7 +413,6 @@
                 return `
                 <tr>
                     <td>${new Date(log.timestamp).toLocaleTimeString()}</td>
-                    
                     <td>
                         <div style="display:flex; align-items:center;">
                             <span style="background:#e0f2fe; color:#0284c7; padding:2px 8px; border-radius:6px; font-size:11px; font-weight:bold; border:1px solid #bae6fd;">
@@ -444,57 +420,27 @@
                             </span>
                         </div>
                     </td>
-
                     <td style="max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size:13px;" title="${log.user_query}">
                         ${log.user_query || '-'}
                     </td>
-
                     <td>${log.model_name}</td>
                     <td>${log.duration?.toFixed(2)}s</td>
                     <td>${log.total_tokens || 0}</td>
                     <td class="cost">$${(log.cost || 0).toFixed(6)}</td>
-
-                    <td style="text-align:center;">
-                        ${sourceBtn}
-                    </td>
+                    <td style="text-align:center;">${sourceBtn}</td>
                 </tr>
             `}).join('');
         }
 
-        // ฟังก์ชันสำหรับกดปุ่ม View แล้วโชว์รายละเอียด
-        function showSources(sourceString) {
-            try {
-                const sources = JSON.parse(sourceString);
-                let msg = "📚 Reference Sources:\n-------------------\n";
-
-                sources.forEach((s, i) => {
-                    msg += `${i + 1}. 📄 ${s.source} (Page ${s.page})\n`;
-                    msg += `   🎯 Score: ${s.score}\n`;
-                    // ตัดเนื้อหามาโชว์นิดหน่อย
-                    let contentSnippet = s.content ? s.content.substring(0, 100).replace(/\n/g, ' ') + "..." : "No content preview";
-                    msg += `   📝 "${contentSnippet}"\n\n`;
-                });
-
-                alert(msg); // ใช้ alert ง่ายๆ หรือจะทำ Modal สวยๆ ก็ได้ครับ
-            } catch (e) {
-                console.error("Error parsing sources:", e);
-                alert("Cannot display sources.");
-            }
-        }
-
-        // ✅ ฟังก์ชันแสดงกราฟ Analytics (เพิ่มใหม่)
         function renderStats(stats) {
             const tbody = document.getElementById('analyticsBody');
             if (!stats || stats.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px;">No data available</td></tr>';
                 return;
             }
-
             tbody.innerHTML = stats.map(st => `
                 <tr>
-                    <td>
-                        <span style="font-weight:bold; color:#2563eb; font-size:14px;">${st.namespace.toUpperCase()}</span>
-                    </td>
+                    <td><span style="font-weight:bold; color:#2563eb; font-size:14px;">${st.namespace.toUpperCase()}</span></td>
                     <td>${st.total_requests.toLocaleString()}</td>
                     <td>${st.total_tokens.toLocaleString()}</td>
                     <td class="cost" style="font-size:15px;">$${st.total_cost.toFixed(6)}</td>
@@ -502,50 +448,99 @@
             `).join('');
         }
 
-        // ✅ ฟังก์ชันแสดง Knowledge Vector (เพิ่มใหม่)
         function renderKnowledge(data) {
             const tbody = document.getElementById('knowledgeBody');
-
-            // กรณีไม่มี Pinecone หรือยังไม่เคยเทรน
-            if (!data || !data.namespaces || data.namespaces.length === 0) {
+            
+            // ✅ แก้ไขให้รับ Array โดยตรง (Backend ส่งมาเป็น List)
+            if (!data || data.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:20px;">No knowledge base found (Pinecone empty)</td></tr>';
                 return;
             }
 
-            tbody.innerHTML = data.namespaces.map(ns => `
+            tbody.innerHTML = data.map(item => `
                 <tr>
-                    <td style="font-weight:bold;">${ns.namespace}</td>
-                    <td>${ns.count.toLocaleString()} vectors</td>
+                    <td style="font-weight:bold;">${item.namespace || 'Global'}</td>
+                    <td>${item.count.toLocaleString()} vectors</td>
                     <td>
                         <div style="display:flex; align-items:center; gap:10px;">
                             <div style="flex:1; height:6px; background:#e2e8f0; border-radius:3px; overflow:hidden;">
-                                <div style="width:${ns.percent}%; height:100%; background:#10b981;"></div>
+                                <div style="width:${item.ratio}%; height:100%; background:#10b981;"></div>
                             </div>
-                            <span style="font-size:12px; color:#64748b;">${ns.percent.toFixed(1)}%</span>
+                            <span style="font-size:12px; color:#64748b;">${item.ratio.toFixed(1)}%</span>
                         </div>
                     </td>
                 </tr>
             `).join('');
         }
 
-        // --- UI Events ---
-        window.switchTab = (tabName) => {
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-            document.getElementById(`tab-${tabName}`).classList.add('active');
+        async function searchKnowledge() {
+            const query = document.getElementById('kSearchQuery').value.trim();
+            const bu = document.getElementById('kSearchBU').value;
+            const tbody = document.getElementById('kResultsBody');
 
-            // หาปุ่มที่ถูกกดเพื่อใส่ active class
-            const btn = event.target;
-            if (btn) btn.classList.add('active');
+            if (!query) { alert("กรุณาพิมพ์คำค้นหาก่อนครับ"); return; }
 
-            // เรียก fetchData ทันทีที่เปลี่ยน Tab
-            fetchData();
-        };
+            tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:20px; color:#64748b;">⏳ กำลังค้นหาข้อมูล...</td></tr>';
 
-        document.getElementById('refreshBtn').onclick = fetchData;
-        document.getElementById('buFilter').onchange = fetchData;
+            try {
+                const res = await fetch(`/knowledge/search?q=${encodeURIComponent(query)}&bu=${bu}&limit=10`);
+                if (!res.ok) throw new Error("API Error");
+                const results = await res.json();
 
-        // --- Models Logic (เหมือนเดิม) ---
+                if (!results || results.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:20px; color:#ef4444;">❌ ไม่พบข้อมูลที่ตรงกัน</td></tr>';
+                    return;
+                }
+                if (results.error) {
+                    tbody.innerHTML = `<tr><td colspan="3" style="text-align:center; padding:20px; color:red;">Error: ${results.error}</td></tr>`;
+                    return;
+                }
+
+                tbody.innerHTML = results.map(item => `
+                <tr style="border-bottom: 1px solid #f1f5f9; hover:background-color: #f8fafc;">
+                    <td style="padding: 12px; vertical-align: top;">
+                        <span style="background:${getScoreColor(item.score)}; color:white; padding:4px 8px; border-radius:6px; font-size:12px; font-weight:bold;">
+                            ${(item.score * 100).toFixed(1)}%
+                        </span>
+                    </td>
+                    <td style="padding: 12px; vertical-align: top;">
+                        <div style="font-weight:600; color:#334155; font-size:13px;">📄 ${item.source}</div>
+                        <div style="font-size:11px; color:#64748b; margin-top:4px;">Page ${item.page}</div>
+                    </td>
+                    <td style="padding: 12px; vertical-align: top; font-size:13px; color:#475569; line-height: 1.6;">
+                        "${item.content.substring(0, 200)}..." 
+                    </td>
+                </tr>`).join('');
+            } catch (err) {
+                console.error(err);
+                tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:20px; color:red;">⚠️ เกิดข้อผิดพลาดในการเชื่อมต่อ</td></tr>';
+            }
+        }
+
+        // --- Helpers ---
+        function getScoreColor(score) {
+            if (score >= 0.8) return '#16a34a';
+            if (score >= 0.7) return '#ca8a04';
+            return '#dc2626';
+        }
+
+        function showSources(sourceString) {
+            try {
+                const sources = JSON.parse(sourceString);
+                let msg = "📚 Reference Sources:\n-------------------\n";
+                sources.forEach((s, i) => {
+                    msg += `${i + 1}. 📄 ${s.source} (Page ${s.page})\n`;
+                    msg += `   🎯 Score: ${s.score}\n`;
+                    let contentSnippet = s.content ? s.content.substring(0, 100).replace(/\n/g, ' ') + "..." : "No content preview";
+                    msg += `   📝 "${contentSnippet}"\n\n`;
+                });
+                alert(msg);
+            } catch (e) {
+                console.error("Error parsing sources:", e);
+                alert("Cannot display sources.");
+            }
+        }
+
         async function loadModels() {
             const models = await api.getLocalModels();
             const tbody = document.getElementById('modelsBody');
@@ -563,78 +558,26 @@
             `).join('');
         }
 
-        // ✅ ฟังก์ชันค้นหา Knowledge Base
-        async function searchKnowledge() {
-            const query = document.getElementById('kSearchQuery').value.trim();
-            const bu = document.getElementById('kSearchBU').value;
-            const tbody = document.getElementById('kResultsBody');
+        // --- Expose to Window (Important for HTML onclick) ---
+        window.switchTab = (tabName) => {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            document.getElementById(`tab-${tabName}`).classList.add('active');
+            if (event && event.target) event.target.classList.add('active');
+            fetchData();
+        };
 
-            if (!query) {
-                alert("กรุณาพิมพ์คำค้นหาก่อนครับ");
-                return;
-            }
-
-            // แสดงสถานะ Loading
-            tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:20px; color:#64748b;">⏳ กำลังค้นหาข้อมูล...</td></tr>';
-
-            try {
-                // ยิง API ไปที่ Backend (ต้องมี Route /knowledge/search ที่ Backend แล้วนะ)
-                const res = await fetch(`/knowledge/search?q=${encodeURIComponent(query)}&bu=${bu}&limit=10`);
-
-                if (!res.ok) throw new Error("API Error");
-
-                const results = await res.json();
-
-                // กรณีไม่เจอข้อมูล
-                if (!results || results.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:20px; color:#ef4444;">❌ ไม่พบข้อมูลที่ตรงกัน</td></tr>';
-                    return;
-                }
-
-                // กรณีมี Error จาก Backend
-                if (results.error) {
-                    tbody.innerHTML = `<tr><td colspan="3" style="text-align:center; padding:20px; color:red;">Error: ${results.error}</td></tr>`;
-                    return;
-                }
-
-                // Render ผลลัพธ์
-                tbody.innerHTML = results.map(item => `
-            <tr style="border-bottom: 1px solid #f1f5f9; hover:background-color: #f8fafc;">
-                <td style="padding: 12px; vertical-align: top;">
-                    <span style="background:${getScoreColor(item.score)}; color:white; padding:4px 8px; border-radius:6px; font-size:12px; font-weight:bold;">
-                        ${(item.score * 100).toFixed(1)}%
-                    </span>
-                </td>
-                <td style="padding: 12px; vertical-align: top;">
-                    <div style="font-weight:600; color:#334155; font-size:13px;">📄 ${item.source}</div>
-                    <div style="font-size:11px; color:#64748b; margin-top:4px;">Page ${item.page}</div>
-                </td>
-                <td style="padding: 12px; vertical-align: top; font-size:13px; color:#475569; line-height: 1.6;">
-                    "${item.content.substring(0, 200)}..." 
-                </td>
-            </tr>
-        `).join('');
-
-            } catch (err) {
-                console.error(err);
-                tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:20px; color:red;">⚠️ เกิดข้อผิดพลาดในการเชื่อมต่อ</td></tr>';
-            }
-        }
-
-        // 🎨 ฟังก์ชันเลือกสีตามคะแนนความมั่นใจ
-        function getScoreColor(score) {
-            if (score >= 0.8) return '#16a34a'; // เขียว (แม่นมาก)
-            if (score >= 0.7) return '#ca8a04'; // เหลือง (พอใช้)
-            return '#dc2626'; // แดง (น้อย)
-        }
-
-        // ✨ เพิ่มลูกเล่น: กด Enter ในช่องค้นหาแล้ว Search เลย
+        document.getElementById('refreshBtn').onclick = fetchData;
+        document.getElementById('buFilter').onchange = fetchData;
         document.getElementById('kSearchQuery').addEventListener('keypress', function (e) {
-            if (e.key === 'Enter') {
-                searchKnowledge();
-            }
+            if (e.key === 'Enter') searchKnowledge();
         });
 
+        // ✅ ทำให้ฟังก์ชันเหล่านี้เป็น Global เพื่อให้ปุ่ม HTML เรียกใช้ได้
+        window.showSources = showSources;
+        window.searchKnowledge = searchKnowledge;
+        
+        // Model Functions
         window.activateModel = async (id, inp, out) => { if (confirm('Switch to ' + id + '?')) { await api.activateModel(id, inp, out); loadModels(); } };
         window.deleteModel = async (id) => { if (confirm('Delete ' + id + '?')) { await api.deleteModel(id); loadModels(); } };
         window.openModelModal = async () => { document.getElementById('orModal').style.display = 'flex'; allORModels = await api.getOpenRouterModels(); renderORList(allORModels); };
@@ -645,5 +588,4 @@
 
     </script>
 </body>
-
 </html>
