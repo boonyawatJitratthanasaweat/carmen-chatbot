@@ -112,17 +112,24 @@ async def get_users_namespaces():
         {"label": "👥 HR Department", "value": "HR"}
     ]
 
-# ✅ API ดูสถิติ Vector Database
 @app.get("/knowledge/stats")
 async def get_knowledge_stats():
-    if not vectorstore:
-        return {"error": "Vector Store Not Initialized"}
+    # ตรวจสอบว่ามี API KEY หรือไม่
+    api_key = os.environ.get("PINECONE_API_KEY")
+    index_name = os.environ.get("PINECONE_INDEX_NAME")
+    
+    if not api_key or not index_name:
+        return {"error": "Pinecone Environment Variables Missing"}
     
     try:
-        # ดึง Stats จาก Pinecone Index ตรงๆ
-        index_stats = vectorstore.get_pinecone_index().describe_index_stats()
+        # ✅ วิธีใหม่: เชื่อมต่อ Pinecone โดยตรง เพื่อขอดู Stats
+        pc = Pinecone(api_key=api_key)
+        index = pc.Index(index_name)
         
-        # แปลงข้อมูลให้อ่านง่าย
+        # ดึงข้อมูล
+        index_stats = index.describe_index_stats()
+        
+        # แปลงข้อมูลให้อ่านง่าย (เหมือนเดิม)
         namespaces = index_stats.get("namespaces", {})
         total_vectors = index_stats.get("total_vector_count", 0)
         
@@ -137,9 +144,10 @@ async def get_knowledge_stats():
             })
             
         return stats
+
     except Exception as e:
         print(f"Stats Error: {e}")
-        return []
+        return {"error": str(e)}
 
 @app.get("/knowledge/search")
 async def search_knowledge(
