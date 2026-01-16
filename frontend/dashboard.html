@@ -115,8 +115,15 @@
         }
 
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(5px); }
-            to { opacity: 1; transform: translateY(0); }
+            from {
+                opacity: 0;
+                transform: translateY(5px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         .table-container {
@@ -272,18 +279,21 @@
 
         <div>
             <h3 style="margin-bottom: 15px; color: #334155;">🔎 Search Knowledge Base</h3>
-            <div style="display: flex; gap: 10px; margin-bottom: 20px; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0;">
+            <div
+                style="display: flex; gap: 10px; margin-bottom: 20px; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0;">
                 <input type="text" id="kSearchQuery" placeholder="พิมพ์คำค้นหา เช่น 'วิธีลางาน', 'การเบิกงบ'..."
                     style="flex: 1; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; outline: none;">
 
-                <select id="kSearchBU" style="padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; width: 150px; cursor: pointer;">
+                <select id="kSearchBU"
+                    style="padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; width: 150px; cursor: pointer;">
                     <option value="global">🌐 Global</option>
                     <option value="HR">👥 HR</option>
                     <option value="Sales">💰 Sales</option>
                     <option value="IT">💻 IT</option>
                 </select>
 
-                <button onclick="searchKnowledge()" style="padding: 10px 25px; background: #2563eb; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; transition: 0.2s;">
+                <button onclick="searchKnowledge()"
+                    style="padding: 10px 25px; background: #2563eb; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; transition: 0.2s;">
                     🔍 Search
                 </button>
             </div>
@@ -392,44 +402,53 @@
 
         // --- Render Functions ---
 
+        // 1. ประกาศตัวแปรไว้นอกฟังก์ชัน เพื่อเก็บข้อมูล Logs ล่าสุด
+        let currentLogsData = [];
+
         function renderLogs(logs) {
             const tbody = document.getElementById('logsBody');
+
+            // 2. บันทึกข้อมูลลงตัวแปร Global
+            currentLogsData = logs || [];
+
             if (!logs || logs.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:20px; color:#94a3b8;">No logs found</td></tr>';
                 return;
             }
 
-            tbody.innerHTML = logs.map(log => {
+            // 3. ใส่ index (ตัว i) เข้าไปใน map
+            tbody.innerHTML = logs.map((log, i) => {
                 let sourceBtn = '<span style="color:#cbd5e1;">-</span>';
+
                 if (log.sources && log.sources.length > 0) {
-                    const sourceData = JSON.stringify(log.sources).replace(/"/g, '&quot;');
+                    // 4. แก้ตรง onclick: ส่งแค่ตัวเลข i (index) ไปแทน JSON ยาวๆ
                     sourceBtn = `
-                        <button onclick="showSources('${sourceData}')" 
-                                style="background:#f1f5f9; border:1px solid #cbd5e1; color:#475569; cursor:pointer; padding:4px 8px; border-radius:4px; font-size:11px; transition:0.2s;">
-                            📄 View (${log.sources.length})
-                        </button>`;
+                <button onclick="showSources(${i})" 
+                        style="background:#f1f5f9; border:1px solid #cbd5e1; color:#475569; cursor:pointer; padding:4px 8px; border-radius:4px; font-size:11px; transition:0.2s;">
+                    📄 View (${log.sources.length})
+                </button>`;
                 }
 
                 return `
-                <tr>
-                    <td>${new Date(log.timestamp).toLocaleTimeString()}</td>
-                    <td>
-                        <div style="display:flex; align-items:center;">
-                            <span style="background:#e0f2fe; color:#0284c7; padding:2px 8px; border-radius:6px; font-size:11px; font-weight:bold; border:1px solid #bae6fd;">
-                                ${log.bu || 'GLOBAL'}
-                            </span>
-                        </div>
-                    </td>
-                    <td style="max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size:13px;" title="${log.user_query}">
-                        ${log.user_query || '-'}
-                    </td>
-                    <td>${log.model_name}</td>
-                    <td>${log.duration?.toFixed(2)}s</td>
-                    <td>${log.total_tokens || 0}</td>
-                    <td class="cost">$${(log.cost || 0).toFixed(6)}</td>
-                    <td style="text-align:center;">${sourceBtn}</td>
-                </tr>
-            `}).join('');
+        <tr>
+            <td>${new Date(log.timestamp).toLocaleTimeString()}</td>
+            <td>
+                <div style="display:flex; align-items:center;">
+                    <span style="background:#e0f2fe; color:#0284c7; padding:2px 8px; border-radius:6px; font-size:11px; font-weight:bold; border:1px solid #bae6fd;">
+                        ${log.bu || 'GLOBAL'}
+                    </span>
+                </div>
+            </td>
+            <td style="max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size:13px;" title="${log.user_query}">
+                ${log.user_query || '-'}
+            </td>
+            <td>${log.model_name}</td>
+            <td>${log.duration?.toFixed(2)}s</td>
+            <td>${log.total_tokens || 0}</td>
+            <td class="cost">$${(log.cost || 0).toFixed(6)}</td>
+            <td style="text-align:center;">${sourceBtn}</td>
+        </tr>
+    `}).join('');
         }
 
         function renderStats(stats) {
@@ -450,7 +469,7 @@
 
         function renderKnowledge(data) {
             const tbody = document.getElementById('knowledgeBody');
-            
+
             // ✅ แก้ไขให้รับ Array โดยตรง (Backend ส่งมาเป็น List)
             if (!data || data.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:20px;">No knowledge base found (Pinecone empty)</td></tr>';
@@ -524,20 +543,36 @@
             return '#dc2626';
         }
 
-        function showSources(sourceString) {
+        // รับ index แทน json string
+        function showSources(index) {
             try {
-                const sources = JSON.parse(sourceString);
+                // ดึงข้อมูลจากตัวแปร Global ด้วย Index
+                const log = currentLogsData[index];
+
+                if (!log || !log.sources) {
+                    alert("No sources found for this log.");
+                    return;
+                }
+
+                const sources = log.sources;
                 let msg = "📚 Reference Sources:\n-------------------\n";
+
                 sources.forEach((s, i) => {
                     msg += `${i + 1}. 📄 ${s.source} (Page ${s.page})\n`;
                     msg += `   🎯 Score: ${s.score}\n`;
-                    let contentSnippet = s.content ? s.content.substring(0, 100).replace(/\n/g, ' ') + "..." : "No content preview";
-                    msg += `   📝 "${contentSnippet}"\n\n`;
+
+                    // Logic ตัดคำและจัดการ Newline
+                    let contentSnippet = s.content ? s.content.substring(0, 150) : "No content";
+                    // ลบพวก Enter/Newline ออกเพื่อความสวยงามใน Alert
+                    contentSnippet = contentSnippet.replace(/(\r\n|\n|\r)/gm, " ");
+
+                    msg += `   📝 "${contentSnippet}..."\n\n`;
                 });
+
                 alert(msg);
             } catch (e) {
-                console.error("Error parsing sources:", e);
-                alert("Cannot display sources.");
+                console.error("Error displaying sources:", e);
+                alert("Cannot display sources due to data error.");
             }
         }
 
@@ -576,7 +611,7 @@
         // ✅ ทำให้ฟังก์ชันเหล่านี้เป็น Global เพื่อให้ปุ่ม HTML เรียกใช้ได้
         window.showSources = showSources;
         window.searchKnowledge = searchKnowledge;
-        
+
         // Model Functions
         window.activateModel = async (id, inp, out) => { if (confirm('Switch to ' + id + '?')) { await api.activateModel(id, inp, out); loadModels(); } };
         window.deleteModel = async (id) => { if (confirm('Delete ' + id + '?')) { await api.deleteModel(id); loadModels(); } };
@@ -586,6 +621,10 @@
         document.getElementById('orSearch').onkeyup = window.filterModels;
         window.addFromOR = async (id, inp, out) => { if (confirm(`Add ${id}?`)) { await api.addModel(id, inp, out); await api.activateModel(id, inp, out); document.getElementById('orModal').style.display = 'none'; loadModels(); } };
 
+       
+        // ...
+
     </script>
 </body>
+
 </html>
