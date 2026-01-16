@@ -318,17 +318,20 @@ export class CarmenBot {
         return match ? match[1] : null;
     }
 
-   addMessage(text, sender, animate = false, msgId = null, sources = null) {
+  addMessage(text, sender, animate = false, msgId = null, sources = null) {
         const body = document.getElementById('carmenChatBody');
         const div = document.createElement('div');
         div.className = `msg ${sender}`;
 
+        // ---------------------------------------------------------
+        // 1. ส่วนแสดง Sources (อ้างอิงเอกสาร)
+        // ---------------------------------------------------------
         let sourcesHTML = '';
         if (sender === 'bot' && sources && sources.length > 0) {
             sourcesHTML = `
                 <details style="margin-top: 8px; border-top: 1px solid #e2e8f0; padding-top: 8px;">
-                    <summary style="cursor: pointer; font-size: 11px; color: #64748b; outline: none;">
-                        📚 อ้างอิงจาก ${sources.length} เอกสาร
+                    <summary style="cursor: pointer; font-size: 11px; color: #64748b; outline: none; list-style: none;">
+                        📚 อ้างอิงจาก ${sources.length} เอกสาร <span style="font-size: 9px;">▼</span>
                     </summary>
                     <div style="margin-top: 5px; display: flex; flex-direction: column; gap: 5px;">
                         ${sources.map(s => `
@@ -345,6 +348,9 @@ export class CarmenBot {
             `;
         }
 
+        // ---------------------------------------------------------
+        // 2. จัดการ Text Format และ Video
+        // ---------------------------------------------------------
         let formattedText = text.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>').replace(/\n/g, '<br>');
 
         let videoContent = "";
@@ -355,54 +361,69 @@ export class CarmenBot {
                 videoContent += `<div style="position:relative; width:100%; padding-bottom:56.25%; height:0; border-radius:8px; overflow:hidden; margin-top:8px;">
                                     <iframe src="https://www.youtube.com/embed/${videoId}?rel=0" style="position:absolute; top:0; left:0; width:100%; height:100%; border:0;" allowfullscreen></iframe>
                                  </div>`;
-                return `<a href="${url}" target="_blank" style="color:#2563eb; text-decoration:underline;">(ดูวิดีโอ)</a>`; 
+                return `<a href="${url}" target="_blank" style="color:#2563eb; text-decoration:underline;">(ดูวิดีโอ)</a>`;
             }
             return `<a href="${url}" target="_blank" style="color:#2563eb;">${url}</a>`;
         });
 
+        // ---------------------------------------------------------
+        // 3. สร้าง Tools Bar (Copy + Feedback) - ✅ ใส่ Style ให้ครบ
+        // ---------------------------------------------------------
         let toolsHTML = '';
         if (sender === 'bot') {
-            toolsHTML += `
-                <button class="copy-btn" title="คัดลอก" style="
-                    display: flex !important; background-color: transparent !important; border: none !important; opacity: 0.6 !important; width: 24px !important; height: 24px !important;
-                ">
-                    <svg viewBox="0 0 24 24" width="16" height="16" style="display:block; min-width:16px;">
-                        <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z" fill="#64748b" style="fill:#64748b !important;" />
-                    </svg>
-                </button>
+            toolsHTML = `
+                <div class="tools-container" style="display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-top: 6px; padding-top: 4px;">
+                    
+                    <button class="copy-btn" title="คัดลอก" style="background: none; border: none; cursor: pointer; opacity: 0.6; padding: 2px;">
+                        <svg viewBox="0 0 24 24" width="14" height="14" style="display:block;">
+                            <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z" fill="#64748b"/>
+                        </svg>
+                    </button>
+
+                    ${msgId ? `
+                        <div style="width: 1px; height: 12px; background: #cbd5e1;"></div>
+
+                        <div style="display: flex; gap: 5px;">
+                            <button class="feedback-btn" onclick="window.carmenRate('${msgId}', 1, this)" title="มีประโยชน์" style="background: none; border: none; cursor: pointer; font-size: 12px; opacity: 0.7; padding: 0;">👍</button>
+                            <button class="feedback-btn" onclick="window.carmenRate('${msgId}', -1, this)" title="ไม่ถูกต้อง" style="background: none; border: none; cursor: pointer; font-size: 12px; opacity: 0.7; padding: 0;">👎</button>
+                        </div>
+                    ` : ''}
+                </div>
             `;
-            if (msgId) {
-                toolsHTML += `
-                    <div class="feedback-container">
-                        <div class="feedback-btn" onclick="window.carmenRate(${msgId}, 1, this)" title="มีประโยชน์">👍</div>
-                        <div class="feedback-btn" onclick="window.carmenRate(${msgId}, -1, this)" title="ไม่ถูกต้อง">👎</div>
-                    </div>
-                `;
-            }
         }
 
         body.appendChild(div);
 
-        const btn = div.querySelector('.copy-btn');
-        if (btn) {
-            btn.onclick = () => {
-                const rawText = text.replace(/\*\*(.*?)\*\*/g, '$1').replace(/<br>/g, '\n'); 
-                navigator.clipboard.writeText(rawText).then(() => {
-                    btn.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" fill="#16a34a"/></svg>`;
-                    btn.style.opacity = '1'; 
-                    setTimeout(() => {
-                        btn.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" style="display:block; min-width:16px;"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z" fill="#64748b" style="fill:#64748b !important;"/></svg>`;
-                        btn.style.opacity = '0.6'; 
-                    }, 2000);
-                });
-            };
-        }
+        // Logic ผูก Event ปุ่ม Copy (ต้องทำหลังจาก append ลง DOM แล้ว)
+        const bindCopyEvent = (element) => {
+            const btn = element.querySelector('.copy-btn');
+            if (btn) {
+                btn.onclick = () => {
+                    const rawText = text.replace(/\*\*(.*?)\*\*/g, '$1').replace(/<br>/g, '\n');
+                    navigator.clipboard.writeText(rawText).then(() => {
+                        // เปลี่ยน Icon เป็นสีเขียวชั่วคราว
+                        btn.innerHTML = `<svg viewBox="0 0 24 24" width="14" height="14"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" fill="#16a34a"/></svg>`;
+                        btn.style.opacity = '1';
+                        setTimeout(() => {
+                            btn.innerHTML = `<svg viewBox="0 0 24 24" width="14" height="14" style="display:block;"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z" fill="#64748b"/></svg>`;
+                            btn.style.opacity = '0.6';
+                        }, 2000);
+                    });
+                };
+            }
+        };
 
+        // ---------------------------------------------------------
+        // 4. Animation Logic
+        // ---------------------------------------------------------
         if (sender === 'bot' && animate) {
             div.classList.add('typing');
             let i = 0; const speed = 10;
+            // รวม HTML ทั้งหมด
             const fullContent = formattedText + videoContent + sourcesHTML + toolsHTML;
-            div.innerHTML = ""; 
+            
+            div.innerHTML = ""; // เคลียร์ก่อนเริ่มพิมพ์
+            
             const typeWriter = () => {
                 if (i < formattedText.length) {
                     if (formattedText.charAt(i) === '<') {
@@ -410,37 +431,22 @@ export class CarmenBot {
                         while (formattedText.charAt(i) !== '>' && i < formattedText.length) { tag += formattedText.charAt(i); i++; }
                         tag += '>'; i++; div.innerHTML += tag;
                     } else { div.innerHTML += formattedText.charAt(i); i++; }
-                    this.scrollToBottom(); setTimeout(typeWriter, speed);
+                    this.scrollToBottom(); 
+                    setTimeout(typeWriter, speed);
                 } else {
                     div.classList.remove('typing');
-                    div.innerHTML = fullContent; 
+                    div.innerHTML = fullContent; // แปะเนื้อหาครบทุกอย่าง (Video, Sources, Tools)
                     
-                    // Re-attach events for copy/feedback after animation
-                    const newBtn = div.querySelector('.copy-btn');
-                    if(newBtn) {
-                         newBtn.onclick = () => {
-                           const rawText = text.replace(/\*\*(.*?)\*\*/g, '$1').replace(/<br>/g, '\n'); 
-                           navigator.clipboard.writeText(rawText).then(() => {
-                               newBtn.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" fill="#16a34a"/></svg>`;
-                               newBtn.style.opacity = '1';
-                               setTimeout(() => {
-                                   newBtn.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" style="display:block; min-width:16px;"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z" fill="#64748b" style="fill:#64748b !important;"/></svg>`;
-                                   newBtn.style.opacity = '0.6';
-                               }, 2000);
-                           });
-                         }
-                         const fbBtns = div.querySelectorAll('.feedback-btn');
-                         if(fbBtns.length > 0 && msgId) {
-                             fbBtns[0].onclick = () => window.carmenRate(msgId, 1, fbBtns[0]);
-                             fbBtns[1].onclick = () => window.carmenRate(msgId, -1, fbBtns[1]);
-                         }
-                    }
+                    // ผูก Event Copy ใหม่หลังจาก Animation จบ
+                    bindCopyEvent(div);
                     this.scrollToBottom();
                 }
             };
             typeWriter();
         } else {
+            // กรณีไม่มี Animation
             div.innerHTML = formattedText + videoContent + sourcesHTML + toolsHTML;
+            bindCopyEvent(div);
             this.scrollToBottom();
         }
     }
