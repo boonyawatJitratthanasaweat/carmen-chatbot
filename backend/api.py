@@ -180,6 +180,29 @@ async def search_knowledge(
     except Exception as e:
         print(f"Search Error: {e}")
         return {"error": str(e)}
+    
+    from pydantic import BaseModel
+
+# 1. สร้าง Model สำหรับรับค่า
+class FeedbackRequest(BaseModel):
+    score: int  # 1 (Like) หรือ -1 (Dislike)
+
+# 2. เพิ่ม Route นี้ลงไปใน app
+@app.post("/chat/feedback/{message_id}")
+async def record_feedback(message_id: str, feedback: FeedbackRequest):
+    try:
+        score = feedback.score
+        print(f"📝 Feedback Received! MsgID: {message_id}, Score: {score}")
+        
+        # --- (จุดสำหรับเขียนลง Database) ---
+        # ตัวอย่าง:
+        # db.execute("UPDATE chat_logs SET feedback = ? WHERE id = ?", (score, message_id))
+        # ---------------------------------
+
+        return {"status": "success", "message": "Thank you for feedback"}
+    except Exception as e:
+        print(f"Error saving feedback: {e}")
+        return {"status": "error", "message": str(e)}
 
 # --- Model Management ---
 class ModelUpdate(BaseModel):
