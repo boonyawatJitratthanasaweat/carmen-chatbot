@@ -1,16 +1,16 @@
 export class CarmenBot {
     constructor(config = {}) {
         // 1. API URL Configuration
-        const defaultUrl = "https://carmen-chatbot-api.onrender.com"; 
+        const defaultUrl = "https://carmen-chatbot-api.onrender.com";
         const urlToUse = config.apiUrl || defaultUrl;
         this.apiBase = urlToUse.replace(/\/$/, "");
 
         // 2. User & Context Configuration
-        this.bu = config.bu || "global";          
-        this.username = config.user || "Guest";   
-        this.theme = config.theme || null;        
-        this.title = config.title || null;        
-        this.prompt_extend = config.prompt_extend || null; 
+        this.bu = config.bu || "global";
+        this.username = config.user || "Guest";
+        this.theme = config.theme || null;
+        this.title = config.title || null;
+        this.prompt_extend = config.prompt_extend || null;
 
         // Session Management
         this.sessionKey = `carmen_sess_${this.bu}_${this.username}`;
@@ -38,7 +38,7 @@ export class CarmenBot {
         this.attachEvents();
         this.setupGlobalFunctions();
         this.showLauncher();
-        
+
         // Update User Display Name
         const userDisplay = document.getElementById('carmenUserDisplay');
         if (userDisplay) {
@@ -50,7 +50,7 @@ export class CarmenBot {
 
     injectStyles() {
         if (document.getElementById('carmen-style')) return;
-        
+
         const fontLink = document.createElement('link');
         fontLink.href = 'https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600&display=swap';
         fontLink.rel = 'stylesheet';
@@ -172,17 +172,17 @@ export class CarmenBot {
     setupGlobalFunctions() {
         window.carmenRate = async (msgId, score, btnElement) => {
             const parent = btnElement.parentElement;
-            parent.innerHTML = score === 1 
-                ? '<span style="font-size:11px; color:#16a34a;">ขอบคุณค่ะ ❤️</span>' 
+            parent.innerHTML = score === 1
+                ? '<span style="font-size:11px; color:#16a34a;">ขอบคุณค่ะ ❤️</span>'
                 : '<span style="font-size:11px; color:#991b1b;">ขอบคุณค่ะ 🙏</span>';
-            
+
             try {
                 await fetch(`${this.apiBase}/chat/feedback/${msgId}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ score: score })
                 });
-            } catch(e) { console.error(e); }
+            } catch (e) { console.error(e); }
         };
     }
 
@@ -202,7 +202,7 @@ export class CarmenBot {
         };
 
         closeBtn.onclick = () => win.classList.remove('open');
-        
+
         clearBtn.onclick = () => {
             document.getElementById('carmenChatBody').innerHTML = '';
             this.sessionId = `sess_${Date.now()}_${Math.random().toString(36).substring(7)}`;
@@ -212,18 +212,18 @@ export class CarmenBot {
         };
 
         sendBtn.onclick = () => this.sendMessage();
-        input.onkeypress = (e) => { if(e.key === 'Enter') this.sendMessage(); };
+        input.onkeypress = (e) => { if (e.key === 'Enter') this.sendMessage(); };
     }
 
     showLauncher() {
         const btn = document.getElementById('carmen-launcher');
-        if(btn) btn.style.display = 'flex';
+        if (btn) btn.style.display = 'flex';
     }
 
     async loadHistory() {
         const body = document.getElementById('carmenChatBody');
         body.innerHTML = '';
-        
+
         try {
             const params = new URLSearchParams({ bu: this.bu, session_id: this.sessionId });
             const res = await fetch(`${this.apiBase}/chat/history?${params.toString()}`, { method: 'GET' });
@@ -236,7 +236,7 @@ export class CarmenBot {
                     divider.style.cssText = 'text-align:center; font-size:11px; color:#94a3b8; margin:10px 0;';
                     divider.innerText = '— ประวัติการสนทนาล่าสุด —';
                     body.appendChild(divider);
-                    setTimeout(() => this.scrollToBottom(), 100); 
+                    setTimeout(() => this.scrollToBottom(), 100);
                 } else {
                     this.addMessage(`สวัสดีค่ะ 👋<br>มีอะไรให้ Carmen ช่วยไหมคะ?`, 'bot', true);
                 }
@@ -251,11 +251,11 @@ export class CarmenBot {
     async sendMessage() {
         const input = document.getElementById('carmenUserInput');
         const text = input.value.trim();
-        if(!text) return;
-        
+        if (!text) return;
+
         this.addMessage(text, 'user', false);
         input.value = '';
-        
+
         // ลบ Suggestions ออกเมื่อเริ่มคุย
         const suggestions = document.querySelectorAll('.suggestions-container');
         suggestions.forEach(el => el.remove());
@@ -282,7 +282,7 @@ export class CarmenBot {
 
             const data = await response.json();
             document.getElementById('carmenTypingIndicator').style.display = 'none';
-            if(data.answer) this.addMessage(data.answer, 'bot', true, data.message_id, data.sources);
+            if (data.answer) this.addMessage(data.answer, 'bot', true, data.message_id, data.sources);
         } catch (error) {
             console.error(error);
             document.getElementById('carmenTypingIndicator').style.display = 'none';
@@ -318,50 +318,18 @@ export class CarmenBot {
         return match ? match[1] : null;
     }
 
-  addMessage(text, sender, animate = false, msgId = null, sources = null) {
+    addMessage(text, sender, animate = false, msgId = null, sources = null) {
         const body = document.getElementById('carmenChatBody');
         const div = document.createElement('div');
         div.className = `msg ${sender}`;
 
 
         let formattedText = text;
-        const imageRegex = /!\[(.*?)\]\s*\((.*?)\)/g;
+        const imageRegex = /(?:^|\n)!\[(.*?)\]\s*\((.*?)\)/g;
 
-        formattedText = formattedText.replace(imageRegex, (match, alt, url) => {
-            // ลบช่องว่างหัวท้าย (เผื่อมี)
-            let cleanUrl = url.trim();
-            
-            console.log("🔍 Found Image Markdown:", match); // เช็ค Log 1
-            console.log("👉 Extracted URL:", cleanUrl);    // เช็ค Log 2
+        ฮ
 
-            // เช็คว่าเป็นรูปในเครื่องเราไหม (images/xxx หรือ ./images/xxx)
-            if (cleanUrl.includes('images/') || cleanUrl.endsWith('.png') || cleanUrl.endsWith('.jpg')) {
-                
-                // ลบ ./ หรือ / ตัวหน้าสุดออก (เพื่อให้ต่อ String ง่ายๆ)
-                cleanUrl = cleanUrl.replace(/^(\.\/|\/)/, '');
 
-                // ⚠️ สำคัญ: ต้องมั่นใจว่า apiBaseUrl ไม่มี / ปิดท้าย
-                const baseUrl = this.apiBaseUrl.replace(/\/$/, '');
-                const fullUrl = `${baseUrl}/${cleanUrl}`;
-                
-                console.log("✅ Final Image URL:", fullUrl); // เช็ค Log 3: ดูว่า URL ถูกไหม
-
-                return `
-                    <div style="margin-top: 10px; margin-bottom: 10px;">
-                        <img src="${fullUrl}" 
-                             alt="${alt}" 
-                             style="max-width: 100%; border-radius: 8px; border: 1px solid #e2e8f0; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.05);" 
-                             onclick="window.open(this.src, '_blank')"
-                             onerror="this.style.display='none'; console.log('❌ Failed to load image:', this.src);"
-                        >
-                    </div>`;
-            }
-            
-            // กรณีเป็น Link ภายนอก (http...)
-            return `<img src="${cleanUrl}" alt="${alt}" style="max-width: 100%; border-radius: 8px; margin-top: 10px;">`;
-        });
-
-       
         let sourcesHTML = '';
         if (sender === 'bot' && sources && sources.length > 0) {
             sourcesHTML = `
@@ -384,7 +352,7 @@ export class CarmenBot {
             `;
         }
 
-        
+
 
         // ---------------------------------------------------------
         // 2. จัดการ Text Format และ Video
@@ -458,9 +426,9 @@ export class CarmenBot {
             let i = 0; const speed = 10;
             // รวม HTML ทั้งหมด
             const fullContent = formattedText + videoContent + sourcesHTML + toolsHTML;
-            
+
             div.innerHTML = ""; // เคลียร์ก่อนเริ่มพิมพ์
-            
+
             const typeWriter = () => {
                 if (i < formattedText.length) {
                     if (formattedText.charAt(i) === '<') {
@@ -468,12 +436,12 @@ export class CarmenBot {
                         while (formattedText.charAt(i) !== '>' && i < formattedText.length) { tag += formattedText.charAt(i); i++; }
                         tag += '>'; i++; div.innerHTML += tag;
                     } else { div.innerHTML += formattedText.charAt(i); i++; }
-                    this.scrollToBottom(); 
+                    this.scrollToBottom();
                     setTimeout(typeWriter, speed);
                 } else {
                     div.classList.remove('typing');
                     div.innerHTML = fullContent; // แปะเนื้อหาครบทุกอย่าง (Video, Sources, Tools)
-                    
+
                     // ผูก Event Copy ใหม่หลังจาก Animation จบ
                     bindCopyEvent(div);
                     this.scrollToBottom();
@@ -490,6 +458,6 @@ export class CarmenBot {
 
     scrollToBottom() {
         const body = document.getElementById('carmenChatBody');
-        if(body) body.scrollTop = body.scrollHeight;
+        if (body) body.scrollTop = body.scrollHeight;
     }
 }
