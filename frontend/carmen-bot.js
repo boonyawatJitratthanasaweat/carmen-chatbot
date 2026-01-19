@@ -324,7 +324,42 @@ export class CarmenBot {
         div.className = `msg ${sender}`;
 
 
-        
+        let formattedText = text;
+        const imageRegex = /!\[(.*?)\]\s*\((.*?)\)/g;
+
+        formattedText = formattedText.replace(imageRegex, (match, alt, url) => {
+            // ลบช่องว่างหัวท้าย (เผื่อมี)
+            let cleanUrl = url.trim();
+            
+            console.log("🔍 Found Image Markdown:", match); // เช็ค Log 1
+            console.log("👉 Extracted URL:", cleanUrl);    // เช็ค Log 2
+
+            // เช็คว่าเป็นรูปในเครื่องเราไหม (images/xxx หรือ ./images/xxx)
+            if (cleanUrl.includes('images/') || cleanUrl.endsWith('.png') || cleanUrl.endsWith('.jpg')) {
+                
+                // ลบ ./ หรือ / ตัวหน้าสุดออก (เพื่อให้ต่อ String ง่ายๆ)
+                cleanUrl = cleanUrl.replace(/^(\.\/|\/)/, '');
+
+                // ⚠️ สำคัญ: ต้องมั่นใจว่า apiBaseUrl ไม่มี / ปิดท้าย
+                const baseUrl = this.apiBaseUrl.replace(/\/$/, '');
+                const fullUrl = `${baseUrl}/${cleanUrl}`;
+                
+                console.log("✅ Final Image URL:", fullUrl); // เช็ค Log 3: ดูว่า URL ถูกไหม
+
+                return `
+                    <div style="margin-top: 10px; margin-bottom: 10px;">
+                        <img src="${fullUrl}" 
+                             alt="${alt}" 
+                             style="max-width: 100%; border-radius: 8px; border: 1px solid #e2e8f0; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.05);" 
+                             onclick="window.open(this.src, '_blank')"
+                             onerror="this.style.display='none'; console.log('❌ Failed to load image:', this.src);"
+                        >
+                    </div>`;
+            }
+            
+            // กรณีเป็น Link ภายนอก (http...)
+            return `<img src="${cleanUrl}" alt="${alt}" style="max-width: 100%; border-radius: 8px; margin-top: 10px;">`;
+        });
 
        
         let sourcesHTML = '';
@@ -353,18 +388,7 @@ export class CarmenBot {
 
         // ---------------------------------------------------------
         // 2. จัดการ Text Format และ Video
-        // ---------------------------------------------------------
-        let formattedText = text.replace(/!\[(.*?)\]\((.*?)\)/g, (match, alt, url) => {
-            // เช็คว่า url เป็น path รูปภาพในเครื่องเราหรือไม่ (ขึ้นต้นด้วย images/)
-            if (url.startsWith('images/') || url.startsWith('./images/')) {
-                // ลบ ./ ออกถ้ามี
-                const cleanPath = url.replace(/^\.\//, '');
-                // เติม Base URL ของ API เข้าไป
-                return `<img src="${this.apiBaseUrl}/${cleanPath}" alt="${alt}" style="max-width: 100%; border-radius: 8px; margin-top: 10px; border: 1px solid #e2e8f0; cursor: pointer;" onclick="window.open(this.src, '_blank')">`;
-            }
-            // ถ้าเป็น Link รูปภายนอก (http...) ก็คืนค่าเดิมไป
-            return `<img src="${url}" alt="${alt}" style="max-width: 100%; border-radius: 8px; margin-top: 10px;">`;
-        });
+        // --------------------------------------------------------
 
         let videoContent = "";
         const urlRegex = /(https?:\/\/(?:www\.)?(?:youtube\.com|youtu\.be)[^\s<)"']+)/g;
