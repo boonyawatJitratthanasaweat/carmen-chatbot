@@ -323,9 +323,10 @@ export class CarmenBot {
         const div = document.createElement('div');
         div.className = `msg ${sender}`;
 
-        // ---------------------------------------------------------
-        // 1. ส่วนแสดง Sources (อ้างอิงเอกสาร)
-        // ---------------------------------------------------------
+
+        
+
+       
         let sourcesHTML = '';
         if (sender === 'bot' && sources && sources.length > 0) {
             sourcesHTML = `
@@ -348,10 +349,22 @@ export class CarmenBot {
             `;
         }
 
+        
+
         // ---------------------------------------------------------
         // 2. จัดการ Text Format และ Video
         // ---------------------------------------------------------
-        let formattedText = text.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>').replace(/\n/g, '<br>');
+        let formattedText = text.replace(/!\[(.*?)\]\((.*?)\)/g, (match, alt, url) => {
+            // เช็คว่า url เป็น path รูปภาพในเครื่องเราหรือไม่ (ขึ้นต้นด้วย images/)
+            if (url.startsWith('images/') || url.startsWith('./images/')) {
+                // ลบ ./ ออกถ้ามี
+                const cleanPath = url.replace(/^\.\//, '');
+                // เติม Base URL ของ API เข้าไป
+                return `<img src="${this.apiBaseUrl}/${cleanPath}" alt="${alt}" style="max-width: 100%; border-radius: 8px; margin-top: 10px; border: 1px solid #e2e8f0; cursor: pointer;" onclick="window.open(this.src, '_blank')">`;
+            }
+            // ถ้าเป็น Link รูปภายนอก (http...) ก็คืนค่าเดิมไป
+            return `<img src="${url}" alt="${alt}" style="max-width: 100%; border-radius: 8px; margin-top: 10px;">`;
+        });
 
         let videoContent = "";
         const urlRegex = /(https?:\/\/(?:www\.)?(?:youtube\.com|youtu\.be)[^\s<)"']+)/g;
