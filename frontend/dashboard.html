@@ -360,6 +360,7 @@
 
 
         const api = new AdminAPI();
+        const API_BASE_URL = "https://carmen-chatbot-api.onrender.com";
         let allORModels = [];
         let autoRefresh;
 
@@ -375,30 +376,53 @@
             const activeTabId = document.querySelector('.tab-content.active').id;
 
             try {
-                // 1. Logs
                 if (activeTabId === 'tab-logs') {
                     const logs = await api.getLogs(bu);
                     renderLogs(logs);
-                }
-                // 2. Analytics
-                else if (activeTabId === 'tab-analytics') {
+                } else if (activeTabId === 'tab-analytics') {
                     const stats = await api.getAnalytics();
                     renderStats(stats);
-                }
-                // 3. Knowledge
-                else if (activeTabId === 'tab-knowledge') {
-                    // ✅ ใช้ fetch ตรงๆ เพื่อความชัวร์ (เผื่อ admin-api.js ไม่ได้อัปเดต)
+                } else if (activeTabId === 'tab-knowledge') {
                     const res = await fetch('/knowledge/stats');
                     const vectors = await res.json();
                     renderKnowledge(vectors);
-                }
-                // 4. Models
-                else if (activeTabId === 'tab-models') {
+                } else if (activeTabId === 'tab-models') {
                     loadModels();
                 }
             } catch (e) {
                 console.error("Fetch Error:", e);
             }
+        }
+
+        function formatTableContent(text) {
+            if (!text) return "";
+            
+            // ตัดข้อความให้สั้นลงก่อน (เพิ่มความยาวนิดหน่อยเพื่อให้เห็นบริบท)
+            let formatted = text.substring(0, 300);
+
+            // 1. แปลง Markdown Image: ![alt](images/xxx) -> <img src="...">
+            formatted = formatted.replace(/!\[(.*?)\]\s*\((.*?)\)/g, (match, alt, url) => {
+                let cleanUrl = url.trim();
+                if (cleanUrl.includes('images/') || cleanUrl.endsWith('.png') || cleanUrl.endsWith('.jpg')) {
+                    cleanUrl = cleanUrl.replace(/^(\.\/|\/)/, '');
+                    // แสดงรูปขนาดเล็ก (Thumbnail) ในตาราง
+                    return `<br><img src="${API_BASE_URL}/${cleanUrl}" title="${alt}" style="max-height: 60px; width: auto; border-radius: 4px; border: 1px solid #e2e8f0; margin: 5px 0; cursor: pointer;" onclick="window.open(this.src, '_blank')"><br>`;
+                }
+                return match;
+            });
+
+            // 2. แปลง HTML Image: <img src="images/xxx"> -> <img src="...">
+            formatted = formatted.replace(/<img\s+[^>]*src=["'](.*?)["'][^>]*>/gi, (match, url) => {
+                let cleanUrl = url.trim();
+                // ถ้ายังเป็น Path ภายใน (ไม่มี http) ให้เติม Base URL
+                if ((cleanUrl.includes('images/') || cleanUrl.endsWith('.png')) && !cleanUrl.startsWith('http')) {
+                    cleanUrl = cleanUrl.replace(/^(\.\/|\/)/, '');
+                    return `<br><img src="${API_BASE_URL}/${cleanUrl}" style="max-height: 60px; width: auto; border-radius: 4px; border: 1px solid #e2e8f0; margin: 5px 0; cursor: pointer;" onclick="window.open(this.src, '_blank')"><br>`;
+                }
+                return match;
+            });
+
+            return formatted + "...";
         }
 
         // --- Render Functions ---
@@ -408,8 +432,6 @@
 
         function renderLogs(logs) {
             const tbody = document.getElementById('logsBody');
-
-            // ✅ 1. บันทึกข้อมูลทั้งหมดลงตัวแปร Global
             currentLogsData = logs || [];
 
             if (!logs || logs.length === 0) {
@@ -419,37 +441,22 @@
 
             tbody.innerHTML = logs.map((log, i) => {
                 let sourceBtn = '<span style="color:#cbd5e1;">-</span>';
-
                 if (log.sources && log.sources.length > 0) {
-                    // ✅ 2. แก้ตรง onclick: ส่งแค่ตัวเลข i (ลำดับ) ไปแทน JSON ยาวๆ
-                    // ไม่ต้องมีการ escape string หรือ json stringify ตรงนี้แล้ว ปลอดภัย 100%
-                    sourceBtn = `
-                <button onclick="showSources(${i})" 
-                        style="background:#f1f5f9; border:1px solid #cbd5e1; color:#475569; cursor:pointer; padding:4px 8px; border-radius:4px; font-size:11px; transition:0.2s;">
-                    📄 View (${log.sources.length})
-                </button>`;
+                    sourceBtn = `<button onclick="showSources(${i})" style="background:#f1f5f9; border:1px solid #cbd5e1; color:#475569; cursor:pointer; padding:4px 8px; border-radius:4px; font-size:11px; transition:0.2s;">📄 View (${log.sources.length})</button>`;
                 }
 
                 return `
-        <tr>
-            <td>${new Date(log.timestamp).toLocaleTimeString()}</td>
-            <td>
-                <div style="display:flex; align-items:center;">
-                    <span style="background:#e0f2fe; color:#0284c7; padding:2px 8px; border-radius:6px; font-size:11px; font-weight:bold; border:1px solid #bae6fd;">
-                        ${log.bu || 'GLOBAL'}
-                    </span>
-                </div>
-            </td>
-            <td style="max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size:13px;" title="${log.user_query}">
-                ${log.user_query || '-'}
-            </td>
-            <td>${log.model_name}</td>
-            <td>${log.duration?.toFixed(2)}s</td>
-            <td>${log.total_tokens || 0}</td>
-            <td class="cost">$${(log.cost || 0).toFixed(6)}</td>
-            <td style="text-align:center;">${sourceBtn}</td>
-        </tr>
-    `}).join('');
+                    <tr>
+                        <td>${new Date(log.timestamp).toLocaleTimeString()}</td>
+                        <td><div style="display:flex; align-items:center;"><span style="background:#e0f2fe; color:#0284c7; padding:2px 8px; border-radius:6px; font-size:11px; font-weight:bold; border:1px solid #bae6fd;">${log.bu || 'GLOBAL'}</span></div></td>
+                        <td style="max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size:13px;" title="${log.user_query}">${log.user_query || '-'}</td>
+                        <td>${log.model_name}</td>
+                        <td>${log.duration?.toFixed(2)}s</td>
+                        <td>${log.total_tokens || 0}</td>
+                        <td class="cost">$${(log.cost || 0).toFixed(6)}</td>
+                        <td style="text-align:center;">${sourceBtn}</td>
+                    </tr>`;
+            }).join('');
         }
 
         function renderStats(stats) {
@@ -464,19 +471,29 @@
                     <td>${st.total_requests.toLocaleString()}</td>
                     <td>${st.total_tokens.toLocaleString()}</td>
                     <td class="cost" style="font-size:15px;">$${st.total_cost.toFixed(6)}</td>
-                </tr>
-            `).join('');
+                </tr>`).join('');
+        }
+        function renderStats(stats) {
+            const tbody = document.getElementById('analyticsBody');
+            if (!stats || stats.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px;">No data available</td></tr>';
+                return;
+            }
+            tbody.innerHTML = stats.map(st => `
+                <tr>
+                    <td><span style="font-weight:bold; color:#2563eb; font-size:14px;">${st.namespace.toUpperCase()}</span></td>
+                    <td>${st.total_requests.toLocaleString()}</td>
+                    <td>${st.total_tokens.toLocaleString()}</td>
+                    <td class="cost" style="font-size:15px;">$${st.total_cost.toFixed(6)}</td>
+                </tr>`).join('');
         }
 
         function renderKnowledge(data) {
             const tbody = document.getElementById('knowledgeBody');
-
-            // ✅ แก้ไขให้รับ Array โดยตรง (Backend ส่งมาเป็น List)
             if (!data || data.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:20px;">No knowledge base found (Pinecone empty)</td></tr>';
                 return;
             }
-
             tbody.innerHTML = data.map(item => `
                 <tr>
                     <td style="font-weight:bold;">${item.namespace || 'Global'}</td>
@@ -489,8 +506,7 @@
                             <span style="font-size:12px; color:#64748b;">${item.ratio.toFixed(1)}%</span>
                         </div>
                     </td>
-                </tr>
-            `).join('');
+                </tr>`).join('');
         }
 
         async function searchKnowledge() {
@@ -528,7 +544,7 @@
                         <div style="font-size:11px; color:#64748b; margin-top:4px;">Page ${item.page}</div>
                     </td>
                     <td style="padding: 12px; vertical-align: top; font-size:13px; color:#475569; line-height: 1.6;">
-                        "${item.content.substring(0, 200)}..." 
+                        ${formatTableContent(item.content)}
                     </td>
                 </tr>`).join('');
             } catch (err) {
@@ -544,32 +560,22 @@
             return '#dc2626';
         }
 
-        // รับ index แทน json string
-        // ✅ รับ index (ตัวเลข) แทน json string
         function showSources(index) {
             try {
-                // ดึงข้อมูลจากตัวแปร Global ด้วย Index
                 const log = currentLogsData[index];
-
                 if (!log || !log.sources) {
                     alert("No sources found for this log.");
                     return;
                 }
-
                 const sources = log.sources;
                 let msg = "📚 Reference Sources:\n-------------------\n";
-
                 sources.forEach((s, i) => {
                     msg += `${i + 1}. 📄 ${s.source} (Page ${s.page})\n`;
                     msg += `   🎯 Score: ${s.score}\n`;
-
-                    // Logic ตัดคำและจัดการ Newline (เพื่อความสวยงามใน Alert)
                     let contentSnippet = s.content ? s.content.substring(0, 150) : "No content";
-                    contentSnippet = contentSnippet.replace(/(\r\n|\n|\r)/gm, " "); // ลบ Enter ออก
-
+                    contentSnippet = contentSnippet.replace(/(\r\n|\n|\r)/gm, " "); 
                     msg += `   📝 "${contentSnippet}..."\n\n`;
                 });
-
                 alert(msg);
             } catch (e) {
                 console.error("Error displaying sources:", e);
@@ -577,7 +583,7 @@
             }
         }
 
-        async function loadModels() {
+       async function loadModels() {
             const models = await api.getLocalModels();
             const tbody = document.getElementById('modelsBody');
             tbody.innerHTML = models.map(m => `
@@ -609,11 +615,9 @@
             if (e.key === 'Enter') searchKnowledge();
         });
 
-        // ✅ ทำให้ฟังก์ชันเหล่านี้เป็น Global เพื่อให้ปุ่ม HTML เรียกใช้ได้
         window.showSources = showSources;
         window.searchKnowledge = searchKnowledge;
 
-        // Model Functions
         window.activateModel = async (id, inp, out) => { if (confirm('Switch to ' + id + '?')) { await api.activateModel(id, inp, out); loadModels(); } };
         window.deleteModel = async (id) => { if (confirm('Delete ' + id + '?')) { await api.deleteModel(id); loadModels(); } };
         window.openModelModal = async () => { document.getElementById('orModal').style.display = 'flex'; allORModels = await api.getOpenRouterModels(); renderORList(allORModels); };
@@ -622,8 +626,9 @@
         document.getElementById('orSearch').onkeyup = window.filterModels;
         window.addFromOR = async (id, inp, out) => { if (confirm(`Add ${id}?`)) { await api.addModel(id, inp, out); await api.activateModel(id, inp, out); document.getElementById('orModal').style.display = 'none'; loadModels(); } };
 
+        
 
-        // ...
+
 
     </script>
 </body>

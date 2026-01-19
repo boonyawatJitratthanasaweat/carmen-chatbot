@@ -248,9 +248,12 @@ export class CarmenBot {
         setTimeout(() => this.addSuggestions(), 800);
     }
 
-    async sendMessage() {
+    async sendMessage(message = null) {
         const input = document.getElementById('carmenUserInput');
-        const text = input.value.trim();
+        
+        // ✅ แก้จุดนี้: ถ้ามี message ส่งมา (จากปุ่ม) ให้ใช้เลย แต่ถ้าไม่มี ให้ไปอ่านจาก Input
+        const text = message || input.value.trim();
+        
         if (!text) return;
 
         this.addMessage(text, 'user', false);
@@ -290,25 +293,45 @@ export class CarmenBot {
         }
     }
 
-    addSuggestions() {
-        // ✅ 1. ลบของเก่าออกก่อนเสมอกันซ้ำ
+    addSuggestions(suggestions) {
+        // ✅ 1. ลบของเก่าออกก่อนเสมอ (แก้ปัญหาขึ้นซ้ำ 2 อัน)
         const existing = document.querySelectorAll('.suggestions-container');
         existing.forEach(el => el.remove());
+
+        const items = suggestions || this.suggestedQuestions;
+        if (!items || items.length === 0) return;
 
         const body = document.getElementById('carmenChatBody');
         const div = document.createElement('div');
         div.className = 'suggestions-container';
+        
+        // Style: จัดชิดขวา + ไม่หลุดจอ
+        div.style.cssText = "display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; margin-bottom: 10px; justify-content: flex-end; padding-right: 5px;";
 
-        this.suggestedQuestions.forEach(q => {
-            const chip = document.createElement('div');
-            chip.className = 'suggestion-chip';
-            chip.innerText = q;
-            chip.onclick = () => {
-                document.getElementById('carmenUserInput').value = q;
-                this.sendMessage();
+        items.forEach(text => {
+            const btn = document.createElement('button');
+            btn.innerText = text;
+            btn.className = 'suggestion-chip'; 
+            
+            btn.style.cssText = "background: #ffffff; border: 1px solid #cbd5e1; color: #475569; padding: 8px 12px; border-radius: 18px; cursor: pointer; font-size: 12px; transition: 0.2s; max-width: 85%; text-align: left; line-height: 1.4; box-shadow: 0 1px 2px rgba(0,0,0,0.05);";
+            
+            btn.onmouseover = () => { 
+                btn.style.background = '#2563eb'; 
+                btn.style.color = 'white'; 
+                btn.style.borderColor = '#2563eb';
             };
-            div.appendChild(chip);
+            btn.onmouseout = () => { 
+                btn.style.background = '#ffffff'; 
+                btn.style.color = '#475569'; 
+                btn.style.borderColor = '#cbd5e1';
+            };
+
+            btn.onclick = () => {
+                this.sendMessage(text); 
+            };
+            div.appendChild(btn);
         });
+
         body.appendChild(div);
         this.scrollToBottom();
     }
@@ -319,143 +342,164 @@ export class CarmenBot {
     }
 
     addMessage(text, sender, animate = false, msgId = null, sources = null) {
-        const body = document.getElementById('carmenChatBody');
-        const div = document.createElement('div');
-        div.className = `msg ${sender}`;
+    const body = document.getElementById('carmenChatBody');
+    const div = document.createElement('div');
+    div.className = `msg ${sender}`;
 
+    let formattedText = text;
 
-        let formattedText = text;
-        const imageRegex = /(?:^|\n)!\[(.*?)\]\s*\((.*?)\)/g;
+    // ---------------------------------------------------------
+    // 1. จัดการรูปภาพ Markdown: ![alt](url) -> HTML
+    // ---------------------------------------------------------
+    formattedText = formattedText.replace(/!\[(.*?)\]\s*\((.*?)\)/g, (match, alt, url) => {
+        let cleanUrl = url.trim();
+        if (cleanUrl.includes('images/') || cleanUrl.endsWith('.png') || cleanUrl.endsWith('.jpg')) {
+            cleanUrl = cleanUrl.replace(/^(\.\/|\/)/, '');
+            const baseUrl = this.apiBase ? this.apiBase.replace(/\/$/, '') : ''; 
+            const fullUrl = `${baseUrl}/${cleanUrl}`;
+            // บรรทัดเดียวเป๊ะๆ
+            return `<div style="margin: 10px 0;"><img src="${fullUrl}" alt="${alt}" style="max-width: 100%; height: auto; border-radius: 8px; border: 1px solid #e2e8f0; cursor: pointer;" onclick="window.open(this.src, '_blank')" onerror="this.style.display='none';"></div>`;
+        }
+        return `<img src="${cleanUrl}" alt="${alt}" style="max-width: 100%; height: auto; border-radius: 8px; margin-top: 10px;">`;
+    });
 
-        ฮ
+    // ---------------------------------------------------------
+    // 2. จัดการรูปภาพ HTML ที่หลุดมาแบบ "หลายบรรทัด": <img ... >
+    // ---------------------------------------------------------
+    // ใช้ [\s\S]*? เพื่อจับทุกตัวอักษรรวมถึง Newline
+    formattedText = formattedText.replace(/<img\s+([\s\S]*?)>/gi, (match, content) => {
+        // ดึง src ออกมา (รองรับทั้ง ' และ ")
+        const srcMatch = content.match(/src=["'](.*?)["']/i);
+        if (!srcMatch) return match; // ถ้าไม่มี src ก็ปล่อยไป
 
+        let url = srcMatch[1];
+        if (url.startsWith('http')) return match; // ถ้าเป็น Link เต็มแล้วก็ปล่อยไป
 
-        let sourcesHTML = '';
-        if (sender === 'bot' && sources && sources.length > 0) {
-            sourcesHTML = `
-                <details style="margin-top: 8px; border-top: 1px solid #e2e8f0; padding-top: 8px;">
-                    <summary style="cursor: pointer; font-size: 11px; color: #64748b; outline: none; list-style: none;">
-                        📚 อ้างอิงจาก ${sources.length} เอกสาร <span style="font-size: 9px;">▼</span>
-                    </summary>
-                    <div style="margin-top: 5px; display: flex; flex-direction: column; gap: 5px;">
-                        ${sources.map(s => `
-                            <div style="background: #f1f5f9; padding: 6px; border-radius: 4px; font-size: 10px; color: #475569;">
-                                <strong>📄 ${s.source} (Page ${s.page})</strong>
-                                <div style="margin-top:2px; opacity:0.8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                                    "${s.content.substring(0, 50)}..."
-                                </div>
-                                <div style="font-size:9px; color:#94a3b8;">Score: ${s.score}</div>
+        if (url.includes('images/') || url.endsWith('.png') || url.endsWith('.jpg')) {
+            let cleanUrl = url.trim().replace(/^(\.\/|\/)/, '');
+            const baseUrl = this.apiBase ? this.apiBase.replace(/\/$/, '') : ''; 
+            const fullUrl = `${baseUrl}/${cleanUrl}`;
+
+            // ดึง alt ออกมา (ถ้ามี)
+            const altMatch = content.match(/alt=["'](.*?)["']/i);
+            const alt = altMatch ? altMatch[1] : 'image';
+
+            // สร้าง HTML บรรทัดเดียว (ตัดปัญหา <br> แทรก)
+            return `<img src="${fullUrl}" alt="${alt}" style="max-width: 100%; height: auto; border-radius: 8px; cursor: pointer; border: 1px solid #e2e8f0; display: inline-block; vertical-align: middle;" onclick="window.open(this.src, '_blank')" onerror="this.style.display='none';">`;
+        }
+        return match;
+    });
+
+    // 3. จัดการ Text Format และ Video (ทำเป็นอย่างสุดท้าย)
+    formattedText = formattedText.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>').replace(/\n/g, '<br>');
+
+    let videoContent = "";
+    const urlRegex = /(https?:\/\/(?:www\.)?(?:youtube\.com|youtu\.be)[^\s<)"']+)/g;
+    formattedText = formattedText.replace(urlRegex, (url) => {
+        const videoId = this.getYoutubeId(url);
+        if (videoId) {
+            videoContent += `<div style="position:relative; width:100%; padding-bottom:56.25%; height:0; border-radius:8px; overflow:hidden; margin-top:8px;">
+                                <iframe src="https://www.youtube.com/embed/${videoId}?rel=0" style="position:absolute; top:0; left:0; width:100%; height:100%; border:0;" allowfullscreen></iframe>
+                             </div>`;
+            return `<a href="${url}" target="_blank" style="color:#2563eb; text-decoration:underline;">(ดูวิดีโอ)</a>`;
+        }
+        return `<a href="${url}" target="_blank" style="color:#2563eb;">${url}</a>`;
+    });
+
+    // 4. สร้าง Sources และ Tools Bar
+    let sourcesHTML = '';
+    if (sender === 'bot' && sources && sources.length > 0) {
+        sourcesHTML = `
+            <details style="margin-top: 8px; border-top: 1px solid #e2e8f0; padding-top: 8px;">
+                <summary style="cursor: pointer; font-size: 11px; color: #64748b; outline: none; list-style: none;">
+                    📚 อ้างอิงจาก ${sources.length} เอกสาร <span style="font-size: 9px;">▼</span>
+                </summary>
+                <div style="margin-top: 5px; display: flex; flex-direction: column; gap: 5px;">
+                    ${sources.map(s => `
+                        <div style="background: #f1f5f9; padding: 6px; border-radius: 4px; font-size: 10px; color: #475569;">
+                            <strong>📄 ${s.source} (Page ${s.page})</strong>
+                            <div style="margin-top:2px; opacity:0.8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                "${s.content.substring(0, 50)}..."
                             </div>
-                        `).join('')}
-                    </div>
-                </details>
-            `;
-        }
-
-
-
-        // ---------------------------------------------------------
-        // 2. จัดการ Text Format และ Video
-        // --------------------------------------------------------
-
-        let videoContent = "";
-        const urlRegex = /(https?:\/\/(?:www\.)?(?:youtube\.com|youtu\.be)[^\s<)"']+)/g;
-        formattedText = formattedText.replace(urlRegex, (url) => {
-            const videoId = this.getYoutubeId(url);
-            if (videoId) {
-                videoContent += `<div style="position:relative; width:100%; padding-bottom:56.25%; height:0; border-radius:8px; overflow:hidden; margin-top:8px;">
-                                    <iframe src="https://www.youtube.com/embed/${videoId}?rel=0" style="position:absolute; top:0; left:0; width:100%; height:100%; border:0;" allowfullscreen></iframe>
-                                 </div>`;
-                return `<a href="${url}" target="_blank" style="color:#2563eb; text-decoration:underline;">(ดูวิดีโอ)</a>`;
-            }
-            return `<a href="${url}" target="_blank" style="color:#2563eb;">${url}</a>`;
-        });
-
-        // ---------------------------------------------------------
-        // 3. สร้าง Tools Bar (Copy + Feedback) - ✅ ใส่ Style ให้ครบ
-        // ---------------------------------------------------------
-        let toolsHTML = '';
-        if (sender === 'bot') {
-            toolsHTML = `
-                <div class="tools-container" style="display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-top: 6px; padding-top: 4px;">
-                    
-                    <button class="copy-btn" title="คัดลอก" style="background: none; border: none; cursor: pointer; opacity: 0.6; padding: 2px;">
-                        <svg viewBox="0 0 24 24" width="14" height="14" style="display:block;">
-                            <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z" fill="#64748b"/>
-                        </svg>
-                    </button>
-
-                    ${msgId ? `
-                        <div style="width: 1px; height: 12px; background: #cbd5e1;"></div>
-
-                        <div style="display: flex; gap: 5px;">
-                            <button class="feedback-btn" onclick="window.carmenRate('${msgId}', 1, this)" title="มีประโยชน์" style="background: none; border: none; cursor: pointer; font-size: 12px; opacity: 0.7; padding: 0;">👍</button>
-                            <button class="feedback-btn" onclick="window.carmenRate('${msgId}', -1, this)" title="ไม่ถูกต้อง" style="background: none; border: none; cursor: pointer; font-size: 12px; opacity: 0.7; padding: 0;">👎</button>
+                            <div style="font-size:9px; color:#94a3b8;">Score: ${s.score}</div>
                         </div>
-                    ` : ''}
+                    `).join('')}
                 </div>
-            `;
-        }
-
-        body.appendChild(div);
-
-        // Logic ผูก Event ปุ่ม Copy (ต้องทำหลังจาก append ลง DOM แล้ว)
-        const bindCopyEvent = (element) => {
-            const btn = element.querySelector('.copy-btn');
-            if (btn) {
-                btn.onclick = () => {
-                    const rawText = text.replace(/\*\*(.*?)\*\*/g, '$1').replace(/<br>/g, '\n');
-                    navigator.clipboard.writeText(rawText).then(() => {
-                        // เปลี่ยน Icon เป็นสีเขียวชั่วคราว
-                        btn.innerHTML = `<svg viewBox="0 0 24 24" width="14" height="14"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" fill="#16a34a"/></svg>`;
-                        btn.style.opacity = '1';
-                        setTimeout(() => {
-                            btn.innerHTML = `<svg viewBox="0 0 24 24" width="14" height="14" style="display:block;"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z" fill="#64748b"/></svg>`;
-                            btn.style.opacity = '0.6';
-                        }, 2000);
-                    });
-                };
-            }
-        };
-
-        // ---------------------------------------------------------
-        // 4. Animation Logic
-        // ---------------------------------------------------------
-        if (sender === 'bot' && animate) {
-            div.classList.add('typing');
-            let i = 0; const speed = 10;
-            // รวม HTML ทั้งหมด
-            const fullContent = formattedText + videoContent + sourcesHTML + toolsHTML;
-
-            div.innerHTML = ""; // เคลียร์ก่อนเริ่มพิมพ์
-
-            const typeWriter = () => {
-                if (i < formattedText.length) {
-                    if (formattedText.charAt(i) === '<') {
-                        let tag = '';
-                        while (formattedText.charAt(i) !== '>' && i < formattedText.length) { tag += formattedText.charAt(i); i++; }
-                        tag += '>'; i++; div.innerHTML += tag;
-                    } else { div.innerHTML += formattedText.charAt(i); i++; }
-                    this.scrollToBottom();
-                    setTimeout(typeWriter, speed);
-                } else {
-                    div.classList.remove('typing');
-                    div.innerHTML = fullContent; // แปะเนื้อหาครบทุกอย่าง (Video, Sources, Tools)
-
-                    // ผูก Event Copy ใหม่หลังจาก Animation จบ
-                    bindCopyEvent(div);
-                    this.scrollToBottom();
-                }
-            };
-            typeWriter();
-        } else {
-            // กรณีไม่มี Animation
-            div.innerHTML = formattedText + videoContent + sourcesHTML + toolsHTML;
-            bindCopyEvent(div);
-            this.scrollToBottom();
-        }
+            </details>
+        `;
     }
 
+    let toolsHTML = '';
+    if (sender === 'bot') {
+        toolsHTML = `
+            <div class="tools-container" style="display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-top: 6px; padding-top: 4px;">
+                <button class="copy-btn" title="คัดลอก" style="background: none; border: none; cursor: pointer; opacity: 0.6; padding: 2px;">
+                    <svg viewBox="0 0 24 24" width="14" height="14" style="display:block;">
+                        <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z" fill="#64748b"/>
+                    </svg>
+                </button>
+                ${msgId ? `
+                    <div style="width: 1px; height: 12px; background: #cbd5e1;"></div>
+                    <div style="display: flex; gap: 5px;">
+                        <button class="feedback-btn" onclick="window.carmenRate('${msgId}', 1, this)" title="มีประโยชน์" style="background: none; border: none; cursor: pointer; font-size: 12px; opacity: 0.7; padding: 0;">👍</button>
+                        <button class="feedback-btn" onclick="window.carmenRate('${msgId}', -1, this)" title="ไม่ถูกต้อง" style="background: none; border: none; cursor: pointer; font-size: 12px; opacity: 0.7; padding: 0;">👎</button>
+                    </div>
+                ` : ''}
+            </div>
+        `;
+    }
+
+    body.appendChild(div);
+
+    // Bind Events
+    const bindCopyEvent = (element) => {
+        const btn = element.querySelector('.copy-btn');
+        if (btn) {
+            btn.onclick = () => {
+                const rawText = text.replace(/!\[.*?\]\(.*?\)/g, '[รูปภาพ]').replace(/\*\*(.*?)\*\*/g, '$1').replace(/<br>/g, '\n');
+                navigator.clipboard.writeText(rawText).then(() => {
+                    btn.innerHTML = `<svg viewBox="0 0 24 24" width="14" height="14"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" fill="#16a34a"/></svg>`;
+                    btn.style.opacity = '1';
+                    setTimeout(() => {
+                        btn.innerHTML = `<svg viewBox="0 0 24 24" width="14" height="14" style="display:block;"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z" fill="#64748b"/></svg>`;
+                        btn.style.opacity = '0.6';
+                    }, 2000);
+                });
+            };
+        }
+    };
+
+    // Animation
+    if (sender === 'bot' && animate) {
+        div.classList.add('typing');
+        let i = 0; const speed = 10;
+        const fullContent = formattedText + videoContent + sourcesHTML + toolsHTML;
+
+        div.innerHTML = ""; 
+
+        const typeWriter = () => {
+            if (i < formattedText.length) {
+                if (formattedText.charAt(i) === '<') {
+                    let tag = '';
+                    while (formattedText.charAt(i) !== '>' && i < formattedText.length) { tag += formattedText.charAt(i); i++; }
+                    tag += '>'; i++; div.innerHTML += tag;
+                } else { div.innerHTML += formattedText.charAt(i); i++; }
+                this.scrollToBottom(); 
+                setTimeout(typeWriter, speed);
+            } else {
+                div.classList.remove('typing');
+                div.innerHTML = fullContent; 
+                bindCopyEvent(div);
+                this.scrollToBottom();
+            }
+        };
+        typeWriter();
+    } else {
+        div.innerHTML = formattedText + videoContent + sourcesHTML + toolsHTML;
+        bindCopyEvent(div);
+        this.scrollToBottom();
+    }
+}
     scrollToBottom() {
         const body = document.getElementById('carmenChatBody');
         if (body) body.scrollTop = body.scrollHeight;
