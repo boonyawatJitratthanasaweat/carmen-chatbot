@@ -370,10 +370,16 @@ async def cancel_training():
 # ==========================================
 # 🛠️ System Routes
 # ==========================================
-# images_path = os.path.join(os.path.dirname(__file__), "images")
-# if not os.path.exists(images_path):
-#     os.makedirs(images_path)
-# app.mount("/images", StaticFiles(directory=images_path), name="images")
+current_dir = os.path.dirname(os.path.abspath(__file__))
+
+
+project_root = os.path.dirname(current_dir) 
+images_dir = os.path.join(project_root, "images")
+
+if not os.path.exists(images_dir):
+    print(f"⚠️ Warning: Images directory not found at {images_dir}, creating empty one.")
+    os.makedirs(images_dir)
+app.mount("/images", StaticFiles(directory=images_dir), name="images")
 
 
 app.mount("/static", StaticFiles(directory="frontend"), name="static")
