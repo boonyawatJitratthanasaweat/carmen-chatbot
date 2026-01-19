@@ -131,8 +131,8 @@ async def process_chat_message(
     # ---------------------------------------------------------
     raw_results = []
     if bu and bu != "global":
-        raw_results += vectorstore.similarity_search_with_score(message, k=4, namespace=bu)
-    raw_results += vectorstore.similarity_search_with_score(message, k=4, namespace="global")
+        raw_results += vectorstore.similarity_search_with_score(message, k=8, namespace=bu)
+    raw_results += vectorstore.similarity_search_with_score(message, k=8, namespace="global")
     
     passed_docs = []
     source_debug = [] 

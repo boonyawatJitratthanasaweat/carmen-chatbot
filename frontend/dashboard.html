@@ -459,20 +459,7 @@
             }).join('');
         }
 
-        function renderStats(stats) {
-            const tbody = document.getElementById('analyticsBody');
-            if (!stats || stats.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px;">No data available</td></tr>';
-                return;
-            }
-            tbody.innerHTML = stats.map(st => `
-                <tr>
-                    <td><span style="font-weight:bold; color:#2563eb; font-size:14px;">${st.namespace.toUpperCase()}</span></td>
-                    <td>${st.total_requests.toLocaleString()}</td>
-                    <td>${st.total_tokens.toLocaleString()}</td>
-                    <td class="cost" style="font-size:15px;">$${st.total_cost.toFixed(6)}</td>
-                </tr>`).join('');
-        }
+
         function renderStats(stats) {
             const tbody = document.getElementById('analyticsBody');
             if (!stats || stats.length === 0) {
@@ -615,8 +602,7 @@
             if (e.key === 'Enter') searchKnowledge();
         });
 
-        window.showSources = showSources;
-        window.searchKnowledge = searchKnowledge;
+      
 
         window.activateModel = async (id, inp, out) => { if (confirm('Switch to ' + id + '?')) { await api.activateModel(id, inp, out); loadModels(); } };
         window.deleteModel = async (id) => { if (confirm('Delete ' + id + '?')) { await api.deleteModel(id); loadModels(); } };
@@ -625,8 +611,6 @@
         window.filterModels = () => { const q = document.getElementById('orSearch').value.toLowerCase(); renderORList(allORModels.filter(m => m.name.toLowerCase().includes(q) || m.id.toLowerCase().includes(q))); };
         document.getElementById('orSearch').onkeyup = window.filterModels;
         window.addFromOR = async (id, inp, out) => { if (confirm(`Add ${id}?`)) { await api.addModel(id, inp, out); await api.activateModel(id, inp, out); document.getElementById('orModal').style.display = 'none'; loadModels(); } };
-
-        
 
 
 
