@@ -1,10 +1,10 @@
 import time
 import os
-from pyparsing import Optional
 import requests
 import uvicorn
 from pathlib import Path
 from datetime import datetime
+from typing import Optional, List, Dict, Any # ✅ ใช้ typing เท่านั้น
 from dotenv import load_dotenv
 
 from fastapi import FastAPI, HTTPException, BackgroundTasks, Depends, File, UploadFile
@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import desc, func
 
 # Local Imports
+# ตรวจสอบว่าไฟล์ database.py และ chat_service.py อยู่ใน folder เดียวกัน
 from .database import Base, engine, SessionLocal, ModelPricing, ChatHistory, TokenLog
 from .chat_service import process_chat_message, vectorstore, INDEX_NAME 
 from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -30,8 +31,6 @@ from langchain_core.documents import Document
 # Load Environment Variables
 env_path = Path(__file__).parent / '.env'
 load_dotenv(dotenv_path=env_path)
-
-
 
 # ✅ Auto-Create Tables
 Base.metadata.create_all(bind=engine)
@@ -49,18 +48,16 @@ def get_db():
 # ==========================================
 class ChatRequest(BaseModel):
     text: str
-    image: Optional[str] = None
+    image: Optional[str] = None # ✅ ตอนนี้ Optional จะทำงานถูกต้องแล้ว
     bu: str = "global"
     username: str = "Guest"
-    session_id: str = None
-    model: str = None
-    prompt_extend: str = None
-    theme: str = None
-    title: str = None
+    session_id: Optional[str] = None
+    model: Optional[str] = None
+    prompt_extend: Optional[str] = None
+    theme: Optional[str] = None
+    title: Optional[str] = None
 
 @app.post("/chat")
-
-
 async def chat_endpoint(req: ChatRequest, db: Session = Depends(get_db)):
     if not vectorstore: raise HTTPException(status_code=500, detail="AI Brain Not Ready")
     if not req.session_id: req.session_id = f"sess_{int(time.time())}_{req.username}"
@@ -76,10 +73,8 @@ async def chat_endpoint(req: ChatRequest, db: Session = Depends(get_db)):
 
 @app.get("/chat/history")
 async def get_history(bu: str, session_id: str = None, db: Session = Depends(get_db)):
-
     history = db.query(ChatHistory).filter(ChatHistory.bu == bu)\
         .order_by(desc(ChatHistory.timestamp)).limit(50).all()
-    
     return history[::-1]
 
 # ==========================================
@@ -166,7 +161,6 @@ async def search_knowledge(
 
     try:
         # ค้นหาด้วย LangChain Pinecone
-        # มันจะ Embed คำค้นหา -> ยิงไป Pinecone -> ได้ผลลัพธ์กลับมา
         results = vectorstore.similarity_search_with_score(q, k=limit, namespace=bu)
         
         # แปลงข้อมูลให้เป็น JSON ที่อ่านง่าย
@@ -184,14 +178,14 @@ async def search_knowledge(
     except Exception as e:
         print(f"Search Error: {e}")
         return {"error": str(e)}
-    
-    from pydantic import BaseModel
 
-# 1. สร้าง Model สำหรับรับค่า
+# ==========================================
+# 📝 FEEDBACK API
+# ==========================================
+# สร้าง Model สำหรับรับค่า
 class FeedbackRequest(BaseModel):
     score: int  # 1 (Like) หรือ -1 (Dislike)
 
-# 2. เพิ่ม Route นี้ลงไปใน app
 @app.post("/chat/feedback/{message_id}")
 async def record_feedback(message_id: str, feedback: FeedbackRequest):
     try:
@@ -208,7 +202,9 @@ async def record_feedback(message_id: str, feedback: FeedbackRequest):
         print(f"Error saving feedback: {e}")
         return {"status": "error", "message": str(e)}
 
-# --- Model Management ---
+# ==========================================
+# ⚙️ Model Management
+# ==========================================
 class ModelUpdate(BaseModel):
     model_id: str; input_rate: float; output_rate: float
 
@@ -351,7 +347,7 @@ class TrainingRequest(BaseModel):
     text: str; namespace: str = "global"; source: str = "manual"
 
 class GithubRequest(BaseModel):
-    repo_name: str; github_token: str = None; namespace: str = "global"; incremental: bool = False
+    repo_name: str; github_token: Optional[str] = None; namespace: str = "global"; incremental: bool = False
 
 class UrlRequest(BaseModel):
     url: str; namespace: str = "global"; recursive: bool = False; depth: int = 2
@@ -399,29 +395,45 @@ async def cancel_training():
 # ==========================================
 current_dir = os.path.dirname(os.path.abspath(__file__))
 
-
+# ปรับ path ให้รองรับกรณีรันจาก root หรือ folder src
 project_root = os.path.dirname(current_dir) 
 images_dir = os.path.join(project_root, "images")
 
 if not os.path.exists(images_dir):
-    print(f"⚠️ Warning: Images directory not found at {images_dir}, creating empty one.")
-    os.makedirs(images_dir)
-app.mount("/images", StaticFiles(directory=images_dir), name="images")
+    try:
+        os.makedirs(images_dir)
+        print(f"✅ Created images directory at {images_dir}")
+    except OSError as e:
+        print(f"⚠️ Could not create images directory: {e}")
 
+# Mount Static Files (ตรวจสอบก่อน Mount เพื่อไม่ให้ error)
+if os.path.exists(images_dir):
+    app.mount("/images", StaticFiles(directory=images_dir), name="images")
 
-app.mount("/static", StaticFiles(directory="frontend"), name="static")
+# Mount Frontend (ถ้ามี)
+frontend_dir = os.path.join(project_root, "frontend")
+if not os.path.exists(frontend_dir):
+    # กรณีรัน local แล้ว frontend อยู่ที่เดียวกับ api
+    frontend_dir = os.path.join(current_dir, "frontend")
+
+if os.path.exists(frontend_dir):
+    app.mount("/static", StaticFiles(directory=frontend_dir), name="static")
 
 @app.get("/")
-async def read_root(): return FileResponse('frontend/index.html')
+async def read_root():
+    return FileResponse(os.path.join(frontend_dir, 'index.html')) if os.path.exists(os.path.join(frontend_dir, 'index.html')) else {"error": "Frontend not found"}
 
 @app.get("/dashboard.html")
-async def read_dashboard(): return FileResponse('frontend/dashboard.html')
+async def read_dashboard():
+    return FileResponse(os.path.join(frontend_dir, 'dashboard.html'))
 
 @app.get("/train.html")
-async def read_train_page(): return FileResponse('frontend/train.html')
+async def read_train_page():
+    return FileResponse(os.path.join(frontend_dir, 'train.html'))
 
 @app.get("/carmen-bot.js")
-async def read_widget_js(): return FileResponse('frontend/carmen-bot.js')
+async def read_widget_js():
+    return FileResponse(os.path.join(frontend_dir, 'carmen-bot.js'))
 
 @app.get("/debug/init-db")
 async def init_database_endpoint(db: Session = Depends(get_db)):
