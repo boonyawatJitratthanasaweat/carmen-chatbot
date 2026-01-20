@@ -1,5 +1,6 @@
 import time
 import os
+from pyparsing import Optional
 import requests
 import uvicorn
 from pathlib import Path
@@ -48,6 +49,7 @@ def get_db():
 # ==========================================
 class ChatRequest(BaseModel):
     text: str
+    image: Optional[str] = None
     bu: str = "global"
     username: str = "Guest"
     session_id: str = None
@@ -57,6 +59,8 @@ class ChatRequest(BaseModel):
     title: str = None
 
 @app.post("/chat")
+
+
 async def chat_endpoint(req: ChatRequest, db: Session = Depends(get_db)):
     if not vectorstore: raise HTTPException(status_code=500, detail="AI Brain Not Ready")
     if not req.session_id: req.session_id = f"sess_{int(time.time())}_{req.username}"

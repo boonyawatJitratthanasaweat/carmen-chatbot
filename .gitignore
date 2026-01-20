@@ -11,3 +11,4 @@ scripts/
 carmen-chatbot-widget/
 
 backend/images/
+node_modules/

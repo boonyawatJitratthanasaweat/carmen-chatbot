@@ -19,5 +19,6 @@
             "username": "carmen_db_user",
             "database": "carmen_db"
         }
-    ]
+    ],
+    "liveServer.settings.port": 5501
 }
