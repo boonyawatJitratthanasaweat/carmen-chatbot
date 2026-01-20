@@ -49,8 +49,8 @@ def get_db():
 class ChatRequest(BaseModel):
     text: str
     image: Optional[str] = None # ✅ ตอนนี้ Optional จะทำงานถูกต้องแล้ว
-    bu: str = "global"
-    username: str = "Guest"
+    bu: str 
+    username: str 
     session_id: Optional[str] = None
     model: Optional[str] = None
     prompt_extend: Optional[str] = None
@@ -64,7 +64,7 @@ async def chat_endpoint(req: ChatRequest, db: Session = Depends(get_db)):
 
     try:
         return await process_chat_message(
-            db=db, message=req.text, bu=req.bu, session_id=req.session_id,
+            db=db, message=req.text, bu=req.bu, session_id=req.session_id, username=req.username,
             model_name=req.model, prompt_extend=req.prompt_extend, theme=req.theme, title=req.title
         )
     except Exception as e:

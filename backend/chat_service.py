@@ -79,8 +79,8 @@ async def process_chat_message(
     db: Session,
     message: str,
     bu: str,
-    session_id: str = None, 
-    username: str = None,
+    session_id: str, # ✅ รับ session_id เข้ามา
+    username: str,   # ✅ รับ username เข้ามา
     model_name: str = None,
     prompt_extend: str = "",
     theme: str = None,
@@ -118,7 +118,9 @@ async def process_chat_message(
     # 2. Save User Message to ChatHistory
     # ---------------------------------------------------------
     user_history = ChatHistory(
-        bu=bu,
+        session_id=session_id, # ✅ บันทึก Session ID
+        bu=bu,                 # ✅ บันทึกแผนก (เช่น HR)
+        username=username,     # ✅ บันทึกชื่อคนใช้
         sender="user",
         message=message,
         model_used=model_name 
@@ -127,11 +129,15 @@ async def process_chat_message(
     db.commit()
 
     # ---------------------------------------------------------
-    # 3. RAG Search & Source Extraction (แก้ตรงนี้)
+    # 3. RAG Search (Force Global Namespace)
     # ---------------------------------------------------------
     raw_results = []
-    if bu and bu != "global":
-        raw_results += vectorstore.similarity_search_with_score(message, k=8, namespace=bu)
+    
+    # ⚠️ ปิดการค้นหาตาม BU ชั่วคราว (ตาม requirement)
+    # if bu and bu != "global":
+    #     raw_results += vectorstore.similarity_search_with_score(message, k=8, namespace=bu)
+    
+    # ✅ บังคับค้นหาจาก global เท่านั้น
     raw_results += vectorstore.similarity_search_with_score(message, k=8, namespace="global")
     
     passed_docs = []
@@ -192,7 +198,9 @@ async def process_chat_message(
     duration = time.time() - start_time
 
     new_log = TokenLog(
-        bu=bu,
+        session_id=session_id, # ✅ บันทึก Session ID
+        bu=bu,                 # ✅ บันทึกตาม BU จริง (เอาไว้ทำ Dashboard)
+        username=username,     # ✅ บันทึกชื่อคนใช้
         model_name=model_name, 
         input_tokens=input_tk,
         output_tokens=output_tk,
@@ -208,7 +216,9 @@ async def process_chat_message(
     # 5. Save Bot Message to ChatHistory
     # ---------------------------------------------------------
     bot_history = ChatHistory(
+        session_id=session_id, # ✅ บันทึก Session ID
         bu=bu,
+        username=username,
         sender="bot",
         message=bot_ans,
         model_used=model_name 
@@ -217,12 +227,11 @@ async def process_chat_message(
     db.commit()
     db.refresh(bot_history)
 
-    # ✅ ส่ง sources กลับไปด้วย
     return {
         "answer": bot_ans,
         "bu": bu,
         "model": model_name,
         "sources": source_debug,
-        "message_id": bot_history.id 
-
+        "message_id": bot_history.id,
+        "session_id": session_id # ส่งกลับให้ Frontend ด้วย
     }

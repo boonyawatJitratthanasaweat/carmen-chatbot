@@ -41,12 +41,22 @@ class ChatHistory(Base):
     __tablename__ = "chat_history"
 
     id = Column(Integer, primary_key=True, index=True)
-    bu = Column(String, index=True) 
+    
+    # ✅ เพิ่ม session_id (สำคัญสำหรับการแยก Session แชท)
+    session_id = Column(String, index=True)
+    
+    bu = Column(String, index=True)
+    
+    # ✅✅ เพิ่ม username ตามที่ต้องการ (Nullable เผื่อเป็น Guest)
+    username = Column(String, index=True, nullable=True)
+
     sender = Column(String)
     message = Column(Text)
+    
     # ✅ ForeignKey: เชื่อมไปยัง llm_models.model_name
     model_used = Column(String, ForeignKey("llm_models.model_name"), nullable=True)
     timestamp = Column(DateTime, default=datetime.now)
+    
     # ✅ Relation Back: เชื่อมกลับไปหา Model Object
     model_rel = relationship("ModelPricing", back_populates="chat_histories")
 
@@ -57,7 +67,14 @@ class TokenLog(Base):
     __tablename__ = "token_logs"
 
     id = Column(Integer, primary_key=True, index=True)
+    
+    # ✅ เพิ่ม session_id
+    session_id = Column(String, index=True)
+    
     bu = Column(String, index=True)
+    
+    # ✅✅ เพิ่ม username เพื่อดู Cost รายบุคคลได้
+    username = Column(String, index=True, nullable=True)
     
     # ✅ ForeignKey: เชื่อมไปยัง llm_models.model_name
     model_name = Column(String, ForeignKey("llm_models.model_name"))
