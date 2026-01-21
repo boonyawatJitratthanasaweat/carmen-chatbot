@@ -70,7 +70,13 @@ async def chat_endpoint(req: ChatRequest, db: Session = Depends(get_db)):
         )
     except Exception as e:
         print(f"❌ Chat Error: {e}")
+
+        if "402" in str(e) or "credits" in str(e).lower():
+            raise HTTPException(status_code=402, detail="AI Credit Limit Exceeded")
+            
+        
         raise HTTPException(status_code=500, detail=str(e))
+    
 
 @app.get("/chat/history")
 async def get_history(
