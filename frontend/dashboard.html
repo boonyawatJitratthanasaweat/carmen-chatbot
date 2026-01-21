@@ -423,6 +423,8 @@
             line-height: 1.6;
 
             overflow-y: auto;
+            max-width: 100% !important;
+            height: auto !important;
             max-height: 60vh;
             /* สูงได้เต็มที่แค่นี้ เกินกว่านี้ให้ Scroll เอา */
 
@@ -433,6 +435,10 @@
             padding: 15px;
             border-radius: 12px;
             border: 1px solid #e2e8f0;
+            word-wrap: break-word;       /* ตัดคำยาวๆ */
+            overflow-wrap: break-word;   /* ตัดคำยาวๆ (Standard) */
+            word-break: break-word;      /* ตัดคำที่ไม่มีช่องว่าง */
+            white-space: normal;         /* ให้ขึ้นบรรทัดใหม่ปกติ */
         }
 
         .carmen-alert-btn {
