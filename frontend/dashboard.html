@@ -724,7 +724,7 @@
                     <td>${log.model_name}</td>
                     <td>${log.duration?.toFixed(2)}s</td>
                     <td>${log.total_tokens}(${log.input_tokens}/${log.output_tokens})</td>
-                    <td>$${(log.cost || 0).toFixed(6)}</td>
+                    <td>$${(log.cost || 0).toFixed(8)}</td>
                     <td style="text-align:center;">${sourceBtn}</td>
                 </tr>`;
             }).join('');
@@ -748,7 +748,7 @@
                     </td>
                     <td>${st.total_requests.toLocaleString()}</td>
                     <td>${st.total_tokens.toLocaleString()}</td>
-                    <td style="font-size:15px;">$${st.total_cost.toFixed(6)}</td>
+                    <td style="font-size:15px;">$${st.total_cost.toFixed(10)}</td>
                 </tr>`).join('');
 
             // ✅ 2. Render Charts (เรียกฟังก์ชันวาดกราฟ)
