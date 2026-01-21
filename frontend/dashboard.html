@@ -877,22 +877,29 @@
         }
 
         async function loadModels() {
-            const models = await api.getLocalModels();
-            const tbody = document.getElementById('modelsBody');
-            tbody.innerHTML = models.map(m => `
-                <tr style="${m.is_active ? 'background:#f0fdf4;' : ''}">
-                    <td>${m.is_active ? '✅ Active' : '⚪ Inactive'}</td>
-                    <td style="font-weight:bold;">${m.model_name}</td>
-                    <td>$${m.input_rate.toFixed(4)}</td>
-                    <td>$${m.output_rate.toFixed(4)}</td>
-                    <td>
-                        ${!m.is_active ? `<button onclick="activateModel('${m.model_name}')" style="cursor:pointer; color:#2563eb; border:1px solid #bfdbfe; background:white; padding:4px 8px; border-radius:4px;">Switch</button>` : '<span style="font-size:12px; color:#16a34a; font-weight:bold;">Current</span>'}
-                        ${!m.is_active ? `<button onclick="deleteModel('${m.model_name}')" style="cursor:pointer; color:#ef4444; border:1px solid #fecaca; background:white; padding:4px 8px; border-radius:4px; margin-left:5px;">Del</button>` : ''}
-                    </td>
-                </tr>
-            `).join('');
-        }
+            try {
+                // เรียกผ่าน endpoint ที่เราแก้ backend ไว้แล้ว
+                const res = await fetch(`${API_BASE_URL}/admin/models/local`);
+                if (!res.ok) throw new Error("Failed to load models");
+                const models = await res.json();
 
+                const tbody = document.getElementById('modelsBody');
+                tbody.innerHTML = models.map(m => `
+                    <tr style="${m.is_active ? 'background:#f0fdf4;' : ''}">
+                        <td>${m.is_active ? '✅ Active' : '⚪ Inactive'}</td>
+                        <td style="font-weight:bold;">${m.model_name}</td>
+                        <td>$${(m.input_rate || 0).toFixed(4)}</td>
+                        <td>$${(m.output_rate || 0).toFixed(4)}</td>
+                        <td>
+                            ${!m.is_active ? `<button onclick="activateModel('${m.model_name}')" style="cursor:pointer; color:#2563eb; border:1px solid #bfdbfe; background:white; padding:4px 8px; border-radius:4px;">Switch</button>` : '<span style="font-size:12px; color:#16a34a; font-weight:bold;">Current</span>'}
+                            ${!m.is_active ? `<button onclick="deleteModel('${m.model_name}')" style="cursor:pointer; color:#ef4444; border:1px solid #fecaca; background:white; padding:4px 8px; border-radius:4px; margin-left:5px;">Del</button>` : ''}
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (e) {
+                console.error("Load Models Error:", e);
+            }
+        }
         async function loadBUOptions() {
             try {
                 const res = await fetch(`${API_BASE_URL}/admin/filters/bu`);
@@ -1021,26 +1028,34 @@
 
         // --- Model Management & Global Exports ---
 
-        // ✅ ปรับปรุง activateModel ให้ส่งไป backend
         window.activateModel = async (modelName) => {
-            if (!confirm(`Switch to model: ${modelName}?`)) return;
+            // เช็คก่อนว่ามี modelName ไหม
+            if (!modelName) return alert("Error: Model Name is missing");
+
+            // ถ้าเป็นการกดจากปุ่ม Switch ให้ถามก่อน (แต่ถ้ามาจาก addFromOR จะไม่ถาม)
+            if (event && event.type === 'click' && !confirm(`Switch to model: ${modelName}?`)) return;
+
             try {
                 const res = await fetch(`${API_BASE_URL}/admin/models/activate`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ model_name: modelName })
+                    body: JSON.stringify({ model_name: modelName }) // 👈 Key ต้องตรงกับ Pydantic Model
                 });
+
                 if (res.ok) {
-                    alert("Switch Success! 🎉");
+                    if (event && event.type === 'click') alert("Switch Success! 🎉");
                     loadModels();
                 } else {
-                    alert("Failed to switch model");
+                    const err = await res.json();
+                    alert("Failed to switch: " + (err.detail || "Unknown Error"));
                 }
             } catch (e) {
                 console.error(e);
                 alert("Error connecting to server");
             }
         };
+
+        
 
         // Export functions to window
         window.showSources = showSources;
@@ -1052,13 +1067,65 @@
             if (event && event.target) event.target.classList.add('active');
             fetchData();
         };
+        document.getElementById('refreshBtn').onclick = fetchData;
+        document.getElementById('buFilter').onchange = fetchData;
+        document.getElementById('kSearchQuery').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') searchKnowledge();
+        });
 
-        window.deleteModel = async (id) => { if (confirm('Delete ' + id + '?')) { await api.deleteModel(id); loadModels(); } };
-        window.openModelModal = async () => { document.getElementById('orModal').style.display = 'flex'; allORModels = await api.getOpenRouterModels(); renderORList(allORModels); };
-        window.renderORList = (list) => { document.getElementById('orList').innerHTML = list.map(m => `<div class="model-item"><div><b>${m.name}</b><br><span style="font-size:11px; color:#666;">${m.id}</span></div><button onclick="addFromOR('${m.id}', ${m.input_rate}, ${m.output_rate})" style="border:1px solid #2563eb; color:#2563eb; background:white; padding:4px 10px; border-radius:4px; cursor:pointer;">Add</button></div>`).join(''); };
-        window.filterModels = () => { const q = document.getElementById('orSearch').value.toLowerCase(); renderORList(allORModels.filter(m => m.name.toLowerCase().includes(q) || m.id.toLowerCase().includes(q))); };
+       window.deleteModel = async (id) => { 
+            if (confirm('Delete ' + id + '?')) { 
+                await api.deleteModel(id); 
+                loadModels(); 
+            } 
+        };
+       window.openModelModal = async () => { 
+            document.getElementById('orModal').style.display = 'flex'; 
+            allORModels = await api.getOpenRouterModels(); 
+            renderORList(allORModels); 
+        };
+        window.renderORList = (list) => { 
+            document.getElementById('orList').innerHTML = list.map(m => 
+                `<div class="model-item">
+                    <div><b>${m.name}</b><br><span style="font-size:11px; color:#666;">${m.id}</span></div>
+                    <button onclick="addFromOR('${m.id}', ${m.input_rate}, ${m.output_rate})" 
+                        style="border:1px solid #2563eb; color:#2563eb; background:white; padding:4px 10px; border-radius:4px; cursor:pointer;">
+                        Add
+                    </button>
+                </div>`
+            ).join(''); 
+        };
+       window.filterModels = () => { 
+            const q = document.getElementById('orSearch').value.toLowerCase(); 
+            renderORList(allORModels.filter(m => m.name.toLowerCase().includes(q) || m.id.toLowerCase().includes(q))); 
+        };
         document.getElementById('orSearch').onkeyup = window.filterModels;
-        window.addFromOR = async (id, inp, out) => { if (confirm(`Add ${id}?`)) { await api.addModel(id, inp, out); await api.activateModel(id, inp, out); document.getElementById('orModal').style.display = 'none'; loadModels(); } };
+        window.addFromOR = async (id, inp, out) => {
+            if (!confirm(`Add and switch to ${id}?`)) return;
+
+            try {
+                // 2.1 เพิ่มโมเดลลงฐานข้อมูล (ใช้ api.addModel เดิม หรือ fetch เองก็ได้)
+                // สมมติ api.addModel ยังทำงานได้ (ถ้าไม่ได้ ให้เปลี่ยนเป็น fetch เหมือน activate)
+                await api.addModel(id, inp, out); 
+                
+                // 2.2 สั่ง Activate ทันที (เรียกใช้ fetch โดยตรงเพื่อความชัวร์)
+                const res = await fetch(`${API_BASE_URL}/admin/models/activate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ model_name: id }) // ส่งแค่ชื่อ model
+                });
+
+                if (!res.ok) throw new Error("Activation failed after adding");
+
+                document.getElementById('orModal').style.display = 'none';
+                alert(`Added & Switched to ${id} successfully!`);
+                loadModels();
+
+            } catch (e) {
+                console.error("Add/Activate Error:", e);
+                alert("เกิดข้อผิดพลาด: " + e.message);
+            }
+        };
     </script>
 </body>
 </html>
