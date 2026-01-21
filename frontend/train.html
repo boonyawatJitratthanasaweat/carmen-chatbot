@@ -1,72 +1,243 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Carmen AI - Advanced Training</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sarabun:wght@300;400;500;600&display=swap" rel="stylesheet">
     <style>
-        :root { --bg-body: #f8fafc; --bg-card: #ffffff; --text-main: #0f172a; --text-muted: #64748b; --border-color: #e2e8f0; --primary-blue: #2563eb; --success-green: #10b981; --error-red: #ef4444; }
+        :root {
+            /* 🎨 Theme Variables */
+            --primary-color: #34558b;
+            --primary-gradient: linear-gradient(135deg, #34558b 0%, #2a436b 100%);
+            --secondary-bg: #f1f5f9;
+            --bg-body: #f8fafc;
+            --bg-card: #ffffff;
+            
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --border-color: #e2e8f0;
+            
+            --success-color: #10b981;
+            --danger-color: #ef4444;
+            --warning-color: #f59e0b;
+            
+            --radius-md: 12px;
+            --radius-lg: 20px;
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+
         * { box-sizing: border-box; }
 
-        body { background-color: var(--bg-body); color: var(--text-main); font-family: 'Inter', sans-serif; margin: 0; padding: 20px; font-size: 14px; overflow-x: hidden; }
-        
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; background: white; padding: 16px 24px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
-        .header h1 { margin: 0; color: var(--primary-blue); font-size: 20px; display:flex; align-items:center; gap:10px; }
-        
-        .btn-back { background: white; border: 1px solid var(--border-color); padding: 8px 16px; border-radius: 6px; cursor: pointer; color: var(--text-muted); font-weight:500; transition:0.2s; white-space: nowrap; text-decoration: none; display: inline-block; }
-        .btn-back:hover { border-color: var(--primary-blue); color: var(--primary-blue); }
-        
-        .container { max-width: 900px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-        
-        .card { background: white; border-radius: 12px; padding: 24px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); height: fit-content; }
-        
-        .train-tabs { display: flex; gap: 8px; margin-bottom: 20px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
-        .t-btn { background: none; border: none; padding: 8px 12px; cursor: pointer; font-size: 13px; color: var(--text-muted); font-weight: 500; border-radius: 6px; transition:0.2s; white-space: nowrap; }
-        .t-btn:hover { background: #f1f5f9; color: var(--primary-blue); }
-        .t-btn.active { background: #eff6ff; color: var(--primary-blue); font-weight: 600; }
-        
-        .tab-panel { display: none; animation: fadeIn 0.3s ease; }
-        .tab-panel.active { display: block; }
-        @keyframes fadeIn { from { opacity:0; transform:translateY(5px); } to { opacity:1; transform:translateY(0); } }
-        
-        .form-group { margin-bottom: 15px; }
-        .form-group label { display: block; margin-bottom: 6px; font-weight: 500; font-size: 13px; color: #334155; }
-        .input-box { width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 8px; box-sizing: border-box; font-family: 'Inter', sans-serif; font-size: 14px; }
-        .input-box:focus { outline: none; border-color: var(--primary-blue); ring: 2px solid #bfdbfe; }
-        
-        .checkbox-group { display: flex; align-items: center; gap: 8px; font-size: 13px; margin-top: 5px; }
-        
-        .btn-train { width: 100%; padding: 12px; background: var(--primary-blue); color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: 0.2s; margin-top:10px; display: flex; justify-content: center; align-items: center; gap: 8px; }
-        .btn-train:hover { background: #1e40af; }
-        .btn-train:disabled { background: #94a3b8; cursor: not-allowed; }
-        
-        .btn-cancel { background: #fee2e2; color: #991b1b; margin-top: 10px; width: 100%; padding: 10px; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; display: none; }
-        .btn-cancel:hover { background: #fecaca; }
-        
-        .status-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid #334155; padding-bottom: 10px; }
-        .status-indicator { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; }
-        .dot { width: 8px; height: 8px; border-radius: 50%; background: #64748b; }
-        .dot.active { background: #10b981; box-shadow: 0 0 8px #10b981; animation: pulse 1.5s infinite; }
-        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
-        
-        .console-box { background: #0f172a; color: #10b981; font-family: 'Courier New', monospace; padding: 15px; border-radius: 8px; height: 300px; overflow-y: auto; font-size: 12px; border: 1px solid #1e293b; display: flex; flex-direction: column; gap: 4px; }
-        .log-line { border-bottom: 1px solid #1e293b; padding-bottom: 2px; word-wrap: break-word; }
-        
-        .progress-container { margin-top: 20px; }
-        .progress-bar-bg { width: 100%; height: 8px; background: #334155; border-radius: 4px; overflow: hidden; }
-        .progress-bar-fill { height: 100%; background: #3b82f6; width: 0%; transition: width 0.3s ease; }
-        .progress-text { display: flex; justify-content: space-between; font-size: 12px; color: #cbd5e1; margin-top: 5px; }
-        .info-card { background: #f8fafc; border: 1px dashed #cbd5e1; padding: 15px; border-radius: 8px; font-size: 12px; color: #475569; margin-top: 15px; }
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            font-family: 'Inter', 'Sarabun', sans-serif;
+            margin: 0;
+            padding: 30px;
+            font-size: 14px;
+        }
 
-        @media screen and (max-width: 768px) {
-            body { padding: 10px; }
-            .container { grid-template-columns: 1fr; display: flex; flex-direction: column; gap: 15px; }
-            .header { flex-direction: column; align-items: stretch; gap: 10px; padding: 15px; }
-            .header h1 { justify-content: center; font-size: 18px; }
-            .btn-back { text-align: center; padding: 12px; }
+        /* --- Header --- */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            background: var(--bg-card);
+            padding: 20px 30px;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-md);
+        }
+        .header h1 {
+            margin: 0;
+            color: var(--primary-color);
+            font-size: 24px;
+            font-weight: 700;
+            display: flex; align-items: center; gap: 12px;
+        }
+
+        .btn-back {
+            background: white;
+            border: 1px solid var(--border-color);
+            padding: 10px 20px;
+            border-radius: 30px;
+            cursor: pointer;
+            color: var(--text-muted);
+            font-weight: 600;
+            transition: all 0.2s;
+            display: flex; align-items: center; gap: 6px;
+        }
+        .btn-back:hover {
+            border-color: var(--primary-color);
+            color: var(--primary-color);
+            background: #f8fafc;
+            transform: translateX(-3px);
+        }
+
+        /* --- Layout --- */
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1.2fr 0.8fr;
+            gap: 25px;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border-radius: var(--radius-lg);
+            padding: 30px;
+            box-shadow: var(--shadow-lg);
+            border: 1px solid rgba(255,255,255,0.5);
+            height: fit-content;
+        }
+
+        h2 { margin-top: 0; font-size: 18px; color: var(--text-main); margin-bottom: 20px; font-weight: 700; }
+
+        /* --- Tabs (Pill Style) --- */
+        .train-tabs {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 25px;
+            background: #e2e8f0;
+            padding: 5px;
+            border-radius: 50px;
+            width: fit-content;
+        }
+        .t-btn {
+            background: transparent;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-size: 13px;
+            color: var(--text-muted);
+            font-weight: 600;
+            border-radius: 40px;
+            transition: all 0.3s ease;
+        }
+        .t-btn:hover { color: var(--primary-color); }
+        .t-btn.active {
+            background: white;
+            color: var(--primary-color);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        .tab-panel { display: none; animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+        .tab-panel.active { display: block; }
+        @keyframes fadeIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+
+        /* --- Forms --- */
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 8px; font-weight: 600; font-size: 13px; color: var(--text-main); }
+        
+        .input-box {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            font-family: inherit;
+            font-size: 14px;
+            transition: all 0.2s;
+            background: #fff;
+        }
+        .input-box:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(52, 85, 139, 0.1);
+        }
+
+        .checkbox-group { display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--text-main); cursor: pointer; }
+        input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--primary-color); }
+
+        /* --- Action Buttons --- */
+        .btn-train {
+            width: 100%;
+            padding: 14px;
+            background: var(--primary-gradient);
+            color: white;
+            border: none;
+            border-radius: 30px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: flex; justify-content: center; align-items: center; gap: 10px;
+            box-shadow: 0 4px 15px rgba(52, 85, 139, 0.3);
+            margin-top: 10px;
+        }
+        .btn-train:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(52, 85, 139, 0.4); }
+        .btn-train:active { transform: scale(0.98); }
+
+        .btn-cancel {
+            background: #fee2e2; color: #ef4444;
+            margin-top: 15px; width: 100%; padding: 12px;
+            border: none; border-radius: 30px;
+            cursor: pointer; font-weight: 700;
+            display: none; transition: 0.2s;
+        }
+        .btn-cancel:hover { background: #fecaca; }
+
+        /* --- Console Card (Right Side) --- */
+        .console-card {
+            background: #0f172a; /* Dark Blue/Black */
+            color: #e2e8f0;
+            display: flex; flex-direction: column;
+            border: 1px solid #1e293b;
+        }
+
+        .status-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 20px; padding-bottom: 15px;
+            border-bottom: 1px solid #334155;
+        }
+        .status-indicator { display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 600; }
+        .dot { width: 10px; height: 10px; border-radius: 50%; background: #475569; transition: 0.3s; }
+        .dot.active { background: #10b981; box-shadow: 0 0 10px #10b981; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% { opacity: 1; transform: scale(1); } 50% { opacity: 0.7; transform: scale(1.2); } 100% { opacity: 1; transform: scale(1); } }
+
+        .console-box {
+            background: #1e293b;
+            color: #10b981; /* Matrix Green */
+            font-family: 'Courier New', monospace;
+            padding: 15px;
+            border-radius: 8px;
+            height: 350px;
+            overflow-y: auto;
+            font-size: 13px;
+            border: 1px solid #334155;
+            display: flex; flex-direction: column; gap: 6px;
+            margin-bottom: 20px;
+        }
+        .log-line { border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 4px; word-wrap: break-word; }
+        
+        /* Custom Scrollbar for Console */
+        .console-box::-webkit-scrollbar { width: 6px; }
+        .console-box::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
+
+        /* --- Progress Bar --- */
+        .progress-container { margin-top: auto; }
+        .progress-bar-bg {
+            width: 100%; height: 10px;
+            background: #334155;
+            border-radius: 10px; overflow: hidden;
+            margin-bottom: 8px;
+        }
+        .progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #3b82f6, #10b981);
+            width: 0%;
+            transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 10px;
+        }
+        .progress-text { display: flex; justify-content: space-between; font-size: 12px; color: #94a3b8; }
+
+        @media screen and (max-width: 900px) {
+            .container { grid-template-columns: 1fr; }
             .console-box { height: 250px; }
-            .card { padding: 15px; }
         }
     </style>
 </head>
@@ -74,17 +245,21 @@
 
     <div class="header">
         <h1>⚙️ Carmen Data Engine</h1>
-        <button class="btn-back" onclick="window.location.href='dashboard.html'">← Back to Dashboard</button>
+        <button class="btn-back" onclick="window.location.href='dashboard.html'">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+            Back to Dashboard
+        </button>
     </div>
 
     <div class="container">
         <div class="card">
-            <h2 style="margin-top:0;">Input Source</h2>
+            <h2>📥 Select Data Source</h2>
+            
             <div class="train-tabs">
-                <button class="t-btn active" onclick="switchTab('file')">📄 PDF/File</button>
-                <button class="t-btn" onclick="switchTab('url')">🌐 URL</button> 
+                <button class="t-btn active" onclick="switchTab('file')">📄 File Upload</button>
+                <button class="t-btn" onclick="switchTab('url')">🌐 Website</button> 
                 <button class="t-btn" onclick="switchTab('repo')">🐱 GitHub</button>
-                <button class="t-btn" onclick="switchTab('manual')">✍️ Text</button>
+                <button class="t-btn" onclick="switchTab('manual')">✍️ Manual Text</button>
             </div>
 
             <div id="panel-file" class="tab-panel active">
@@ -92,7 +267,10 @@
                     <label>Target Business Unit (BU)</label>
                     <select id="ns-file" class="input-box namespace-select"></select>
                 </div>
-                <div class="form-group"><label>File (PDF, CSV, TXT)</label><input type="file" id="file-input" class="input-box"></div>
+                <div class="form-group">
+                    <label>Select File (PDF, CSV, TXT, MD)</label>
+                    <input type="file" id="file-input" class="input-box" style="padding: 10px;">
+                </div>
                 <button class="btn-train" onclick="startFile()">🚀 Upload & Train</button>
             </div>
 
@@ -101,11 +279,20 @@
                     <label>Target Business Unit (BU)</label>
                     <select id="ns-url" class="input-box namespace-select"></select>
                 </div>
-                <div class="form-group"><label>Website URL</label><input type="text" id="url-input" class="input-box" placeholder="https://example.com"></div>
-                <div class="form-group" style="display:flex; gap:10px;">
-                    <div style="flex:1;"><label>Depth</label><input type="number" id="url-depth" class="input-box" value="2" min="1" max="5"></div>
-                    <div style="flex:1; display:flex; align-items:center; margin-top:20px;">
-                        <label class="checkbox-group"><input type="checkbox" id="url-recursive"> Recursive Crawl</label>
+                <div class="form-group">
+                    <label>Website URL</label>
+                    <input type="text" id="url-input" class="input-box" placeholder="https://example.com/docs">
+                </div>
+                <div class="form-group" style="display:flex; gap:15px; align-items:center;">
+                    <div style="flex:1;">
+                        <label>Crawl Depth</label>
+                        <input type="number" id="url-depth" class="input-box" value="2" min="1" max="5">
+                    </div>
+                    <div style="flex:1; margin-top: 24px;">
+                        <label class="checkbox-group">
+                            <input type="checkbox" id="url-recursive"> 
+                            Recursive Crawl
+                        </label>
                     </div>
                 </div>
                 <button class="btn-train" onclick="startUrl()">🕷️ Start Crawling</button>
@@ -116,9 +303,20 @@
                     <label>Target Business Unit (BU)</label>
                     <select id="ns-repo" class="input-box namespace-select"></select>
                 </div>
-                <div class="form-group"><label>Repository (user/repo)</label><input type="text" id="repo-name" class="input-box" placeholder="carmen-org/backend-api"></div>
-                <div class="form-group"><label>Access Token (Optional)</label><input type="password" id="repo-token" class="input-box" placeholder="ghp_xxxxxxxxxxxx"></div>
-                <div class="form-group"><label class="checkbox-group"><input type="checkbox" id="repo-incremental"> Incremental Update</label></div>
+                <div class="form-group">
+                    <label>Repository (user/repo)</label>
+                    <input type="text" id="repo-name" class="input-box" placeholder="carmen-org/backend-api">
+                </div>
+                <div class="form-group">
+                    <label>Access Token (Optional for Private Repo)</label>
+                    <input type="password" id="repo-token" class="input-box" placeholder="ghp_xxxxxxxxxxxx">
+                </div>
+                <div class="form-group">
+                    <label class="checkbox-group">
+                        <input type="checkbox" id="repo-incremental"> 
+                        Incremental Update (Only new commits)
+                    </label>
+                </div>
                 <button class="btn-train" onclick="startGithub()">🐱 Clone & Learn</button>
             </div>
 
@@ -127,33 +325,35 @@
                     <label>Target Business Unit (BU)</label>
                     <select id="ns-text" class="input-box namespace-select"></select>
                 </div>
-                <div class="form-group"><label>Text Content</label><textarea id="text-input" class="input-box" rows="8" placeholder="Paste knowledge here..."></textarea></div>
+                <div class="form-group">
+                    <label>Text Content / Knowledge</label>
+                    <textarea id="text-input" class="input-box" rows="10" placeholder="Paste internal knowledge here..."></textarea>
+                </div>
                 <button class="btn-train" onclick="startText()">💾 Save to Memory</button>
             </div>
-
         </div>
 
-        <div class="card" style="background:#1e293b; color:white; border:none;">
+        <div class="card console-card">
             <div class="status-header">
                 <div class="status-indicator">
                     <div id="status-dot" class="dot"></div>
                     <span id="status-text">System Idle</span>
                 </div>
-                <span id="timer" style="font-size:12px; color:#94a3b8; font-family:monospace;">--</span>
+                <span id="timer" style="font-size:12px; color:#94a3b8; font-family:monospace;">00:00</span>
             </div>
 
             <div id="console" class="console-box">
-                <div class="log-line">[System] Ready to accept jobs.</div>
+                <div class="log-line">[System] Ready to accept jobs...</div>
             </div>
 
             <div class="progress-container">
-                <div class="progress-bar-bg"><div id="progress-fill" class="progress-bar-fill"></div></div>
                 <div class="progress-text">
                     <span id="progress-percent">0%</span>
                     <span id="progress-details">0/0 Chunks</span>
                 </div>
+                <div class="progress-bar-bg"><div id="progress-fill" class="progress-bar-fill"></div></div>
                 <div class="progress-text" style="justify-content: flex-end;">
-                     <span>ETA: <span id="eta">--</span></span>
+                    <span>ETA: <span id="eta">--</span></span>
                 </div>
             </div>
 
@@ -166,31 +366,53 @@
         let monitorInterval;
         let isRunning = false;
 
-        const AVAILABLE_BUS = [
-            { value: "global", label: "🌐 Global Knowledge" },
-            { value: "hotel-seaside", label: "🏨 Hotel Seaside" },
-            { value: "account", label: "💰 Accounting" },
-            { value: "HR", label: "👥 HR Department" }
-        ];
 
-        window.onload = function() {
-            initNamespaces();
+        window.onload = async function() {
+            
+            await initNamespaces(); 
         };
 
-        function initNamespaces() {
-            const selects = document.querySelectorAll('.namespace-select');
-            selects.forEach(select => {
-                select.innerHTML = AVAILABLE_BUS.map(opt => 
-                    `<option value="${opt.value}">${opt.label}</option>`
-                ).join('');
-            });
+        async function initNamespaces() {
+            try {
+                // 1. เรียก API ดึงรายชื่อ BU
+                const res = await fetch(`${API_BASE}/admin/filters/bu`);
+                if (!res.ok) throw new Error("Failed to load BUs");
+                const buList = await res.json();
+
+                // 2. สร้าง HTML Option เริ่มต้นด้วย Global เสมอ
+                let optionsHTML = `<option value="global">🌐 Global Knowledge</option>`;
+
+                // 3. วนลูปสร้าง Option จาก Database
+                buList.forEach(bu => {
+                    // ข้ามค่าว่าง หรือ global (เพราะใส่ไปแล้ว)
+                    if (!bu || bu === 'global') return;
+
+                    
+
+                    optionsHTML += `<option value="${bu}">${bu}</option>`;
+                });
+
+                // 4. ยัดใส่ Dropdown ทุกตัวที่มี class 'namespace-select'
+                const selects = document.querySelectorAll('.namespace-select');
+                selects.forEach(select => {
+                    select.innerHTML = optionsHTML;
+                });
+
+            } catch (e) {
+                console.error("Error init namespaces:", e);
+                // กรณี Error ให้มี Global ไว้อย่างน้อย 1 อัน
+                document.querySelectorAll('.namespace-select').forEach(s => {
+                    s.innerHTML = `<option value="global">🌐 Global Knowledge</option>`;
+                });
+            }
         }
 
         function switchTab(tab) {
+    
             document.querySelectorAll('.tab-panel').forEach(el => el.classList.remove('active'));
-            document.querySelectorAll('.t-btn').forEach(el => el.classList.remove('active'));
-            document.getElementById(`panel-${tab}`).classList.add('active');
-            event.target.classList.add('active');
+             document.querySelectorAll('.t-btn').forEach(el => el.classList.remove('active'));
+             document.getElementById(`panel-${tab}`).classList.add('active');
+             if(event) event.target.classList.add('active');
         }
 
         // --- Action Functions (Connected to REAL Backend) ---
