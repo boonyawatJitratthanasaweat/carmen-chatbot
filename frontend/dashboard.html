@@ -451,7 +451,7 @@
             <h3 style="margin-bottom: 15px; color: #334155;">🔎 Search Knowledge Base</h3>
             <div
                 style="display: flex; gap: 10px; margin-bottom: 20px; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0;">
-                <input type="text" id="kSearchQuery" placeholder="พิมพ์คำค้นหา เช่น 'วิธีลางาน', 'การเบิกงบ'..."
+                <input type="text" id="kSearchQuery" placeholder="พิมพ์คำค้นหา เช่น 'A/R Profile', 'บันทึกใบกำกับภาษี'..."
                     style="flex: 1; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; outline: none;">
 
                 <select id="kSearchBU"
@@ -622,7 +622,7 @@
                         <td>${log.model_name}</td>
                         <td>${log.duration?.toFixed(2)}s</td>
                         <td>${log.total_tokens || 0}</td>
-                        <td class="cost">$${(log.cost || 0).toFixed(6)}</td>
+                        <td>$${(log.cost || 0).toFixed(6)}</td>
                         <td style="text-align:center;">${sourceBtn}</td>
                     </tr>`;
             }).join('');
@@ -651,7 +651,7 @@
         </td>
         <td>${st.total_requests.toLocaleString()}</td>
         <td>${st.total_tokens.toLocaleString()}</td>
-        <td class="cost" style="font-size:15px;">$${st.total_cost.toFixed(6)}</td>
+        <td style="font-size:15px;">$${st.total_cost.toFixed(6)}</td>
     </tr>`).join('');
         }
 
