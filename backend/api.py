@@ -503,7 +503,7 @@ async def read_widget_js():
 async def init_database_endpoint(db: Session = Depends(get_db)):
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
-    db.add(ModelPricing(model_name="xiaomi/mimo-v2-flash:free", input_rate=0, output_rate=0, is_active=True))
+    db.add(ModelPricing(model_name="xiaomi/mimo-v2-flash:free", input_rate=0.0000025, output_rate=0.00001, is_active=True))
     db.commit()
     return {"status": "success"}
 

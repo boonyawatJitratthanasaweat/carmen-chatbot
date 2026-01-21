@@ -888,8 +888,8 @@
                     <tr style="${m.is_active ? 'background:#f0fdf4;' : ''}">
                         <td>${m.is_active ? '✅ Active' : '⚪ Inactive'}</td>
                         <td style="font-weight:bold;">${m.model_name}</td>
-                        <td>$${(m.input_rate || 0).toFixed(4)}</td>
-                        <td>$${(m.output_rate || 0).toFixed(4)}</td>
+                        <td>$${(m.input_rate || 0).toFixed(10)}</td>
+                        <td>$${(m.output_rate || 0).toFixed(10)}</td>
                         <td>
                             ${!m.is_active ? `<button onclick="activateModel('${m.model_name}')" style="cursor:pointer; color:#2563eb; border:1px solid #bfdbfe; background:white; padding:4px 8px; border-radius:4px;">Switch</button>` : '<span style="font-size:12px; color:#16a34a; font-weight:bold;">Current</span>'}
                             ${!m.is_active ? `<button onclick="deleteModel('${m.model_name}')" style="cursor:pointer; color:#ef4444; border:1px solid #fecaca; background:white; padding:4px 8px; border-radius:4px; margin-left:5px;">Del</button>` : ''}
