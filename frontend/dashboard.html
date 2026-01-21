@@ -467,9 +467,7 @@
         <h1>📊 Carmen Admin Dashboard</h1>
 
         <div class="controls">
-            <select id="buFilter">
-                <option value="all">🌐 All Business Units</option>
-            </select>
+            
 
             <a href="train.html" class="btn-green"><span>+</span> Add Knowledge</a>
             <button class="btn-refresh" id="refreshBtn"><span>↻</span> Refresh</button>
@@ -484,6 +482,14 @@
     </div>
 
     <div id="tab-logs" class="tab-content active">
+        
+        <div style="display: flex; justify-content: flex-end; align-items: center; margin-bottom: 15px; gap: 10px;">
+            <label for="buFilter" style="font-weight: 600; color: #64748b;">Filter BU:</label>
+            <select id="buFilter" style="min-width: 200px;">
+                <option value="all">🌐 All Business Units</option>
+            </select>
+        </div>
+
         <div class="table-container">
             <table>
                 <thead>
