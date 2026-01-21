@@ -12,17 +12,17 @@
             --primary-color: #34558b;
             --primary-light: #eef2ff;
             --primary-gradient: linear-gradient(135deg, #34558b 0%, #2a436b 100%);
-            
+
             --success-color: #10b981;
             --danger-color: #ef4444;
             --warning-color: #f59e0b;
-            
+
             --bg-body: #f8fafc;
             --bg-card: #ffffff;
-            
+
             --text-main: #1e293b;
             --text-muted: #64748b;
-            
+
             --border-color: #e2e8f0;
             --radius-md: 12px;
             --radius-lg: 18px;
@@ -31,12 +31,15 @@
             --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
         }
 
-        * { box-sizing: border-box; }
+        * {
+            box-sizing: border-box;
+        }
 
         body {
             background-color: var(--bg-body);
             color: var(--text-main);
-            font-family: 'Inter', 'Sarabun', sans-serif; /* เพิ่ม Sarabun */
+            font-family: 'Inter', 'Sarabun', sans-serif;
+            /* เพิ่ม Sarabun */
             margin: 0;
             padding: 30px;
             font-size: 14px;
@@ -55,7 +58,7 @@
             box-shadow: var(--shadow-md);
             flex-wrap: wrap;
             gap: 20px;
-            border: 1px solid rgba(255,255,255,0.5);
+            border: 1px solid rgba(255, 255, 255, 0.5);
         }
 
         .header h1 {
@@ -75,7 +78,8 @@
         }
 
         /* --- Inputs & Selects --- */
-        select, input[type="text"] {
+        select,
+        input[type="text"] {
             padding: 10px 14px;
             border-radius: 8px;
             border: 1px solid var(--border-color);
@@ -87,17 +91,21 @@
             outline: none;
         }
 
-        select:focus, input[type="text"]:focus {
+        select:focus,
+        input[type="text"]:focus {
             border-color: var(--primary-color);
             box-shadow: 0 0 0 3px rgba(52, 85, 139, 0.1);
         }
 
         /* --- Buttons --- */
-        button, .btn-green, .btn-refresh {
+        button,
+        .btn-green,
+        .btn-refresh {
             font-family: inherit;
             font-weight: 500;
             border: none;
-            border-radius: 30px; /* Rounded Pill Style */
+            border-radius: 30px;
+            /* Rounded Pill Style */
             cursor: pointer;
             transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
             display: inline-flex;
@@ -109,7 +117,9 @@
             box-shadow: var(--shadow-sm);
         }
 
-        button:active { transform: scale(0.97); }
+        button:active {
+            transform: scale(0.97);
+        }
 
         .btn-green {
             background: linear-gradient(135deg, #10b981 0%, #059669 100%);
@@ -117,7 +127,11 @@
             padding: 10px 20px;
             box-shadow: 0 4px 10px rgba(16, 185, 129, 0.2);
         }
-        .btn-green:hover { transform: translateY(-1px); box-shadow: 0 6px 15px rgba(16, 185, 129, 0.3); }
+
+        .btn-green:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 15px rgba(16, 185, 129, 0.3);
+        }
 
         .btn-refresh {
             background: white;
@@ -125,9 +139,10 @@
             border: 1px solid var(--border-color);
             padding: 9px 18px;
         }
-        .btn-refresh:hover { 
-            background: var(--bg-body); 
-            color: var(--primary-color); 
+
+        .btn-refresh:hover {
+            background: var(--bg-body);
+            color: var(--primary-color);
             border-color: var(--primary-color);
         }
 
@@ -137,7 +152,8 @@
             gap: 8px;
             margin-bottom: 25px;
             padding: 6px;
-            background: #e2e8f0; /* พื้นหลัง Tab รวม */
+            background: #e2e8f0;
+            /* พื้นหลัง Tab รวม */
             border-radius: 50px;
             width: fit-content;
             border: none;
@@ -155,27 +171,44 @@
             box-shadow: none;
         }
 
-        .tab-btn:hover { color: var(--primary-color); }
+        .tab-btn:hover {
+            color: var(--primary-color);
+        }
 
         .tab-btn.active {
             background: white;
             color: var(--primary-color);
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
         }
 
         /* --- Content Animation --- */
-        .tab-content { display: none; }
-        .tab-content.active { 
-            display: block; 
-            animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1); 
+        .tab-content {
+            display: none;
         }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
 
         /* --- Table Card --- */
         .table-container {
             background: white;
             border-radius: var(--radius-lg);
-            overflow: hidden; /* Rounded corners for table */
+            overflow: hidden;
+            /* Rounded corners for table */
             box-shadow: var(--shadow-lg);
             border: 1px solid var(--border-color);
         }
@@ -202,14 +235,19 @@
             padding: 16px 24px;
             border-bottom: 1px solid var(--border-color);
             color: var(--text-main);
-            height: 1px; /* Trick ให้ cell รับความสูงตาม content */
-            vertical-align: middle !important; /* บังคับให้อยู่กลางบรรทัด */
+            height: 1px;
+            /* Trick ให้ cell รับความสูงตาม content */
+            vertical-align: middle !important;
+            /* บังคับให้อยู่กลางบรรทัด */
         }
 
-        tr:last-child td { border-bottom: none; }
-        
+        tr:last-child td {
+            border-bottom: none;
+        }
+
         tr:hover td {
-            background-color: #f8fafc; /* Hover effect */
+            background-color: #f8fafc;
+            /* Hover effect */
         }
 
         .cost {
@@ -218,30 +256,31 @@
             font-weight: 700;
             background: var(--primary-light);
             font-size: 13px;
-            
+
             /* ✅ 1. กำหนดความสูงตายตัว (แก้ปัญหาป่อง) */
-            height: 26px; 
-            
+            height: 26px;
+
             /* ✅ 2. ใช้ Flex จัดให้อยู่ตรงกลางกล่องเป๊ะๆ */
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            
+
             /* ✅ 3. ปรับ Padding เฉพาะด้านข้าง (ด้านบนล่างให้ Flex จัดการ) */
             padding: 0 12px;
-            
+
             /* ✅ 4. รีเซ็ตค่าอื่นๆ ที่อาจดันความสูง */
             line-height: 1;
             margin: 0;
             vertical-align: middle;
-            
-            border-radius: 13px; /* ครึ่งหนึ่งของ height จะทำให้มนสวย */
+
+            border-radius: 13px;
+            /* ครึ่งหนึ่งของ height จะทำให้มนสวย */
             min-width: 80px;
             box-shadow: inset 0 0 0 1px rgba(52, 85, 139, 0.1);
         }
 
         /* --- Knowledge Search Box --- */
-        #tab-knowledge > div > div[style*="background: #f8fafc"] {
+        #tab-knowledge>div>div[style*="background: #f8fafc"] {
             background: white !important;
             box-shadow: var(--shadow-md);
             border-radius: var(--radius-lg) !important;
@@ -252,10 +291,16 @@
         /* --- Modal --- */
         .modal {
             display: none;
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(15, 23, 42, 0.6); /* Backdrop สีเข้มขึ้น */
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.6);
+            /* Backdrop สีเข้มขึ้น */
             backdrop-filter: blur(4px);
-            justify-content: center; align-items: center;
+            justify-content: center;
+            align-items: center;
             z-index: 9999;
         }
 
@@ -263,38 +308,75 @@
             background: white;
             padding: 30px;
             border-radius: 24px;
-            width: 90%; max-width: 600px; max-height: 85vh;
+            width: 90%;
+            max-width: 600px;
+            max-height: 85vh;
             overflow-y: auto;
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
             animation: modalSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
         }
-        @keyframes modalSlideIn { from { opacity: 0; transform: scale(0.95) translateY(20px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: scale(0.95) translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
 
         .model-item {
-            display: flex; justify-content: space-between; align-items: center;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             padding: 16px;
             border-bottom: 1px solid #f1f5f9;
             transition: background 0.2s;
             border-radius: 8px;
         }
-        .model-item:hover { background: #f8fafc; }
-        
+
+        .model-item:hover {
+            background: #f8fafc;
+        }
+
         /* Custom Scrollbar */
-        ::-webkit-scrollbar { width: 8px; height: 8px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
 
         /* --- Custom Alert Modal --- */
         .carmen-alert-overlay {
             position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(15, 23, 42, 0.6); /* สีพื้นหลังดำจางๆ */
-            backdrop-filter: blur(4px); /* เบลอฉากหลัง */
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 23, 42, 0.6);
+            /* สีพื้นหลังดำจางๆ */
+            backdrop-filter: blur(4px);
+            /* เบลอฉากหลัง */
             display: flex;
             justify-content: center;
             align-items: center;
-            z-index: 100000; /* อยู่บนสุด */
+            z-index: 100000;
+            /* อยู่บนสุด */
             opacity: 0;
             visibility: hidden;
             transition: all 0.3s ease;
@@ -307,17 +389,21 @@
 
         .carmen-alert-box {
             background: white;
-            padding: 24px;       /* ลด Padding ลงหน่อย */
+            padding: 24px;
+            /* ลด Padding ลงหน่อย */
             border-radius: 20px;
             width: 90%;
-            max-width: 500px;    /* ✅ จำกัดความกว้างไม่ให้ล้น */
+            max-width: 500px;
+            /* ✅ จำกัดความกว้างไม่ให้ล้น */
             text-align: center;
             box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
             transform: scale(0.9);
             transition: transform 0.3s;
-            display: flex;       /* จัด Layout ภายใน */
+            display: flex;
+            /* จัด Layout ภายใน */
             flex-direction: column;
-            max-height: 85vh;    /* ✅ ห้ามสูงเกิน 85% ของหน้าจอ */
+            max-height: 85vh;
+            /* ✅ ห้ามสูงเกิน 85% ของหน้าจอ */
         }
 
         .carmen-alert-overlay.active .carmen-alert-box {
@@ -335,13 +421,15 @@
             color: var(--text-main);
             margin-bottom: 20px;
             line-height: 1.6;
-            
-            overflow-y: auto;    
-            max-height: 60vh;    /* สูงได้เต็มที่แค่นี้ เกินกว่านี้ให้ Scroll เอา */
-            
+
+            overflow-y: auto;
+            max-height: 60vh;
+            /* สูงได้เต็มที่แค่นี้ เกินกว่านี้ให้ Scroll เอา */
+
             /* ✅ จัดให้อ่านง่ายขึ้น */
-            text-align: left;    
-            background: #f8fafc; /* ใส่พื้นหลังให้ข้อความดูแยกส่วนชัดเจน */
+            text-align: left;
+            background: #f8fafc;
+            /* ใส่พื้นหลังให้ข้อความดูแยกส่วนชัดเจน */
             padding: 15px;
             border-radius: 12px;
             border: 1px solid #e2e8f0;
@@ -364,6 +452,7 @@
             transform: scale(1.05);
             background: #2a436b;
         }
+
         .carmen-alert-btn:active {
             transform: scale(0.95);
         }
@@ -451,7 +540,8 @@
             <h3 style="margin-bottom: 15px; color: #334155;">🔎 Search Knowledge Base</h3>
             <div
                 style="display: flex; gap: 10px; margin-bottom: 20px; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0;">
-                <input type="text" id="kSearchQuery" placeholder="พิมพ์คำค้นหา เช่น 'A/R Profile', 'บันทึกใบกำกับภาษี'..."
+                <input type="text" id="kSearchQuery"
+                    placeholder="พิมพ์คำค้นหา เช่น 'A/R Profile', 'บันทึกใบกำกับภาษี'..."
                     style="flex: 1; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; outline: none;">
 
                 <select id="kSearchBU"
@@ -614,7 +704,16 @@
 
                 return `
                     <tr>
-                        <td>${new Date(log.timestamp).toLocaleTimeString()}</td>
+                        ${new Date(log.timestamp).toLocaleString('th-TH', {
+                    timeZone: 'Asia/Bangkok',  
+                    hour12: false,             
+                    year: '2-digit',          
+                    month: 'short',            
+                    day: 'numeric',          
+                    hour: '2-digit',           
+                    minute: '2-digit',         
+                    second: '2-digit'         
+                })}
                         <td><div style="display:flex; align-items:center;"><span style="background:#e0f2fe; color:#0284c7; padding:2px 8px; border-radius:6px; font-size:11px; font-weight:bold; border:1px solid #bae6fd;">${log.bu}</span><span style="font-size:12px; color:#475569; font-weight:500; display:flex; align-items:center; gap:3px;">
             👤 ${log.username}
         </span></div></td>
@@ -731,16 +830,16 @@
             try {
                 const log = currentLogsData[index];
                 if (!log || !log.sources) { alert("ไม่พบข้อมูล Sources"); return; }
-                
+
                 const sources = log.sources;
-                
+
                 // สร้าง HTML สวยๆ ใส่ใน Alert
                 let html = `<div style="margin-bottom:10px; font-weight:bold; color:#334155;">📚 พบ ${sources.length} แหล่งอ้างอิง:</div>`;
-                
+
                 sources.forEach((s, i) => {
                     // ตัดข้อความถ้ายาวเกินไป
                     let contentSnippet = s.content ? s.content.substring(0, 200) + "..." : "No content";
-                    
+
                     // สร้างการ์ดเล็กๆ สำหรับแต่ละ Source
                     html += `
                     <div style="margin-bottom: 12px; padding: 10px; background: white; border: 1px solid #cbd5e1; border-radius: 8px;">
@@ -877,12 +976,12 @@
                 const overlay = document.getElementById('carmenAlertOverlay');
                 const msgBox = document.getElementById('carmenAlertMsg');
                 const iconBox = document.querySelector('.carmen-alert-icon');
-                
+
                 if (message.includes("Error") || message.includes("ไม่พบ")) iconBox.textContent = "❌";
                 else if (message.includes("Success") || message.includes("สำเร็จ")) iconBox.textContent = "✅";
                 else iconBox.textContent = "📄";
-                msgBox.innerHTML = message.replace(/\n/g, "<br>"); 
-                
+                msgBox.innerHTML = message.replace(/\n/g, "<br>");
+
                 overlay.classList.add('active');
             };
         }
