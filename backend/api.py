@@ -7,13 +7,14 @@ from datetime import datetime
 from typing import Optional, List, Dict, Any # ✅ ใช้ typing เท่านั้น
 from dotenv import load_dotenv
 
+
 from fastapi import FastAPI, HTTPException, BackgroundTasks, Depends, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles 
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
-from sqlalchemy import desc, func
+from sqlalchemy import desc, func, distinct 
 
 # Local Imports
 # ตรวจสอบว่าไฟล์ database.py และ chat_service.py อยู่ใน folder เดียวกัน
@@ -88,8 +89,8 @@ async def get_token_logs(bu: str = "all", db: Session = Depends(get_db)):
 
 @app.get("/admin/analytics")
 async def get_analytics(db: Session = Depends(get_db)):
-    stats = db.query(TokenLog.bu, func.count(TokenLog.id).label("total_requests"), func.sum(TokenLog.total_tokens).label("total_tokens"), func.sum(TokenLog.cost).label("total_cost")).group_by(TokenLog.bu).all()
-    return [{"namespace": s.bu or "Unknown", "total_requests": s.total_requests, "total_tokens": s.total_tokens or 0, "total_cost": s.total_cost or 0.0} for s in stats]
+    stats = db.query(TokenLog.bu, func.count(TokenLog.id).label("total_requests"), func.sum(TokenLog.total_tokens).label("total_tokens"), func.sum(TokenLog.cost).label("total_cost"), func.count(distinct(TokenLog.username)).label("user_count")).group_by(TokenLog.bu).all()
+    return [{"namespace": s.bu or "Unknown", "total_requests": s.total_requests, "total_tokens": s.total_tokens or 0, "total_cost": s.total_cost or 0.0, "user_count": s.user_count, } for s in stats]
 
 @app.get("/admin/vectors")
 async def get_vector_stats():
@@ -178,6 +179,19 @@ async def search_knowledge(
     except Exception as e:
         print(f"Search Error: {e}")
         return {"error": str(e)}
+    
+@app.get("/admin/filters/bu")
+def get_unique_bus(db: Session = Depends(get_db)):
+    try:
+        # ดึงรายชื่อ BU ทั้งหมดที่มีในระบบ (ไม่ซ้ำกัน)
+        # กรองเอาเฉพาะที่ไม่ใช่ None
+        bus = db.query(TokenLog.bu).distinct().filter(TokenLog.bu.isnot(None)).all()
+        
+        # ผลลัพธ์จะเป็น List of Tuples [('HR',), ('Sales',)] ต้องแปลงเป็น List ธรรมดา
+        return [b[0] for b in bus]
+    except Exception as e:
+        print(f"Error fetching BUs: {e}")
+        return []
 
 # ==========================================
 # 📝 FEEDBACK API

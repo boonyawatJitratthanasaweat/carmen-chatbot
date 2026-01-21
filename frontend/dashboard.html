@@ -8,191 +8,263 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-body: #f1f5f9;
+            /* 🎨 Carmen Chatbot Color Palette */
+            --primary-color: #34558b;
+            --primary-light: #eef2ff;
+            --primary-gradient: linear-gradient(135deg, #34558b 0%, #2a436b 100%);
+            
+            --success-color: #10b981;
+            --danger-color: #ef4444;
+            --warning-color: #f59e0b;
+            
+            --bg-body: #f8fafc;
             --bg-card: #ffffff;
+            
             --text-main: #1e293b;
-            --primary-blue: #2563eb;
+            --text-muted: #64748b;
+            
             --border-color: #e2e8f0;
+            --radius-md: 12px;
+            --radius-lg: 18px;
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
         }
 
-        * {
-            box-sizing: border-box;
-        }
+        * { box-sizing: border-box; }
 
         body {
             background-color: var(--bg-body);
             color: var(--text-main);
-            font-family: 'Inter', sans-serif;
+            font-family: 'Inter', 'Sarabun', sans-serif; /* เพิ่ม Sarabun */
             margin: 0;
-            padding: 20px;
+            padding: 30px;
             font-size: 14px;
+            line-height: 1.5;
         }
 
+        /* --- Header --- */
         .header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 24px;
-            background: white;
-            padding: 16px 24px;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            margin-bottom: 30px;
+            background: var(--bg-card);
+            padding: 20px 30px;
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-md);
             flex-wrap: wrap;
-            gap: 15px;
+            gap: 20px;
+            border: 1px solid rgba(255,255,255,0.5);
         }
 
         .header h1 {
             margin: 0;
-            color: var(--primary-blue);
-            font-size: 20px;
+            color: var(--primary-color);
+            font-size: 24px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
 
         .controls {
             display: flex;
-            gap: 10px;
+            gap: 12px;
             align-items: center;
         }
 
-        select {
-            padding: 8px;
-            border-radius: 6px;
-            border: 1px solid #ccc;
-            font-family: 'Inter';
+        /* --- Inputs & Selects --- */
+        select, input[type="text"] {
+            padding: 10px 14px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            font-family: inherit;
+            font-size: 14px;
+            color: var(--text-main);
+            background-color: #fff;
+            transition: all 0.2s;
+            outline: none;
         }
 
-        .btn-green {
-            background: #16a34a;
-            color: white;
+        select:focus, input[type="text"]:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(52, 85, 139, 0.1);
+        }
+
+        /* --- Buttons --- */
+        button, .btn-green, .btn-refresh {
+            font-family: inherit;
+            font-weight: 500;
             border: none;
-            padding: 8px 16px;
-            border-radius: 6px;
+            border-radius: 30px; /* Rounded Pill Style */
             cursor: pointer;
-            text-decoration: none;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
             display: inline-flex;
             align-items: center;
-            gap: 5px;
+            justify-content: center;
+            gap: 6px;
+            text-decoration: none;
+            font-size: 13px;
+            box-shadow: var(--shadow-sm);
         }
+
+        button:active { transform: scale(0.97); }
+
+        .btn-green {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            padding: 10px 20px;
+            box-shadow: 0 4px 10px rgba(16, 185, 129, 0.2);
+        }
+        .btn-green:hover { transform: translateY(-1px); box-shadow: 0 6px 15px rgba(16, 185, 129, 0.3); }
 
         .btn-refresh {
-            background: var(--primary-blue);
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 6px;
-            cursor: pointer;
+            background: white;
+            color: var(--text-muted);
+            border: 1px solid var(--border-color);
+            padding: 9px 18px;
+        }
+        .btn-refresh:hover { 
+            background: var(--bg-body); 
+            color: var(--primary-color); 
+            border-color: var(--primary-color);
         }
 
+        /* --- Tabs --- */
         .tabs {
             display: flex;
-            gap: 10px;
-            margin-bottom: 15px;
-            border-bottom: 1px solid #e2e8f0;
-            padding-bottom: 10px;
+            gap: 8px;
+            margin-bottom: 25px;
+            padding: 6px;
+            background: #e2e8f0; /* พื้นหลัง Tab รวม */
+            border-radius: 50px;
+            width: fit-content;
+            border: none;
         }
 
         .tab-btn {
-            padding: 8px 16px;
+            padding: 10px 24px;
             border: none;
             background: transparent;
             cursor: pointer;
             font-weight: 600;
-            color: #64748b;
-            border-radius: 6px;
+            color: var(--text-muted);
+            border-radius: 40px;
+            transition: all 0.3s ease;
+            box-shadow: none;
         }
+
+        .tab-btn:hover { color: var(--primary-color); }
 
         .tab-btn.active {
-            background: #dbeafe;
-            color: var(--primary-blue);
+            background: white;
+            color: var(--primary-color);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
         }
 
-        .tab-content {
-            display: none;
+        /* --- Content Animation --- */
+        .tab-content { display: none; }
+        .tab-content.active { 
+            display: block; 
+            animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1); 
         }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        .tab-content.active {
-            display: block;
-            animation: fadeIn 0.3s;
-        }
-
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(5px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
+        /* --- Table Card --- */
         .table-container {
             background: white;
-            border-radius: 12px;
-            overflow-x: auto;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            border-radius: var(--radius-lg);
+            overflow: hidden; /* Rounded corners for table */
+            box-shadow: var(--shadow-lg);
+            border: 1px solid var(--border-color);
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
             text-align: left;
-            min-width: 800px;
+            min-width: 900px;
         }
 
         th {
             background: #f8fafc;
-            padding: 12px 20px;
+            padding: 16px 24px;
             font-weight: 600;
-            color: #475569;
-            border-bottom: 2px solid #e2e8f0;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            font-size: 12px;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid var(--border-color);
         }
 
         td {
-            padding: 14px 20px;
-            border-bottom: 1px solid #e2e8f0;
+            padding: 16px 24px;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-main);
+            vertical-align: middle;
+        }
+
+        tr:last-child td { border-bottom: none; }
+        
+        tr:hover td {
+            background-color: #f8fafc; /* Hover effect */
         }
 
         .cost {
-            font-family: monospace;
-            color: var(--primary-blue);
+            font-family: 'Inter', monospace;
+            color: var(--primary-color);
             font-weight: 600;
+            background: var(--primary-light);
+            padding: 4px 8px;
+            border-radius: 6px;
+            display: inline-block;
         }
 
-        /* Modal */
+        /* --- Knowledge Search Box --- */
+        #tab-knowledge > div > div[style*="background: #f8fafc"] {
+            background: white !important;
+            box-shadow: var(--shadow-md);
+            border-radius: var(--radius-lg) !important;
+            padding: 24px !important;
+            border: 1px solid var(--border-color) !important;
+        }
+
+        /* --- Modal --- */
         .modal {
             display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            justify-content: center;
-            align-items: center;
-            z-index: 999;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.6); /* Backdrop สีเข้มขึ้น */
+            backdrop-filter: blur(4px);
+            justify-content: center; align-items: center;
+            z-index: 9999;
         }
 
         .modal-content {
             background: white;
-            padding: 20px;
-            border-radius: 12px;
-            width: 90%;
-            max-width: 600px;
-            max-height: 80vh;
+            padding: 30px;
+            border-radius: 24px;
+            width: 90%; max-width: 600px; max-height: 85vh;
             overflow-y: auto;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            animation: modalSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
         }
+        @keyframes modalSlideIn { from { opacity: 0; transform: scale(0.95) translateY(20px); } to { opacity: 1; transform: scale(1) translateY(0); } }
 
         .model-item {
-            display: flex;
-            justify-content: space-between;
-            padding: 10px;
-            border-bottom: 1px solid #eee;
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 16px;
+            border-bottom: 1px solid #f1f5f9;
+            transition: background 0.2s;
+            border-radius: 8px;
         }
-
-        .model-item:hover {
-            background: #f8fafc;
-        }
+        .model-item:hover { background: #f8fafc; }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
     </style>
 </head>
 
@@ -204,10 +276,6 @@
         <div class="controls">
             <select id="buFilter">
                 <option value="all">🌐 All Business Units</option>
-                <option value="global">🏢 Global</option>
-                <option value="hotel-seaside">🏨 Hotel Seaside</option>
-                <option value="account">💰 Accounting</option>
-                <option value="HR">👥 HR</option>
             </select>
 
             <a href="train.html" class="btn-green"><span>+</span> Add Knowledge</a>
@@ -247,7 +315,7 @@
             <table>
                 <thead>
                     <tr>
-                        <th>Namespace (BU)</th>
+                        <th>BU</th>
                         <th>Requests</th>
                         <th>Total Tokens</th>
                         <th>Cost</th>
@@ -287,9 +355,6 @@
                 <select id="kSearchBU"
                     style="padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; width: 150px; cursor: pointer;">
                     <option value="global">🌐 Global</option>
-                    <option value="HR">👥 HR</option>
-                    <option value="Sales">💰 Sales</option>
-                    <option value="IT">💻 IT</option>
                 </select>
 
                 <button onclick="searchKnowledge()"
@@ -396,7 +461,7 @@
 
         function formatTableContent(text) {
             if (!text) return "";
-            
+
             // ตัดข้อความให้สั้นลงก่อน (เพิ่มความยาวนิดหน่อยเพื่อให้เห็นบริบท)
             let formatted = text.substring(0, 300);
 
@@ -448,7 +513,9 @@
                 return `
                     <tr>
                         <td>${new Date(log.timestamp).toLocaleTimeString()}</td>
-                        <td><div style="display:flex; align-items:center;"><span style="background:#e0f2fe; color:#0284c7; padding:2px 8px; border-radius:6px; font-size:11px; font-weight:bold; border:1px solid #bae6fd;">${log.bu || 'GLOBAL'}</span></div></td>
+                        <td><div style="display:flex; align-items:center;"><span style="background:#e0f2fe; color:#0284c7; padding:2px 8px; border-radius:6px; font-size:11px; font-weight:bold; border:1px solid #bae6fd;">${log.bu}</span><span style="font-size:12px; color:#475569; font-weight:500; display:flex; align-items:center; gap:3px;">
+            👤 ${log.username}
+        </span></div></td>
                         <td style="max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size:13px;" title="${log.user_query}">${log.user_query || '-'}</td>
                         <td>${log.model_name}</td>
                         <td>${log.duration?.toFixed(2)}s</td>
@@ -466,13 +533,24 @@
                 tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px;">No data available</td></tr>';
                 return;
             }
+            // ในฟังก์ชัน renderStats(stats)
             tbody.innerHTML = stats.map(st => `
-                <tr>
-                    <td><span style="font-weight:bold; color:#2563eb; font-size:14px;">${st.namespace.toUpperCase()}</span></td>
-                    <td>${st.total_requests.toLocaleString()}</td>
-                    <td>${st.total_tokens.toLocaleString()}</td>
-                    <td class="cost" style="font-size:15px;">$${st.total_cost.toFixed(6)}</td>
-                </tr>`).join('');
+     <tr>
+        <td>
+            <div style="display:flex; flex-direction:column; gap:2px;">
+                <span style="font-weight:bold; color:#2563eb; font-size:14px;">
+                    ${st.namespace.toUpperCase()}
+                </span>
+                
+                <span style="font-size:11px; color:#64748b; display:flex; align-items:center; gap:4px;">
+                    👥 ${st.user_count || 0} Users
+                </span>
+            </div>
+        </td>
+        <td>${st.total_requests.toLocaleString()}</td>
+        <td>${st.total_tokens.toLocaleString()}</td>
+        <td class="cost" style="font-size:15px;">$${st.total_cost.toFixed(6)}</td>
+    </tr>`).join('');
         }
 
         function renderKnowledge(data) {
@@ -560,7 +638,7 @@
                     msg += `${i + 1}. 📄 ${s.source} (Page ${s.page})\n`;
                     msg += `   🎯 Score: ${s.score}\n`;
                     let contentSnippet = s.content ? s.content.substring(0, 150) : "No content";
-                    contentSnippet = contentSnippet.replace(/(\r\n|\n|\r)/gm, " "); 
+                    contentSnippet = contentSnippet.replace(/(\r\n|\n|\r)/gm, " ");
                     msg += `   📝 "${contentSnippet}..."\n\n`;
                 });
                 alert(msg);
@@ -570,7 +648,7 @@
             }
         }
 
-       async function loadModels() {
+        async function loadModels() {
             const models = await api.getLocalModels();
             const tbody = document.getElementById('modelsBody');
             tbody.innerHTML = models.map(m => `
@@ -587,7 +665,76 @@
             `).join('');
         }
 
-        // --- Expose to Window (Important for HTML onclick) ---
+
+        async function loadBUOptions() {
+            try {
+                // 1. ดึงข้อมูลจาก API
+                const res = await fetch(`${API_BASE_URL}/admin/filters/bu`);
+                if (!res.ok) throw new Error("Failed to load BUs");
+                const bus = await res.json();
+
+                // ---------------------------------------------
+                // A. จัดการ Dropdown กรองกราฟ (#buFilter)
+                // ---------------------------------------------
+                const filterSelect = document.getElementById('buFilter');
+                if (filterSelect) {
+                    const currentVal = filterSelect.value;
+                    filterSelect.innerHTML = '<option value="all">🌐 All Business Units</option>';
+
+                    bus.forEach(bu => {
+                        if (!bu || bu === 'global') return; // ข้าม global ไปก่อน (หรือจะรวมก็ได้แล้วแต่ดีไซน์)
+                        filterSelect.appendChild(createOption(bu));
+                    });
+
+                    // เพิ่ม Global ไว้ท้ายสุดหรือตามต้องการ (ถ้าใน DB มี global ก็จะถูก add ไปแล้ว)
+                    // ถ้าอยากให้ Global อยู่แยกออกมาชัดเจน ก็ hardcode ไว้ใน HTML หรือใส่เงื่อนไขตรงนี้ได้
+
+                    if (currentVal && currentVal !== 'all') filterSelect.value = currentVal;
+                }
+
+                // ---------------------------------------------
+                // B. จัดการ Dropdown ค้นหาความรู้ (#kSearchBU) ✅ เพิ่มตรงนี้
+                // ---------------------------------------------
+                const searchSelect = document.getElementById('kSearchBU');
+                if (searchSelect) {
+                    const currentVal = searchSelect.value;
+                    // Default ของช่องค้นหาคือ Global
+                    searchSelect.innerHTML = '<option value="global">🌐 Global</option>';
+
+                    bus.forEach(bu => {
+                        // ไม่เอา global ซ้ำ เพราะมี Default แล้ว
+                        if (!bu || bu === 'global') return;
+                        searchSelect.appendChild(createOption(bu));
+                    });
+
+                    if (currentVal && currentVal !== 'global') searchSelect.value = currentVal;
+                }
+
+            } catch (e) {
+                console.error("Error loading BU options:", e);
+            }
+        }
+
+        // ฟังก์ชันช่วยสร้าง <option> พร้อมไอคอน (จะได้ไม่ต้องเขียนซ้ำ)
+        function createOption(bu) {
+            const option = document.createElement('option');
+            option.value = bu;
+
+            let icon = "🏢";
+            const upperBU = bu.toUpperCase();
+            if (upperBU.includes("HR")) icon = "👥";
+            else if (upperBU.includes("ACCOUNT") || upperBU.includes("SALES")) icon = "💰";
+            else if (upperBU.includes("HOTEL")) icon = "🏨";
+            else if (upperBU.includes("IT") || upperBU.includes("DEV")) icon = "💻";
+
+            option.textContent = `${icon} ${bu}`;
+            return option;
+        }
+        window.onload = async () => {
+            await loadBUOptions(); // ✅ โหลดตัวเลือก BU ก่อน
+            fetchData();           // แล้วค่อยโหลดข้อมูลกราฟ
+            // autoRefresh = setInterval(fetchData, 10000); 
+        };
 
         window.showSources = showSources;
         window.searchKnowledge = searchKnowledge;
@@ -605,7 +752,7 @@
             if (e.key === 'Enter') searchKnowledge();
         });
 
-      
+
 
         window.activateModel = async (id, inp, out) => { if (confirm('Switch to ' + id + '?')) { await api.activateModel(id, inp, out); loadModels(); } };
         window.deleteModel = async (id) => { if (confirm('Delete ' + id + '?')) { await api.deleteModel(id); loadModels(); } };
