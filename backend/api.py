@@ -6,9 +6,10 @@ from pathlib import Path
 from datetime import datetime
 from typing import Optional, List, Dict, Any # ✅ ใช้ typing เท่านั้น
 from dotenv import load_dotenv
+import io
 
 
-from fastapi import FastAPI, HTTPException, BackgroundTasks, Depends, File, UploadFile
+from fastapi import FastAPI, HTTPException, BackgroundTasks, Depends, File, UploadFile, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles 
 from fastapi.responses import FileResponse
@@ -28,6 +29,7 @@ from github import Github
 from langchain_community.document_loaders import WebBaseLoader, RecursiveUrlLoader
 from bs4 import BeautifulSoup as Soup 
 from langchain_core.documents import Document
+from pypdf import PdfReader
 
 # Load Environment Variables
 env_path = Path(__file__).parent / '.env'
@@ -428,15 +430,49 @@ async def train_manual(req: TrainingRequest):
     return {"status": "success"}
 
 @app.post("/train/upload")
-async def train_upload(file: UploadFile = File(...), namespace: str = "global"):
-    content = (await file.read()).decode("utf-8", errors="ignore")
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=300)
-    chunks = text_splitter.create_documents([content])
-    for chunk in chunks: chunk.metadata = {"source": file.filename}
-    
-    # Upload แบบง่าย (ไม่ผ่าน Background Task เพราะไฟล์เดียวมักไม่นาน)
-    vectorstore.add_documents(chunks, namespace=namespace)
-    return {"status": "success", "chunks_added": len(chunks)}
+async def train_upload(
+    file: UploadFile = File(...), 
+    namespace: str = Form(...) # ✅ ต้องใช้ Form(...) เพื่อรับค่าจาก Frontend FormData
+):
+    try:
+        # 1. อ่านไฟล์ตามประเภทนามสกุล
+        filename = file.filename.lower()
+        content = ""
+
+        # อ่านข้อมูลไฟล์เป็น Bytes
+        file_bytes = await file.read()
+
+        if filename.endswith(".pdf"):
+            # ✅ กรณี PDF: ใช้ pypdf อ่าน
+            pdf_reader = PdfReader(io.BytesIO(file_bytes))
+            for page in pdf_reader.pages:
+                text = page.extract_text()
+                if text:
+                    content += text + "\n"
+        else:
+            content = file_bytes.decode("utf-8", errors="ignore")
+        if not content.strip():
+            raise HTTPException(status_code=400, detail="File is empty or could not extract text")
+
+        text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+        chunks = text_splitter.create_documents([content])
+        for chunk in chunks:
+            chunk.metadata = {
+                "source": file.filename,
+                "namespace": namespace 
+            }
+        if vectorstore:
+           
+            vectorstore.add_documents(chunks, namespace=namespace)
+            print(f"✅ Trained {len(chunks)} chunks to namespace: {namespace}")
+        else:
+            raise HTTPException(status_code=500, detail="Vector Store not initialized")
+
+        return {"status": "success", "chunks": len(chunks), "namespace": namespace}
+
+    except Exception as e:
+        print(f"❌ Upload Error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 # ✅ Restored GitHub API
 @app.post("/train/github")
