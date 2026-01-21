@@ -52,11 +52,17 @@ Role: You are "Carmen" (คาร์เมน), a professional and gentle AI Sup
    - Use Thai menu/button names if available.
 
 4. **⛔ CRITICAL FORMAT RULES (Strictly Follow):**
-   - **NO HTML TAGS:** You must NEVER use HTML tags like `<a href="...">`, `<img>`, or `<div>`.
+   - **NO HTML TAGS:** You must NEVER use HTML tags like `<a href="...">`, or `<div>`.
    - **IMAGES:** If the Context contains an image path (e.g., `![alt](images/filename.png)`), **YOU MUST INCLUDE IT** in your response at the appropriate place. Do not remove it.
    - **YOUTUBE & VIDEOS:** If the context contains a YouTube URL, please output the **Raw URL** directly (e.g., `https://www.youtube.com/watch?v=...`). 
      - ⚠️ **DO NOT** wrap YouTube URLs in Markdown links like `[Watch Video](https://...)`. Just give the plain URL so the system can embed it.
    - **MARKDOWN ONLY:** For other links (non-video), use Markdown format: `[Link Text](URL)`.
+
+5. **🚫 HANDLING IRRELEVANT/MISSING DATA (IMPORTANT):**
+   - If the User's question is NOT related to the provided Context (e.g., weather, food, general knowledge), or if the Context is empty:
+     - **DO NOT** explain what the provided context is (e.g., **NEVER SAY**: "ข้อมูลที่ให้มาเป็นคู่มือ...", "Based on the provided manual...").
+     - **Insted, simply say:** "ขออภัยค ข้อมูลในฐานความรู้ของ Carmen ยังไม่มีหัวข้อนี้"
+     - Keep it short and polite. Do not mention "Source file" or "Manual".   
 
 **Extra Instructions from System:**
 {prompt_extend}
@@ -92,27 +98,35 @@ async def process_chat_message(
     start_time = time.time()
     
     # ---------------------------------------------------------
-    # 1. Manage Model & Foreign Key Integrity
+    # ✅ 1. Manage Model & Pricing (FIXED)
     # ---------------------------------------------------------
-    if not model_name:
-        active_model = db.query(ModelPricing).filter(ModelPricing.is_active == True).first()
-        model_name = active_model.model_name if active_model else "xiaomi/mimo-v2-flash:free"
+    # ดึง Active Model จาก Database เสมอ เพื่อให้การกด Switch มีผลทันที
+    active_model = db.query(ModelPricing).filter(ModelPricing.is_active == True).first()
     
-    pricing = db.query(ModelPricing).filter(ModelPricing.model_name == model_name).first()
-    
-    if not pricing:
-        pricing = ModelPricing(
-            model_name=model_name,
-            input_rate=0.0,
-            output_rate=0.0,
-            is_active=True
-        )
-        db.add(pricing)
-        db.commit()
-        db.refresh(pricing)
-
-    input_rate = pricing.input_rate
-    output_rate = pricing.output_rate
+    if active_model:
+        # ถ้ามี Active Model ให้ใช้ตัวนั้นเลย
+        current_model_name = active_model.model_name
+        input_rate = active_model.input_rate
+        output_rate = active_model.output_rate
+    else:
+        # Fallback: ถ้าไม่มี Active ให้ใช้ค่าที่ส่งมา หรือ Default
+        current_model_name = model_name or "xiaomi/mimo-v2-flash:free"
+        
+        # ตรวจสอบว่าโมเดลนี้มีใน DB ไหม ถ้าไม่มีให้สร้างใหม่ (กัน Error)
+        pricing = db.query(ModelPricing).filter(ModelPricing.model_name == current_model_name).first()
+        if not pricing:
+            pricing = ModelPricing(
+                model_name=current_model_name,
+                input_rate=0.0,
+                output_rate=0.0,
+                is_active=True # Set as active since it's the fallback
+            )
+            db.add(pricing)
+            db.commit()
+            db.refresh(pricing)
+        
+        input_rate = pricing.input_rate
+        output_rate = pricing.output_rate
 
     # ---------------------------------------------------------
     # 2. Save User Message to ChatHistory
@@ -123,7 +137,7 @@ async def process_chat_message(
         username=username,     # ✅ บันทึกชื่อคนใช้
         sender="user",
         message=message,
-        model_used=model_name 
+        model_used=current_model_name 
     )
     db.add(user_history)
     db.commit()
@@ -133,11 +147,7 @@ async def process_chat_message(
     # ---------------------------------------------------------
     raw_results = []
     
-    # ⚠️ ปิดการค้นหาตาม BU ชั่วคราว (ตาม requirement)
-    # if bu and bu != "global":
-    #     raw_results += vectorstore.similarity_search_with_score(message, k=8, namespace=bu)
-    
-    # ✅ บังคับค้นหาจาก global เท่านั้น
+    # ✅ บังคับค้นหาจาก global เท่านั้น (ตามโค้ดเดิม)
     raw_results += vectorstore.similarity_search_with_score(message, k=8, namespace="global")
     
     passed_docs = []
@@ -159,12 +169,12 @@ async def process_chat_message(
     usage = {}
 
     if not passed_docs:
-        bot_ans = "ขออภัยค่ะ ฉันไม่มีข้อมูลเกี่ยวกับเรื่องนี้ในฐานข้อมูล (ความมั่นใจต่ำ)"
+        bot_ans = "ขออภัย ฉันไม่มีสามารถตอบคำถามนี้ได้ เนื่องจากไม่มีข้อมูลที่เกี่ยวข้องในระบบของฉัน"
     else:
         context_text = "\n\n".join([d.page_content for d in passed_docs])
         
         llm = ChatOpenAI(
-            model=model_name,
+            model=current_model_name, # ✅ ใช้ชื่อ Model ที่ Active จริง
             openai_api_key=os.environ.get("OPENROUTER_API_KEY"),
             openai_api_base="https://openrouter.ai/api/v1",
             temperature=0.3
@@ -189,23 +199,26 @@ async def process_chat_message(
             }
 
     # ---------------------------------------------------------
-    # 4. Calculate Stats & Save TokenLog
+    # 4. Calculate Stats & Save TokenLog (FIXED CALCULATION)
     # ---------------------------------------------------------
     input_tk = usage.get('input_tokens', len(message) // 3)
     output_tk = usage.get('output_tokens', len(bot_ans) // 3)
     total_tk = input_tk + output_tk
-    total_cost = (input_tk * input_rate) + (output_tk * output_rate)
+    
+    # ✅ แก้ไขสูตรคำนวณ: (Token / 1,000,000) * Rate
+    total_cost = (input_tk / 1_000_000 * input_rate) + (output_tk / 1_000_000 * output_rate)
+    
     duration = time.time() - start_time
 
     new_log = TokenLog(
-        session_id=session_id, # ✅ บันทึก Session ID
-        bu=bu,                 # ✅ บันทึกตาม BU จริง (เอาไว้ทำ Dashboard)
-        username=username,     # ✅ บันทึกชื่อคนใช้
-        model_name=model_name, 
+        session_id=session_id, 
+        bu=bu,                 
+        username=username,     
+        model_name=current_model_name, # ✅ บันทึกชื่อ Model ที่ใช้จริง
         input_tokens=input_tk,
         output_tokens=output_tk,
         total_tokens=total_tk,
-        cost=total_cost,
+        cost=total_cost, # ✅ ราคาถูกต้องแล้ว
         duration=duration,
         user_query=message,
         sources=source_debug
@@ -216,12 +229,12 @@ async def process_chat_message(
     # 5. Save Bot Message to ChatHistory
     # ---------------------------------------------------------
     bot_history = ChatHistory(
-        session_id=session_id, # ✅ บันทึก Session ID
+        session_id=session_id, 
         bu=bu,
         username=username,
         sender="bot",
         message=bot_ans,
-        model_used=model_name 
+        model_used=current_model_name 
     )
     db.add(bot_history)
     db.commit()
@@ -230,8 +243,8 @@ async def process_chat_message(
     return {
         "answer": bot_ans,
         "bu": bu,
-        "model": model_name,
+        "model": current_model_name,
         "sources": source_debug,
         "message_id": bot_history.id,
-        "session_id": session_id # ส่งกลับให้ Frontend ด้วย
+        "session_id": session_id 
     }

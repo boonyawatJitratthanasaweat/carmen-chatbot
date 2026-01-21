@@ -140,6 +140,30 @@ async def get_users_namespaces():
         {"label": "👥 HR Department", "value": "HR"}
     ]
 
+# backend/api.py
+
+class ModelActivateRequest(BaseModel):
+    model_name: str
+
+@app.post("/admin/models/activate")
+def activate_model(req: ModelActivateRequest, db: Session = Depends(get_db)):
+    try:
+        # 1. ปรับทุกโมเดลให้เป็น Inactive ก่อน (Reset)
+        db.query(ModelPricing).update({ModelPricing.is_active: False})
+        
+        # 2. ปรับโมเดลที่เลือกให้เป็น Active
+        target_model = db.query(ModelPricing).filter(ModelPricing.model_name == req.model_name).first()
+        if not target_model:
+            raise HTTPException(status_code=404, detail="Model not found")
+            
+        target_model.is_active = True
+        
+        db.commit()
+        return {"status": "success", "active_model": req.model_name}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/knowledge/stats")
 async def get_knowledge_stats():
     # ตรวจสอบว่ามี API KEY หรือไม่
