@@ -73,10 +73,36 @@ async def chat_endpoint(req: ChatRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/chat/history")
-async def get_history(bu: str, session_id: str = None, db: Session = Depends(get_db)):
-    history = db.query(ChatHistory).filter(ChatHistory.bu == bu)\
-        .order_by(desc(ChatHistory.timestamp)).limit(50).all()
+async def get_history(
+    bu: str, 
+    username: str,  # ✅ 1. เพิ่ม parameter username (บังคับส่ง)
+    session_id: str = None, 
+    db: Session = Depends(get_db)
+):
+    # ✅ 2. เพิ่ม Filter username == username
+    history = db.query(ChatHistory).filter(
+        ChatHistory.bu == bu,          # กรองแผนก
+        ChatHistory.username == username # กรองชื่อคน
+    ).order_by(desc(ChatHistory.timestamp)).limit(50).all()
+    
     return history[::-1]
+
+
+@app.delete("/chat/history")
+def clear_user_history(bu: str, username: str, db: Session = Depends(get_db)):
+    try:
+        # ✅ ลบเฉพาะ ChatHistory ของ User คนนั้น ในแผนกนั้น
+        db.query(ChatHistory).filter(
+            ChatHistory.bu == bu,
+            ChatHistory.username == username
+        ).delete(synchronize_session=False)
+        
+        db.commit()
+        return {"status": "success", "message": "History cleared"}
+    except Exception as e:
+        db.rollback()
+        print(f"Error clearing history: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 # ==========================================
 # 🛡️ ADMIN API
