@@ -315,18 +315,51 @@ async def delete_model(req: ModelUpdate, db: Session = Depends(get_db)):
 # ==========================================
 # 🧠 TRAINING ZONE (Background Logic)
 # ==========================================
-training_state = {"is_running": False, "progress": 0, "status": "Idle", "logs": [], "start_time": 0, "abort": False, "processed_chunks": 0, "total_chunks": 0, "estimated_remaining": "--"}
+training_state = {
+    "is_running": False, 
+    "progress": 0, 
+    "status": "Idle", 
+    "logs": [], 
+    "start_time": 0, 
+    "abort": False, 
+    "processed_chunks": 0, 
+    "total_chunks": 0, 
+    "estimated_remaining": "--"
+}
 
+# --- Helper Functions ---
 def add_log(message: str):
     print(message)
     training_state["logs"].append(f"[{datetime.now().strftime('%H:%M:%S')}] {message}")
-    if len(training_state["logs"]) > 50: training_state["logs"].pop(0)
+    if len(training_state["logs"]) > 100: training_state["logs"].pop(0)
 
 def reset_state():
-    global training_state
-    training_state.update({"is_running": True, "progress": 0, "status": "Starting...", "logs": [], "start_time": time.time(), "abort": False, "processed_chunks": 0, "total_chunks": 0})
+    training_state.update({
+        "is_running": True, 
+        "progress": 0, 
+        "status": "Starting...", 
+        "logs": [], 
+        "start_time": time.time(), 
+        "abort": False, 
+        "processed_chunks": 0, 
+        "total_chunks": 0,
+        "estimated_remaining": "--"
+    })
 
-# --- Worker 1: GitHub ---
+def calculate_eta(processed, total, start_time):
+    if processed == 0: return "--"
+    elapsed = time.time() - start_time
+    rate = processed / elapsed
+    remaining_items = total - processed
+    seconds_left = remaining_items / rate if rate > 0 else 0
+    
+    if seconds_left < 60: return f"{int(seconds_left)}s"
+    return f"{int(seconds_left // 60)}m {int(seconds_left % 60)}s"
+
+
+
+
+# --- Worker 1: GitHub (ของคุณเดิม) ---
 def process_github_training(repo_name, token, namespace, incremental):
     reset_state()
     try:
@@ -342,16 +375,16 @@ def process_github_training(repo_name, token, namespace, incremental):
             fc = contents.pop(0)
             if fc.type == "dir":
                 contents.extend(repo.get_contents(fc.path))
-            elif fc.path.endswith((".md", ".txt", ".csv", ".py", ".js", ".html", ".css", ".json")):
-                 # Simple content loading
+            elif fc.path.endswith((".md", ".txt", ".py", ".js", ".json")):
                  try:
                     docs.append(Document(page_content=fc.decoded_content.decode("utf-8"), metadata={"source": fc.html_url}))
+                    add_log(f"READ: {fc.path}")
                  except: pass
 
         if not docs:
             add_log("❌ No compatible files found."); training_state["is_running"] = False; return
 
-        add_log(f"📄 Found {len(docs)} files. Processing...")
+        add_log(f"📄 Found {len(docs)} files. Splitting...")
         text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
         chunks = text_splitter.split_documents(docs)
         
@@ -362,11 +395,12 @@ def process_github_training(repo_name, token, namespace, incremental):
     finally:
         training_state["is_running"] = False
 
-# --- Worker 2: URL ---
+# --- Worker 2: URL (ของคุณเดิม) ---
 def process_url_training(url, namespace, recursive, depth):
     reset_state()
     try:
         add_log(f"🌐 Crawling: {url}")
+        # ใช้ lambda ง่ายๆ ดึง text หรือใช้ BeautifulSoup ตามชอบ
         loader = RecursiveUrlLoader(url=url, max_depth=depth, extractor=lambda x: Soup(x, "html.parser").text) if recursive else WebBaseLoader(url)
         docs = loader.load()
         
@@ -376,6 +410,56 @@ def process_url_training(url, namespace, recursive, depth):
 
         upload_chunks(chunks, namespace)
 
+    except Exception as e:
+        add_log(f"❌ Error: {e}")
+    finally:
+        training_state["is_running"] = False
+
+# --- Worker 3: File Upload (เพิ่มใหม่) ---
+def process_file_training(file_bytes, filename, namespace):
+    reset_state()
+    try:
+        add_log(f"📂 Processing File: {filename}")
+        content = ""
+        
+        if filename.endswith(".pdf"):
+            add_log("📖 Reading PDF pages...")
+            pdf_reader = PdfReader(io.BytesIO(file_bytes))
+            for i, page in enumerate(pdf_reader.pages):
+                txt = page.extract_text()
+                if txt: content += txt + "\n"
+        else:
+            add_log("📖 Decoding text file...")
+            content = file_bytes.decode("utf-8", errors="ignore")
+            
+        if not content.strip():
+            raise Exception("File is empty or unreadable")
+            
+        add_log(f"✂️ Splitting {len(content)} characters...")
+        text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+        chunks = text_splitter.create_documents([content])
+        
+        # ใส่ source ให้รู้ว่ามาจากไฟล์ไหน
+        for c in chunks: c.metadata["source"] = filename
+        
+        upload_chunks(chunks, namespace)
+
+    except Exception as e:
+        add_log(f"❌ Error: {e}")
+    finally:
+        training_state["is_running"] = False
+
+# --- Worker 4: Manual Text (เพิ่มใหม่) ---
+def process_text_training(text, namespace):
+    reset_state()
+    try:
+        add_log("✍️ Processing Manual Input...")
+        text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+        chunks = text_splitter.create_documents([text])
+        for c in chunks: c.metadata["source"] = "manual-input"
+        
+        upload_chunks(chunks, namespace)
+        
     except Exception as e:
         add_log(f"❌ Error: {e}")
     finally:
@@ -423,6 +507,10 @@ class GithubRequest(BaseModel):
 
 class UrlRequest(BaseModel):
     url: str; namespace: str = "global"; recursive: bool = False; depth: int = 2
+
+class ManualTrainRequest(BaseModel):
+    text: str
+    namespace: str    
 
 @app.post("/train")
 async def train_manual(req: TrainingRequest):

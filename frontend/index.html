@@ -131,10 +131,10 @@
             });
         </div>
     </div>
-
+    <script src="./carmen-widget.js"></script>
     <script type="module">
         // Import จากไฟล์ที่ Backend Serve ให้ (The Old Way)
-        import { CarmenBot } from './carmen-bot.js';
+        
 
         // 1. ดึงค่าจาก URL Parameter (เพื่อจำลองว่าแต่ละหน้าเว็บส่งค่าต่างกัน)
         const urlParams = new URLSearchParams(window.location.search);
@@ -150,13 +150,13 @@
         document.getElementById('code-user').innerText = currentUser;
         document.getElementById('code-title').innerText = themeTitle;
 
-        // 3. เริ่มต้น Widget ทันที (ไม่ต้อง Login)
-        // Widget จะเด้งขึ้นมาที่มุมขวาล่าง
-        new CarmenBot({
-            bu: currentBU,        // ส่ง BU ไปเพื่อแยกฐานข้อมูล vector / logs
-            user: currentUser,    // ชื่อ User ที่จะแสดงใน Chat
-            title: themeTitle,    // ตั้งชื่อหัวข้อ Chat ตาม BU
-            apiUrl: ""            // ใช้ Relative Path (Auto Connect Backend)
+        
+        new CarmenBot({ 
+            bu: currentBU, //Required
+            user: currentUser, //Required
+            theme: "black", //default: #34558b
+            showClearHistoryButton: true, //default: false
+            showAttachFileButton: false //default: false    
         });
 
     </script>
