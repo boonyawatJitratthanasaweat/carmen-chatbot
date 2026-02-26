@@ -5,7 +5,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Carmen AI - Advanced Training</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sarabun:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sarabun:wght@300;400;500;600&display=swap"
+        rel="stylesheet">
     <style>
         :root {
             /* 🎨 Theme Variables */
@@ -14,15 +16,15 @@
             --secondary-bg: #f1f5f9;
             --bg-body: #f8fafc;
             --bg-card: #ffffff;
-            
+
             --text-main: #1e293b;
             --text-muted: #64748b;
             --border-color: #e2e8f0;
-            
+
             --success-color: #10b981;
             --danger-color: #ef4444;
             --warning-color: #f59e0b;
-            
+
             --radius-md: 12px;
             --radius-lg: 20px;
             --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
@@ -30,7 +32,9 @@
             --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
         }
 
-        * { box-sizing: border-box; }
+        * {
+            box-sizing: border-box;
+        }
 
         body {
             background-color: var(--bg-body);
@@ -52,12 +56,15 @@
             border-radius: var(--radius-lg);
             box-shadow: var(--shadow-md);
         }
+
         .header h1 {
             margin: 0;
             color: var(--primary-color);
             font-size: 24px;
             font-weight: 700;
-            display: flex; align-items: center; gap: 12px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
         }
 
         .btn-back {
@@ -69,8 +76,11 @@
             color: var(--text-muted);
             font-weight: 600;
             transition: all 0.2s;
-            display: flex; align-items: center; gap: 6px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
         }
+
         .btn-back:hover {
             border-color: var(--primary-color);
             color: var(--primary-color);
@@ -92,11 +102,17 @@
             border-radius: var(--radius-lg);
             padding: 30px;
             box-shadow: var(--shadow-lg);
-            border: 1px solid rgba(255,255,255,0.5);
+            border: 1px solid rgba(255, 255, 255, 0.5);
             height: fit-content;
         }
 
-        h2 { margin-top: 0; font-size: 18px; color: var(--text-main); margin-bottom: 20px; font-weight: 700; }
+        h2 {
+            margin-top: 0;
+            font-size: 18px;
+            color: var(--text-main);
+            margin-bottom: 20px;
+            font-weight: 700;
+        }
 
         /* --- Tabs (Pill Style) --- */
         .train-tabs {
@@ -107,7 +123,9 @@
             padding: 5px;
             border-radius: 50px;
             width: fit-content;
+            flex-wrap: wrap;
         }
+
         .t-btn {
             background: transparent;
             border: none;
@@ -119,21 +137,84 @@
             border-radius: 40px;
             transition: all 0.3s ease;
         }
-        .t-btn:hover { color: var(--primary-color); }
+
+        .t-btn:hover {
+            color: var(--primary-color);
+        }
+
         .t-btn.active {
             background: white;
             color: var(--primary-color);
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
         }
 
-        .tab-panel { display: none; animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
-        .tab-panel.active { display: block; }
-        @keyframes fadeIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+        /* --- Utility Classes --- */
+        .flex-row {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .flex-1 {
+            flex: 1;
+        }
+
+        .mt-24 {
+            margin-top: 24px;
+        }
+
+        .p-10 {
+            padding: 10px;
+        }
+
+        .mono-sm {
+            font-size: 12px;
+            color: #94a3b8;
+            font-family: monospace;
+        }
+
+        .w-full {
+            width: 100%;
+        }
+
+        .mb-20 {
+            margin-bottom: 20px;
+        }
+
+        .tab-panel {
+            display: none;
+            animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .tab-panel.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
 
         /* --- Forms --- */
-        .form-group { margin-bottom: 20px; }
-        .form-group label { display: block; margin-bottom: 8px; font-weight: 600; font-size: 13px; color: var(--text-main); }
-        
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            font-size: 13px;
+            color: var(--text-main);
+        }
+
         .input-box {
             width: 100%;
             padding: 12px 16px;
@@ -144,14 +225,27 @@
             transition: all 0.2s;
             background: #fff;
         }
+
         .input-box:focus {
             outline: none;
             border-color: var(--primary-color);
             box-shadow: 0 0 0 3px rgba(52, 85, 139, 0.1);
         }
 
-        .checkbox-group { display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--text-main); cursor: pointer; }
-        input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--primary-color); }
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+            color: var(--text-main);
+            cursor: pointer;
+        }
+
+        input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            accent-color: var(--primary-color);
+        }
 
         /* --- Action Buttons --- */
         .btn-train {
@@ -165,43 +259,92 @@
             font-weight: 700;
             cursor: pointer;
             transition: transform 0.2s, box-shadow 0.2s;
-            display: flex; justify-content: center; align-items: center; gap: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
             box-shadow: 0 4px 15px rgba(52, 85, 139, 0.3);
             margin-top: 10px;
         }
-        .btn-train:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(52, 85, 139, 0.4); }
-        .btn-train:active { transform: scale(0.98); }
 
-        .btn-cancel {
-            background: #fee2e2; color: #ef4444;
-            margin-top: 15px; width: 100%; padding: 12px;
-            border: none; border-radius: 30px;
-            cursor: pointer; font-weight: 700;
-            display: none; transition: 0.2s;
+        .btn-train:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(52, 85, 139, 0.4);
         }
-        .btn-cancel:hover { background: #fecaca; }
+
+        .btn-train:active {
+            transform: scale(0.98);
+        }
+
+        .btn-train:disabled {
+            background: #cbd5e1;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
 
         /* --- Console Card (Right Side) --- */
         .console-card {
-            background: #0f172a; /* Dark Blue/Black */
+            background: #0f172a;
+            /* Dark Blue/Black */
             color: #e2e8f0;
-            display: flex; flex-direction: column;
+            display: flex;
+            flex-direction: column;
             border: 1px solid #1e293b;
         }
 
         .status-header {
-            display: flex; justify-content: space-between; align-items: center;
-            margin-bottom: 20px; padding-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
             border-bottom: 1px solid #334155;
         }
-        .status-indicator { display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 600; }
-        .dot { width: 10px; height: 10px; border-radius: 50%; background: #475569; transition: 0.3s; }
-        .dot.active { background: #10b981; box-shadow: 0 0 10px #10b981; animation: pulse 1.5s infinite; }
-        @keyframes pulse { 0% { opacity: 1; transform: scale(1); } 50% { opacity: 0.7; transform: scale(1.2); } 100% { opacity: 1; transform: scale(1); } }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #475569;
+            transition: 0.3s;
+        }
+
+        .dot.active {
+            background: #10b981;
+            box-shadow: 0 0 10px #10b981;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 0.7;
+                transform: scale(1.2);
+            }
+
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
 
         .console-box {
             background: #1e293b;
-            color: #10b981; /* Matrix Green */
+            color: #10b981;
+            /* Matrix Green */
             font-family: 'Courier New', monospace;
             padding: 15px;
             border-radius: 8px;
@@ -209,23 +352,41 @@
             overflow-y: auto;
             font-size: 13px;
             border: 1px solid #334155;
-            display: flex; flex-direction: column; gap: 6px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
             margin-bottom: 20px;
         }
-        .log-line { border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 4px; word-wrap: break-word; }
-        
-        /* Custom Scrollbar for Console */
-        .console-box::-webkit-scrollbar { width: 6px; }
-        .console-box::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
+
+        .log-line {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            padding-bottom: 4px;
+            word-wrap: break-word;
+        }
+
+        .console-box::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .console-box::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 3px;
+        }
 
         /* --- Progress Bar --- */
-        .progress-container { margin-top: auto; }
+        .progress-container {
+            margin-top: auto;
+        }
+
         .progress-bar-bg {
-            width: 100%; height: 10px;
+            width: 100%;
+            height: 10px;
             background: #334155;
-            border-radius: 10px; overflow: hidden;
+            border-radius: 10px;
+            overflow: hidden;
             margin-bottom: 8px;
         }
+
         .progress-bar-fill {
             height: 100%;
             background: linear-gradient(90deg, #3b82f6, #10b981);
@@ -233,20 +394,34 @@
             transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
             border-radius: 10px;
         }
-        .progress-text { display: flex; justify-content: space-between; font-size: 12px; color: #94a3b8; }
+
+        .progress-text {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: #94a3b8;
+        }
 
         @media screen and (max-width: 900px) {
-            .container { grid-template-columns: 1fr; }
-            .console-box { height: 250px; }
+            .container {
+                grid-template-columns: 1fr;
+            }
+
+            .console-box {
+                height: 250px;
+            }
         }
     </style>
 </head>
+
 <body>
 
     <div class="header">
         <h1>⚙️ Carmen Data Engine</h1>
         <button class="btn-back" onclick="window.location.href='dashboard.html'">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M19 12H5M12 19l-7-7 7-7" />
+            </svg>
             Back to Dashboard
         </button>
     </div>
@@ -254,43 +429,48 @@
     <div class="container">
         <div class="card">
             <h2>📥 Select Data Source</h2>
-            
+
             <div class="train-tabs">
-                <button class="t-btn active" onclick="switchTab('file')">📄 File Upload</button>
-                <button class="t-btn" onclick="switchTab('url')">🌐 Website</button> 
-                <button class="t-btn" onclick="switchTab('repo')">🐱 GitHub</button>
-                <button class="t-btn" onclick="switchTab('manual')">✍️ Manual Text</button>
+                <button class="t-btn active" onclick="switchTab('file', event)">📄 File Upload</button>
+                <button class="t-btn" onclick="switchTab('url', event)">🌐 Website</button>
+                <button class="t-btn" onclick="switchTab('repo', event)">🐱 GitHub</button>
+                <button class="t-btn" onclick="switchTab('manual', event)">✍️ Manual Text</button>
             </div>
 
             <div id="panel-file" class="tab-panel active">
                 <div class="form-group">
-                    <label>Target Business Unit (BU)</label>
-                    <select id="ns-file" class="input-box namespace-select"></select>
+                    <label for="ns-file">Target Business Unit (BU)</label>
+                    <select id="ns-file" class="input-box namespace-select"
+                        title="เลือก Business Unit สำหรับการอัปโหลดไฟล์"></select>
                 </div>
                 <div class="form-group">
-                    <label>Select File (PDF, CSV, TXT, MD)</label>
-                    <input type="file" id="file-input" class="input-box" style="padding: 10px;">
+                    <label for="file-input">Select File (PDF, CSV, TXT, MD)</label>
+                    <input type="file" id="file-input" class="input-box p-10"
+                        title="เลือกไฟล์สำหรับการเทรน (PDF, CSV, TXT, MD)">
                 </div>
                 <button class="btn-train" onclick="startFile()">🚀 Upload & Train</button>
             </div>
 
             <div id="panel-url" class="tab-panel">
                 <div class="form-group">
-                    <label>Target Business Unit (BU)</label>
-                    <select id="ns-url" class="input-box namespace-select"></select>
+                    <label for="ns-url">Target Business Unit (BU)</label>
+                    <select id="ns-url" class="input-box namespace-select"
+                        title="เลือก Business Unit สำหรับ URL"></select>
                 </div>
                 <div class="form-group">
-                    <label>Website URL</label>
-                    <input type="text" id="url-input" class="input-box" placeholder="https://example.com/docs">
+                    <label for="url-input">Website URL</label>
+                    <input type="text" id="url-input" class="input-box" placeholder="https://example.com/docs"
+                        title="ใส่ URL ของเว็บไซต์">
                 </div>
-                <div class="form-group" style="display:flex; gap:15px; align-items:center;">
-                    <div style="flex:1;">
-                        <label>Crawl Depth</label>
-                        <input type="number" id="url-depth" class="input-box" value="2" min="1" max="5">
+                <div class="form-group flex-row">
+                    <div class="flex-1">
+                        <label for="url-depth">Crawl Depth (Optional)</label>
+                        <input type="number" id="url-depth" class="input-box" value="2" min="1" max="5"
+                            title="ความลึกในการ Crawl">
                     </div>
-                    <div style="flex:1; margin-top: 24px;">
+                    <div class="flex-1 mt-24">
                         <label class="checkbox-group">
-                            <input type="checkbox" id="url-recursive"> 
+                            <input type="checkbox" id="url-recursive" title="Crawl แบบ Recursive">
                             Recursive Crawl
                         </label>
                     </div>
@@ -300,20 +480,23 @@
 
             <div id="panel-repo" class="tab-panel">
                 <div class="form-group">
-                    <label>Target Business Unit (BU)</label>
-                    <select id="ns-repo" class="input-box namespace-select"></select>
+                    <label for="ns-repo">Target Business Unit (BU)</label>
+                    <select id="ns-repo" class="input-box namespace-select"
+                        title="เลือก Business Unit สำหรับ Repository"></select>
                 </div>
                 <div class="form-group">
-                    <label>Repository (user/repo)</label>
-                    <input type="text" id="repo-name" class="input-box" placeholder="carmen-org/backend-api">
+                    <label for="repo-name">Repository (user/repo)</label>
+                    <input type="text" id="repo-name" class="input-box" placeholder="carmen-org/backend-api"
+                        title="ชื่อ Repository">
                 </div>
                 <div class="form-group">
-                    <label>Access Token (Optional for Private Repo)</label>
-                    <input type="password" id="repo-token" class="input-box" placeholder="ghp_xxxxxxxxxxxx">
+                    <label for="repo-token">Access Token (Optional for Private Repo)</label>
+                    <input type="password" id="repo-token" class="input-box" placeholder="ghp_xxxxxxxxxxxx"
+                        title="Github Access Token">
                 </div>
                 <div class="form-group">
                     <label class="checkbox-group">
-                        <input type="checkbox" id="repo-incremental"> 
+                        <input type="checkbox" id="repo-incremental" title="อัปเดตเฉพาะ commit ใหม่">
                         Incremental Update (Only new commits)
                     </label>
                 </div>
@@ -322,12 +505,14 @@
 
             <div id="panel-manual" class="tab-panel">
                 <div class="form-group">
-                    <label>Target Business Unit (BU)</label>
-                    <select id="ns-text" class="input-box namespace-select"></select>
+                    <label for="ns-text">Target Business Unit (BU)</label>
+                    <select id="ns-text" class="input-box namespace-select"
+                        title="เลือก Business Unit สำหรับข้อความ"></select>
                 </div>
                 <div class="form-group">
-                    <label>Text Content / Knowledge</label>
-                    <textarea id="text-input" class="input-box" rows="10" placeholder="Paste internal knowledge here..."></textarea>
+                    <label for="text-input">Text Content / Knowledge</label>
+                    <textarea id="text-input" class="input-box" rows="10" placeholder="Paste internal knowledge here..."
+                        title="เนื้อหาความรู้"></textarea>
                 </div>
                 <button class="btn-train" onclick="startText()">💾 Save to Memory</button>
             </div>
@@ -339,7 +524,7 @@
                     <div id="status-dot" class="dot"></div>
                     <span id="status-text">System Idle</span>
                 </div>
-                <span id="timer" style="font-size:12px; color:#94a3b8; font-family:monospace;">00:00</span>
+                <span id="timer" class="mono-sm">00:00</span>
             </div>
 
             <div id="console" class="console-box">
@@ -349,83 +534,78 @@
             <div class="progress-container">
                 <div class="progress-text">
                     <span id="progress-percent">0%</span>
-                    <span id="progress-details">0/0 Chunks</span>
+                    <span id="progress-details">Processing...</span>
                 </div>
-                <div class="progress-bar-bg"><div id="progress-fill" class="progress-bar-fill"></div></div>
-                <div class="progress-text" style="justify-content: flex-end;">
-                    <span>ETA: <span id="eta">--</span></span>
+                <div class="progress-bar-bg">
+                    <div id="progress-fill" class="progress-bar-fill"></div>
                 </div>
             </div>
-
-            <button class="btn-cancel" id="btn-cancel" onclick="cancelJob()">⛔ Stop Operation</button>
         </div>
     </div>
 
     <script>
-        const API_BASE = "";
+        // ✅ 1. Auto-detect Backend API URL
+        const API_BASE = (() => {
+            const hostname = window.location.hostname;
+            if (hostname === '127.0.0.1' || hostname === 'localhost') {
+                return "http://127.0.0.1:8000";
+            } else {
+                return `${window.location.protocol}//${window.location.hostname}:8000`;
+            }
+        })();
+
+        console.log("🔗 Data Engine connected to:", API_BASE);
+
         let monitorInterval;
         let isRunning = false;
+        let startTime;
 
-
-        window.onload = async function() {
-            
-            await initNamespaces(); 
+        window.onload = async function () {
+            await initNamespaces();
         };
 
+        // --- Init Functions ---
         async function initNamespaces() {
             try {
-                // 1. เรียก API ดึงรายชื่อ BU
-                const res = await fetch(`${API_BASE}/admin/filters/bu`);
-                if (!res.ok) throw new Error("Failed to load BUs");
+                const res = await fetch(`${API_BASE}/api/admin/filters/bu`);
                 const buList = await res.json();
-
-                // 2. สร้าง HTML Option เริ่มต้นด้วย Global เสมอ
                 let optionsHTML = `<option value="global">🌐 Global Knowledge</option>`;
 
-                // 3. วนลูปสร้าง Option จาก Database
-                buList.forEach(bu => {
-                    // ข้ามค่าว่าง หรือ global (เพราะใส่ไปแล้ว)
-                    if (!bu || bu === 'global') return;
+                if (Array.isArray(buList)) {
+                    buList.forEach(bu => {
+                        if (bu && bu !== 'global') optionsHTML += `<option value="${bu}">${bu}</option>`;
+                    });
+                }
 
-                    
-
-                    optionsHTML += `<option value="${bu}">${bu}</option>`;
-                });
-
-                // 4. ยัดใส่ Dropdown ทุกตัวที่มี class 'namespace-select'
-                const selects = document.querySelectorAll('.namespace-select');
-                selects.forEach(select => {
+                document.querySelectorAll('.namespace-select').forEach(select => {
                     select.innerHTML = optionsHTML;
                 });
-
             } catch (e) {
-                console.error("Error init namespaces:", e);
-                // กรณี Error ให้มี Global ไว้อย่างน้อย 1 อัน
+                console.warn("Failed to load BUs, using default.");
                 document.querySelectorAll('.namespace-select').forEach(s => {
                     s.innerHTML = `<option value="global">🌐 Global Knowledge</option>`;
                 });
             }
         }
 
-        function switchTab(tab) {
-    
+        function switchTab(tab, evt) {
             document.querySelectorAll('.tab-panel').forEach(el => el.classList.remove('active'));
-             document.querySelectorAll('.t-btn').forEach(el => el.classList.remove('active'));
-             document.getElementById(`panel-${tab}`).classList.add('active');
-             if(event) event.target.classList.add('active');
+            document.querySelectorAll('.t-btn').forEach(el => el.classList.remove('active'));
+            document.getElementById(`panel-${tab}`).classList.add('active');
+            if (evt) evt.target.classList.add('active');
         }
 
-        // --- Action Functions (Connected to REAL Backend) ---
+        // --- Action Functions ---
 
         async function startFile() {
             const file = document.getElementById('file-input').files[0];
-            if(!file) return alert("Please select a file");
-            
+            if (!file) return alert("Please select a file");
+
             const fd = new FormData();
             fd.append("file", file);
             fd.append("namespace", document.getElementById('ns-file').value);
 
-            await sendRequest(`${API_BASE}/train/upload`, fd, true);
+            await sendRequest(`${API_BASE}/api/train/upload`, fd, true);
         }
 
         async function startText() {
@@ -434,19 +614,20 @@
                 namespace: document.getElementById('ns-text').value,
                 source: "manual-input"
             };
-            if(!payload.text) return alert("Enter text");
-            await sendRequest(`${API_BASE}/train`, JSON.stringify(payload));
+            if (!payload.text) return alert("Enter text");
+            await sendRequest(`${API_BASE}/api/train`, JSON.stringify(payload));
         }
 
         async function startUrl() {
+            // Backend expects just { "url": "..." }
+            const urlVal = document.getElementById('url-input').value;
+            if (!urlVal) return alert("Enter URL");
+
             const payload = {
-                url: document.getElementById('url-input').value,
-                namespace: document.getElementById('ns-url').value,
-                recursive: document.getElementById('url-recursive').checked,
-                depth: parseInt(document.getElementById('url-depth').value)
+                url: urlVal
             };
-            if(!payload.url) return alert("Enter URL");
-            await sendRequest(`${API_BASE}/train/url`, JSON.stringify(payload));
+
+            await sendRequest(`${API_BASE}/api/train/url`, JSON.stringify(payload));
         }
 
         async function startGithub() {
@@ -456,51 +637,59 @@
                 namespace: document.getElementById('ns-repo').value,
                 incremental: document.getElementById('repo-incremental').checked
             };
-            if(!payload.repo_name) return alert("Enter Repo Name");
-            await sendRequest(`${API_BASE}/train/github`, JSON.stringify(payload));
-        }
-
-        async function cancelJob() {
-            if(!confirm("Stop current operation?")) return;
-            await fetch(`${API_BASE}/train/cancel`, { method: 'POST' });
+            if (!payload.repo_name) return alert("Enter Repo Name");
+            await sendRequest(`${API_BASE}/api/train/github`, JSON.stringify(payload));
         }
 
         // --- Helper & Monitor ---
 
-        async function sendRequest(url, body, isFile=false) {
+        async function sendRequest(url, body, isFile = false) {
             const headers = {};
             if (!isFile) headers['Content-Type'] = 'application/json';
+
+            // Disable buttons
+            document.querySelectorAll('.btn-train').forEach(b => b.disabled = true);
 
             try {
                 const res = await fetch(url, { method: 'POST', headers, body });
                 const data = await res.json();
-                
+
                 if (res.ok) {
-                    // Start monitoring immediately
                     startMonitoring();
                 } else {
                     alert(`❌ Error: ${data.detail || 'Unknown error'}`);
+                    document.querySelectorAll('.btn-train').forEach(b => b.disabled = false);
                 }
-            } catch (e) { alert(`Network Error: ${e.message}`); }
+            } catch (e) {
+                alert(`Network Error: ${e.message}`);
+                document.querySelectorAll('.btn-train').forEach(b => b.disabled = false);
+            }
         }
 
         function startMonitoring() {
             if (isRunning) return;
             isRunning = true;
-            document.getElementById('btn-cancel').style.display = 'block';
-            
+            startTime = Date.now();
+
+            document.getElementById('console').innerHTML = '<div class="log-line">[System] Job started...</div>';
+
             monitorInterval = setInterval(async () => {
                 try {
-                    // Poll Real Status from Backend
-                    const res = await fetch(`${API_BASE}/train/status`);
+                    const res = await fetch(`${API_BASE}/api/train/status`);
                     const state = await res.json();
-                    
+
                     updateUI(state);
 
-                    // Stop if finished
+                    // Update Timer
+                    const elapsed = Math.floor((Date.now() - startTime) / 1000);
+                    const mins = Math.floor(elapsed / 60).toString().padStart(2, '0');
+                    const secs = (elapsed % 60).toString().padStart(2, '0');
+                    document.getElementById('timer').innerText = `${mins}:${secs}`;
+
+                    // Check Finished
                     if (!state.is_running && state.progress >= 100) {
                         stopMonitoring(true);
-                    } else if (!state.is_running && state.status.includes("Failed")) {
+                    } else if (!state.is_running && state.status.toLowerCase().includes("error")) {
                         stopMonitoring(false);
                     }
                 } catch (e) { console.error("Monitor Error:", e); }
@@ -510,35 +699,36 @@
         function stopMonitoring(success) {
             clearInterval(monitorInterval);
             isRunning = false;
-            document.getElementById('btn-cancel').style.display = 'none';
+            document.querySelectorAll('.btn-train').forEach(b => b.disabled = false);
             document.getElementById('status-dot').className = "dot";
-            if(success) alert("Job Completed!");
+
+            if (success) {
+                document.getElementById('status-text').innerText = "Completed";
+                alert("✅ Job Completed Successfully!");
+            } else {
+                document.getElementById('status-text').innerText = "Failed";
+                alert("⚠️ Job Failed or Interrupted.");
+            }
         }
 
         function updateUI(state) {
-            document.getElementById('status-text').innerText = state.status;
+            document.getElementById('status-text').innerText = state.status || "Running...";
             document.getElementById('status-dot').className = state.is_running ? "dot active" : "dot";
-            document.getElementById('progress-fill').style.width = `${state.progress}%`;
-            document.getElementById('progress-percent').innerText = `${state.progress}%`;
-            
-            // Handle details (chunks / eta)
-            const details = `${state.processed_chunks || 0}/${state.total_chunks || 0} Chunks`;
-            document.getElementById('progress-details').innerText = details;
-            
-            if(state.estimated_remaining) {
-                document.getElementById('eta').innerText = state.estimated_remaining;
-            }
 
+            const progress = state.progress || 0;
+            document.getElementById('progress-fill').style.width = `${progress}%`;
+            document.getElementById('progress-percent').innerText = `${progress}%`;
+
+            // Console Logs
             const consoleBox = document.getElementById('console');
-            // Clear console first if starting new job (optional, but cleaner)
-            if (state.progress === 0 && state.logs.length <= 1) consoleBox.innerHTML = '';
-            
-            // Render Logs
-            if(state.logs && state.logs.length > 0) {
-                consoleBox.innerHTML = state.logs.map(l => `<div class="log-line">${l}</div>`).join('');
+            if (state.logs && Array.isArray(state.logs) && state.logs.length > 0) {
+                // Show last 50 logs only to prevent lag
+                const logsToShow = state.logs.slice(-50);
+                consoleBox.innerHTML = logsToShow.map(l => `<div class="log-line">${l}</div>`).join('');
                 consoleBox.scrollTop = consoleBox.scrollHeight;
             }
         }
     </script>
 </body>
+
 </html>

@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chatbot Test - Page 1</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Sarabun:wght@300;400;600&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --primary: #34558b;
+            --bg: #0f172a;
+            --glass: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.1);
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Outfit', 'Sarabun', sans-serif;
+            background: var(--bg);
+            color: white;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Glass Background Pattern */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background:
+                radial-gradient(circle at 15% 15%, rgba(52, 85, 139, 0.15) 0%, transparent 25%),
+                radial-gradient(circle at 85% 85%, rgba(52, 85, 139, 0.1) 0%, transparent 25%);
+            z-index: -1;
+        }
+
+        nav {
+            padding: 24px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--glass-border);
+            z-index: 100;
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: 800;
+            letter-spacing: -1px;
+            background: linear-gradient(135deg, white 0%, #94a3b8 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 6px;
+            border-radius: 16px;
+            border: 1px solid var(--glass-border);
+        }
+
+        .tab {
+            padding: 10px 24px;
+            border-radius: 12px;
+            text-decoration: none;
+            color: #94a3b8;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .tab:hover {
+            color: white;
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .tab.active {
+            background: white;
+            color: var(--bg);
+            box-shadow: 0 4px 12px rgba(255, 255, 255, 0.2);
+        }
+
+        main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 40px;
+        }
+
+        .content-card {
+            background: var(--glass);
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--glass-border);
+            padding: 60px;
+            border-radius: 40px;
+            text-align: center;
+            max-width: 600px;
+            animation: fadeIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        h1 {
+            font-size: 48px;
+            margin-bottom: 16px;
+            letter-spacing: -2px;
+        }
+
+        p {
+            font-size: 18px;
+            color: #94a3b8;
+            line-height: 1.6;
+        }
+
+        .tag {
+            background: rgba(52, 85, 139, 0.2);
+            color: #60a5fa;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 24px;
+            display: inline-block;
+        }
+    </style>
+
+    <!-- Integrate Using Custom Element -->
+    <script src="./carmen-widget.js"></script>
+</head>
+
+<body>
+
+    <nav>
+        <div class="logo">CARMEN.AI</div>
+        <div class="tabs">
+            <a href="tab1.html" class="tab active">🏠 Home</a>
+            <a href="tab2.html" class="tab">✨ Features</a>
+            <a href="tab3.html" class="tab">💬 Contact</a>
+        </div>
+    </nav>
+
+    <main>
+        <div class="content-card">
+            <div class="tag">Environment Test</div>
+            <h1>🏠 Page 1: Home</h1>
+            <p>ยินดีต้อนรับสู่หน้าทดสอบที่ 1 ครับ ลองเปิดตัว Chatbot และขยายหน้าจอค้างไว้ จากนั้นให้ลองกดเปลี่ยน Tab
+                ด้านบนเพื่อทดสอบว่า Chatbot ยังคงรักษาสถานะเดิมไว้ได้หรือไม่</p>
+        </div>
+    </main>
+
+    <script>
+        new CarmenBot({
+            bu: "Naverland",
+            user: "tig",
+            apiBase: "http://127.0.0.1:8000",
+            theme: "",
+            title: "Carmen Support",
+            showClearHistoryButton: false,
+            showAttachFileButton: false
+        });
+    </script>
+</body>
+
+</html>

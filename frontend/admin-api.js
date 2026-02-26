@@ -22,48 +22,46 @@ export class AdminAPI {
     // 📊 Logs & Analytics
     async getLogs(bu = "all") {
         // ส่ง query param ?bu=... ไปให้ backend กรอง
-        return this._fetch(`/admin/logs?bu=${bu}`);
+        return this._fetch(`/api/admin/logs?bu=${bu}`);
     }
 
     async getAnalytics() {
-        return this._fetch(`/admin/analytics`);
+        return this._fetch(`/api/admin/analytics`);
     }
 
     async getVectorStats() {
-        return this._fetch(`/admin/vectors`);
+        return this._fetch(`/api/admin/vectors`);
     }
 
     // ⚙️ Local Models Management
     async getLocalModels() {
-        return this._fetch(`/admin/models/local`);
+        return this._fetch(`/api/admin/models/local`);
     }
 
     async addModel(modelId, inputRate, outputRate) {
-        return this._fetch(`/admin/models/add`, {
+        return this._fetch(`/api/admin/models/add`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ model_id: modelId, input_rate: inputRate, output_rate: outputRate })
+            body: JSON.stringify({ id: modelId, input_price: inputRate, output_price: outputRate })
         });
     }
 
-    async activateModel(modelId, inputRate, outputRate) {
-        return this._fetch(`/admin/models/activate`, {
+    async activateModel(modelName) {
+        return this._fetch(`/api/admin/models/activate`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ model_id: modelId, input_rate: inputRate, output_rate: outputRate })
+            body: JSON.stringify({ model_name: modelName })
         });
     }
 
-    async deleteModel(modelId) {
-        return this._fetch(`/admin/models/delete`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ model_id: modelId, input_rate: 0, output_rate: 0 })
+    async deleteModel(modelName) {
+        return this._fetch(`/api/admin/models/${encodeURIComponent(modelName)}`, {
+            method: 'DELETE'
         });
     }
 
     // 🌐 OpenRouter Integration
     async getOpenRouterModels() {
-        return this._fetch(`/admin/openrouter/models`);
+        return this._fetch(`/api/admin/openrouter/models`);
     }
 }

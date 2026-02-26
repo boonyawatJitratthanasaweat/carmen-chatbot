@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carmen Admin Login</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Sarabun:wght@400;500;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --primary-color: #34558b;
+            --primary-gradient: linear-gradient(135deg, #34558b 0%, #2a4370 100%);
+            --text-dark: #1e293b;
+            --text-gray: #64748b;
+            --bg-light: #f1f5f9;
+            --radius-card: 24px;
+            --shadow-card: 0 25px 50px -12px rgba(52, 85, 139, 0.15);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; outline: none; }
+
+        body {
+            font-family: 'Inter', 'Sarabun', sans-serif;
+            background: var(--bg-light);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: var(--text-dark);
+        }
+
+        .login-card {
+            background: white;
+            width: 100%;
+            max-width: 400px;
+            padding: 40px;
+            border-radius: var(--radius-card);
+            box-shadow: var(--shadow-card);
+            text-align: center;
+            animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .logo-wrapper {
+            width: 64px;
+            height: 64px;
+            background: var(--primary-gradient);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px auto;
+            box-shadow: 0 10px 20px rgba(52, 85, 139, 0.3);
+        }
+        .logo-wrapper svg { width: 32px; height: 32px; fill: white; }
+
+        h2 { font-size: 24px; font-weight: 700; margin-bottom: 8px; color: var(--text-dark); }
+        p.subtitle { color: var(--text-gray); font-size: 14px; margin-bottom: 32px; }
+
+        .input-group { margin-bottom: 20px; text-align: left; }
+        label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 8px; color: var(--text-dark); }
+        
+        input {
+            width: 100%; padding: 12px 16px;
+            border: 1px solid #e2e8f0; border-radius: 12px;
+            font-size: 15px; transition: all 0.2s; font-family: inherit;
+        }
+        input:focus { border-color: var(--primary-color); box-shadow: 0 0 0 3px rgba(52, 85, 139, 0.1); }
+
+        .btn-login {
+            width: 100%; padding: 14px;
+            background: var(--primary-gradient); color: white;
+            border: none; border-radius: 12px;
+            font-size: 16px; font-weight: 600; cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s; margin-top: 10px;
+            display: flex; justify-content: center; align-items: center; gap: 10px;
+        }
+        .btn-login:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(52, 85, 139, 0.2); }
+        .btn-login:active { transform: scale(0.98); }
+        .btn-login:disabled { opacity: 0.7; cursor: not-allowed; transform: none; }
+
+        /* Loading Spinner */
+        .spinner {
+            width: 20px; height: 20px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+            display: none;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .error-msg { color: #ef4444; font-size: 13px; margin-top: 15px; display: none; }
+        .back-link { display: block; margin-top: 20px; font-size: 13px; color: var(--text-gray); text-decoration: none; }
+        .back-link:hover { text-decoration: underline; }
+
+    </style>
+</head>
+<body>
+
+    <div class="login-card">
+        <div class="logo-wrapper">
+            <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg>
+        </div>
+        
+        <h2>Carmen Dashboard</h2>
+        <p class="subtitle">กรุณาเข้าสู่ระบบเพื่อจัดการข้อมูล</p>
+
+        <form id="loginForm">
+            <div class="input-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" placeholder="เช่น admin" required>
+            </div>
+            
+            <div class="input-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" placeholder="••••••••" required>
+            </div>
+
+            <button type="submit" class="btn-login" id="loginBtn">
+                <div class="spinner" id="btnSpinner"></div>
+                <span id="btnText">เข้าสู่ระบบ</span>
+            </button>
+            <p class="error-msg" id="errorMsg">ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง</p>
+        </form>
+
+        <a href="index.html" class="back-link">← กลับไปหน้าแชท</a>
+    </div>
+
+    <script>
+        // ✅ 1. ตั้งค่า Dynamic API Base URL
+        const API_BASE_URL = (() => {
+            const hostname = window.location.hostname;
+            if (hostname === '127.0.0.1' || hostname === 'localhost') {
+                return "http://127.0.0.1:8000"; // Local Dev
+            } else {
+                // Production / Server (ใช้ IP เดียวกับที่รันเว็บ Port 8000)
+                return `${window.location.protocol}//${window.location.hostname}:8000`;
+            }
+        })();
+
+        console.log("🔗 Connecting to API:", API_BASE_URL);
+
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const usernameInput = document.getElementById('username');
+            const passwordInput = document.getElementById('password');
+            const errorMsg = document.getElementById('errorMsg');
+            const loginBtn = document.getElementById('loginBtn');
+            const btnText = document.getElementById('btnText');
+            const btnSpinner = document.getElementById('btnSpinner');
+
+            const username = usernameInput.value.trim();
+            const password = passwordInput.value.trim();
+
+            // Reset Error
+            errorMsg.style.display = 'none';
+            
+            // เริ่มสถานะ Loading
+            loginBtn.disabled = true;
+            btnText.textContent = "กำลังตรวจสอบ...";
+            btnSpinner.style.display = "block";
+
+            try {
+                // ✅ 2. ยิง API ไปหา Backend (POST /api/login)
+                const response = await fetch(`${API_BASE_URL}/api/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ 
+                        username: username, 
+                        password: password 
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    // ✅ 3. ถ้า Login สำเร็จ
+                    // เก็บข้อมูลลง LocalStorage
+                    const sessionData = {
+                        username: data.username,
+                        role: data.role,      // Backend ต้องส่ง role กลับมา (admin/user)
+                        token: data.token,    // JWT Token (ถ้ามี)
+                        full_name: data.full_name
+                    };
+                    
+                    localStorage.setItem('carmen_user_session', JSON.stringify(sessionData));
+
+                    // เปลี่ยนหน้าตาม Role
+                    if (data.role === 'admin') {
+                        window.location.href = 'dashboard.html';
+                    } else {
+                        // ถ้าไม่ใช่ Admin ดีดกลับหน้าแชท หรือแจ้งเตือน
+                        alert("คุณไม่มีสิทธิ์เข้าถึง Dashboard (Admin Only)");
+                        window.location.href = 'index.html';
+                    }
+
+                } else {
+                    // ❌ 4. ถ้า Login ไม่ผ่าน (เช่น รหัสผิด)
+                    throw new Error(data.detail || 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง');
+                }
+
+            } catch (error) {
+                console.error("Login Error:", error);
+                
+                // เช็คว่าเชื่อมต่อไม่ได้ หรือ Server ผิดพลาด
+                let message = error.message;
+                if (message.includes('Failed to fetch')) {
+                    message = `ไม่สามารถเชื่อมต่อ Server ได้ (${API_BASE_URL})`;
+                }
+
+                errorMsg.textContent = "❌ " + message;
+                errorMsg.style.display = 'block';
+                
+                // Animation สั่นเตือน
+                document.querySelector('.login-card').animate([
+                    { transform: 'translateX(0)' },
+                    { transform: 'translateX(-5px)' },
+                    { transform: 'translateX(5px)' },
+                    { transform: 'translateX(0)' }
+                ], { duration: 300 });
+
+            } finally {
+                // คืนค่าปุ่มให้กดได้เหมือนเดิม
+                loginBtn.disabled = false;
+                btnText.textContent = "เข้าสู่ระบบ";
+                btnSpinner.style.display = "none";
+            }
+        });
+    </script>
+
+</body>
+</html>

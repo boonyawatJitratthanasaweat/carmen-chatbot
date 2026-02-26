@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Carmen System{% endblock %}</title>
+
+    <!-- Shared Fonts -->
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Sarabun:wght@400;500;700&family=Outfit:wght@400;600;800&display=swap"
+        rel="stylesheet">
+
+    {% block head %}{% endblock %}
+
+    <style>
+        :root {
+            --primary-color: #34558b;
+            --bg-light: #f1f5f9;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', 'Sarabun', sans-serif;
+            background: var(--bg-light);
+        }
+    </style>
+</head>
+
+<body>
+
+    {% block content %}{% endblock %}
+
+    <!-- 🌐 Global Carmen Chatbot Initialization -->
+    <!-- This is included once in the base layout and available on all pages inheriting from it -->
+    <script src="/carmen-widget.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            new CarmenBot({
+                bu: "Naverland",
+                user: "tig",
+                apiBase: window.location.origin, // Automatically points to the current server
+                theme: "",
+                title: "Carmen Support",
+                showClearHistoryButton: false, //default: false
+                showAttachFileButton: false //default: false 
+
+            });
+        });
+    </script>
+
+    {% block scripts %}{% endblock %}
+</body>
+
+</html>

@@ -20,5 +20,6 @@
             "database": "carmen_db"
         }
     ],
-    "liveServer.settings.port": 5502
+    "liveServer.settings.port": 5502,
+    "python-envs.defaultEnvManager": "ms-python.python:system"
 }

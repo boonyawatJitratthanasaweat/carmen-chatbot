@@ -1,14 +1,31 @@
+# Python & Dev
 venv/
+.venv/
 __pycache__/
-*.env
-
-ingest*.py
-
 *.pyc
+.vscode/
+
+# Environment
+.env
+*.env
 backend/.env
-scripts/
 
-carmen-chatbot-widget/
+# Data & DB (Local items that should not be in Repo)
+*.db
+carmen_chat.db
+carmen_logs.db
+carmen_db.session.sql
+carmen_knowledge_db/
 
+
+
+# Also ignore the sub-directory in backend if it's a duplicate
 backend/images/
+
+# Frontend & Dependencies
 node_modules/
+carmen-chatbot-widget/node_modules/
+carmen-chatbot-widget/dist/
+
+# Essential source code (ensure these ARE NOT ignored)
+# !carmen-chatbot-widget/

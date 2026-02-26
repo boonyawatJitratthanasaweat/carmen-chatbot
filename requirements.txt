@@ -2,9 +2,9 @@ fastapi
 uvicorn
 langchain==0.2.16
 langchain-community==0.2.16
-langchain-core==0.2.38
+langchain-core==0.3.4
 langchain-google-genai
-langchain-openai
+langchain-openai==0.2.5
 langchain-pinecone
 pinecone-client
 pydantic
@@ -19,14 +19,12 @@ python-jose[cryptography]
 python-multipart
 bcrypt==4.0.1
 
-
 pypdf
 pandas
 PyGithub
 
 beautifulsoup4
 validators
-
 
 # google drive
 google-api-python-client
@@ -35,3 +33,7 @@ google-auth-oauthlib
 
 pymysql
 cryptography
+
+chromadb
+langchain-chroma
+langchain-text-splitters

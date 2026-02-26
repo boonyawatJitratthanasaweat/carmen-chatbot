@@ -6,18 +6,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Test Carmen Widget</title>
 
-    <script src="carmen-widget.js"></script>
+    <script src="./carmen-widget.js"></script>
 </head>
 
 <body>
 
     <script>
 
-        new CarmenBot({ 
+        new CarmenBot({
             bu: "Naverland", //Required
             user: "tig", //Required
+            apiBase: "http://127.0.0.1:8000", //Required
             theme: "black", //default: #34558b
-            showClearHistoryButton: true, //default: false
+            showClearHistoryButton: false, //default: false
             showAttachFileButton: false //default: false    
         });
 
